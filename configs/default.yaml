@@ -1,0 +1,31 @@
+camera:
+  device_index: 0
+  width: 1280
+  height: 720
+  target_fps: 30
+
+pose:
+  min_detection_confidence: 0.5
+  min_tracking_confidence: 0.5
+
+landmarks:
+  minimum_visibility: 0.5
+
+smoothing:
+  enabled: false
+  method: moving_average
+  window_size: 5
+
+state_machine:
+  minimum_consecutive_frames: 3
+
+thresholds:
+  top_elbow_angle: null
+  bottom_elbow_angle: null
+  body_alignment_angle: null
+
+feedback:
+  cooldown_seconds: 1.0
+
+logging:
+  save_feature_csv: true
