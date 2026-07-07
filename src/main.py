@@ -1,7 +1,9 @@
 import time
 import cv2
 
+from analysis.baseline import BaselinePushUpAnalyser
 from capture.webcam import WebcamCapture
+from features.angles import calculate_angle
 from pose.estimator import PoseEstimator
 from pose.landmarks import (
     extract_landmarks,
@@ -9,16 +11,31 @@ from pose.landmarks import (
     get_visibility,
     side_landmarks_available,
 )
-from features.angles import calculate_angle
 from utils.csv_logger import CSVLogger
+
+
+def draw_text(frame, text, position, scale=0.8):
+    cv2.putText(
+        frame,
+        text,
+        position,
+        cv2.FONT_HERSHEY_SIMPLEX,
+        scale,
+        (0, 255, 0),
+        2,
+        cv2.LINE_AA,
+    )
 
 
 def main():
     camera = WebcamCapture(device_index=0, width=1280, height=720)
+
     pose_estimator = PoseEstimator(
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
     )
+
+    baseline_analyser = BaselinePushUpAnalyser()
 
     logger = CSVLogger(
         output_path="../experiments/logs/live_feature_log.csv",
@@ -34,6 +51,9 @@ def main():
             "hip_visibility",
             "ankle_visibility",
             "pose_detected",
+            "baseline_position",
+            "baseline_rep_count",
+            "baseline_warnings",
         ],
     )
 
@@ -59,9 +79,9 @@ def main():
 
             pose_detected = bool(results.pose_landmarks)
 
+            selected_side = "none"
             elbow_angle = None
             body_alignment_angle = None
-            selected_side = "none"
 
             visibility_values = {
                 "shoulder_visibility": None,
@@ -91,12 +111,33 @@ def main():
                     body_alignment_angle = calculate_angle(shoulder, hip, ankle)
 
                     visibility_values = {
-                        "shoulder_visibility": get_visibility(landmarks, f"{selected_side}_shoulder"),
-                        "elbow_visibility": get_visibility(landmarks, f"{selected_side}_elbow"),
-                        "wrist_visibility": get_visibility(landmarks, f"{selected_side}_wrist"),
-                        "hip_visibility": get_visibility(landmarks, f"{selected_side}_hip"),
-                        "ankle_visibility": get_visibility(landmarks, f"{selected_side}_ankle"),
+                        "shoulder_visibility": get_visibility(
+                            landmarks, f"{selected_side}_shoulder"
+                        ),
+                        "elbow_visibility": get_visibility(
+                            landmarks, f"{selected_side}_elbow"
+                        ),
+                        "wrist_visibility": get_visibility(
+                            landmarks, f"{selected_side}_wrist"
+                        ),
+                        "hip_visibility": get_visibility(
+                            landmarks, f"{selected_side}_hip"
+                        ),
+                        "ankle_visibility": get_visibility(
+                            landmarks, f"{selected_side}_ankle"
+                        ),
                     }
+
+            # IMPORTANT:
+            # The baseline analyser must be updated AFTER elbow_angle and
+            # body_alignment_angle have been calculated.
+            baseline_result = baseline_analyser.update(
+                elbow_angle=elbow_angle,
+                body_alignment_angle=body_alignment_angle,
+            )
+
+            warnings = baseline_result["warnings"]
+            warning_text = ", ".join(warnings) if warnings else "No warning"
 
             logger.write_row(
                 {
@@ -107,56 +148,40 @@ def main():
                     "body_alignment_angle": body_alignment_angle,
                     **visibility_values,
                     "pose_detected": pose_detected,
+                    "baseline_position": baseline_result["position"],
+                    "baseline_rep_count": baseline_result["rep_count"],
+                    "baseline_warnings": warning_text,
                 }
             )
 
             status_text = "Pose detected" if pose_detected else "No pose detected"
 
-            cv2.putText(
+            draw_text(frame, f"{status_text} | FPS: {fps:.1f}", (20, 40), scale=1.0)
+            draw_text(frame, f"Side: {selected_side}", (20, 80))
+
+            if elbow_angle is not None:
+                draw_text(frame, f"Elbow angle: {elbow_angle:.1f}", (20, 120))
+            else:
+                draw_text(frame, "Elbow angle: N/A", (20, 120))
+
+            if body_alignment_angle is not None:
+                draw_text(frame, f"Body angle: {body_alignment_angle:.1f}", (20, 160))
+            else:
+                draw_text(frame, "Body angle: N/A", (20, 160))
+
+            draw_text(
                 frame,
-                f"{status_text} | FPS: {fps:.1f}",
-                (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
+                f"Position: {baseline_result['position']} | Reps: {baseline_result['rep_count']}",
+                (20, 200),
             )
 
-            cv2.putText(
+            draw_text(
                 frame,
-                f"Side: {selected_side}",
-                (20, 80),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
+                f"Warning: {warning_text}",
+                (20, 240),
             )
 
-            cv2.putText(
-                frame,
-                f"Elbow angle: {elbow_angle:.1f}" if elbow_angle is not None else "Elbow angle: N/A",
-                (20, 120),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
-            )
-
-            cv2.putText(
-                frame,
-                f"Body angle: {body_alignment_angle:.1f}" if body_alignment_angle is not None else "Body angle: N/A",
-                (20, 160),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
-            )
-
-            cv2.imshow("Real-Time Calisthenics Analysis - Feature Prototype", frame)
+            cv2.imshow("Real-Time Calisthenics Analysis - Baseline Prototype", frame)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
