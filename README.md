@@ -4,32 +4,67 @@ MSc Artificial Intelligence project at Queen Mary University of London.
 
 ## Current Scope
 
-The project focuses on real-time analysis of one calisthenic exercise:
-the push-up.
+The project focuses on real-time analysis of one calisthenic exercise: the push-up.
 
 The controlled implementation conditions are:
 
 - one person visible;
-- side-view camera orientation;
-- standard webcam or recorded-video input;
-- repetition and movement-phase detection;
-- three predefined observable form deviations;
+- controlled side-view camera orientation;
+- standard webcam input in the current prototype;
+- recorded-video evaluation input planned for the formal evaluation stage;
+- repetition counting and movement-state analysis;
+- three predefined observable form-deviation categories;
 - immediate non-medical feedback.
 
 ## Form Categories
 
-1. Correct repetition
+The planned repetition-level evaluation categories are:
+
+1. Correct repetition under the project-defined conditions
 2. Insufficient depth
 3. Incomplete elbow extension
 4. Shoulder-hip-ankle alignment deviation
 
-## Methods
+The current live baseline displays provisional warnings. A live "No warning" message is not treated as proof that a repetition is correct. Correct and incorrect repetition labels will be defined through manual annotation during evaluation.
 
-The project will compare:
+## Implemented Baseline Prototype
 
-1. A baseline method using raw pose landmarks and frame-level thresholds.
-2. An enhanced method using confidence handling, temporal smoothing,
-   movement-phase modelling and stable transition rules.
+The current prototype:
+
+- opens a live webcam feed using OpenCV;
+- runs MediaPipe Pose on each frame;
+- draws detected pose landmarks;
+- extracts selected landmarks for the visible body side;
+- calculates elbow angle from shoulder-elbow-wrist landmarks;
+- calculates shoulder-hip-ankle body-alignment angle;
+- displays FPS, selected side, angles, position, repetition count and warning text;
+- logs per-frame features and baseline outputs to CSV;
+- applies a provisional raw-threshold baseline for push-up analysis.
+
+## Current Baseline Rules
+
+The current baseline uses provisional operational thresholds:
+
+- top position: elbow angle >= 150 degrees;
+- bottom position: elbow angle <= 100 degrees;
+- repetition count: top -> bottom -> top;
+- body-alignment warning: shoulder-hip-ankle angle < 160 degrees.
+
+These thresholds are project-specific development thresholds. They are not universal definitions of correct push-up form and are not medical or injury-risk claims.
+
+## Current Limitations
+
+The current baseline does not yet include:
+
+- temporal smoothing;
+- hysteresis;
+- consecutive-frame validation;
+- explicit descending and ascending phases;
+- feedback cooldown;
+- full repetition-level form classification;
+- formal manually labelled evaluation results.
+
+The enhanced temporal method, labelled evaluation dataset, quantitative evaluation and final result analysis have not yet been completed.
 
 ## Repository Structure
 
@@ -42,7 +77,7 @@ The project will compare:
 
 Raw identifiable recordings are not committed to this repository.
 
-## Status
+## Installation
 
-Project structure initialised. Pose-estimation implementation has not yet
-been completed.# Real-Time-Calisthenics-Analysis
+```bash
+pip install -r requirements.txt
