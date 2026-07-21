@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Sequence
 
 
 Point2D = Tuple[float, float]
@@ -56,28 +56,100 @@ def get_visibility(landmarks: Dict[str, dict], name: str) -> Optional[float]:
     return landmarks[name]["visibility"]
 
 
-def side_landmarks_available(
+Point2D = Tuple[float, float]
+
+
+FEATURE_LANDMARKS = {
+    "elbow": ("shoulder", "elbow", "wrist"),
+    "alignment": ("shoulder", "hip", "ankle"),
+}
+
+
+def feature_visibility_values(
     landmarks: Dict[str, dict],
     side: str,
+    feature: str,
+) -> Optional[list[float]]:
+    """
+    Return the visibility values required for one feature.
+
+    Returns None when the feature or a required landmark is unavailable.
+    """
+    if feature not in FEATURE_LANDMARKS:
+        raise ValueError(f"Unknown feature: {feature}")
+
+    values = []
+
+    for body_part in FEATURE_LANDMARKS[feature]:
+        name = f"{side}_{body_part}"
+        visibility = get_visibility(landmarks, name)
+
+        if visibility is None:
+            return None
+
+        values.append(float(visibility))
+
+    return values
+
+
+def feature_landmarks_available(
+    landmarks: Dict[str, dict],
+    side: str,
+    feature: str,
     minimum_visibility: float = 0.5,
 ) -> bool:
     """
-    Check whether the selected side has enough visible landmarks.
-
-    side must be 'left' or 'right'.
+    Check only the landmarks required for the requested feature.
     """
-    required = [
-        f"{side}_shoulder",
-        f"{side}_elbow",
-        f"{side}_wrist",
-        f"{side}_hip",
-        f"{side}_ankle",
-    ]
+    values = feature_visibility_values(landmarks, side, feature)
 
-    for name in required:
-        visibility = get_visibility(landmarks, name)
+    if values is None:
+        return False
 
-        if visibility is None or visibility < minimum_visibility:
-            return False
+    return all(value >= minimum_visibility for value in values)
 
-    return True
+
+def feature_visibility_score(
+    landmarks: Dict[str, dict],
+    side: str,
+    feature: str,
+) -> Optional[float]:
+    """
+    Return the weakest required landmark visibility for a feature.
+
+    The minimum is used because the feature is constrained by its
+    least reliable required landmark.
+    """
+    values = feature_visibility_values(landmarks, side, feature)
+
+    if not values:
+        return None
+
+    return min(values)
+
+
+def select_best_elbow_side(
+    landmarks: Dict[str, dict],
+    minimum_visibility: float = 0.5,
+) -> str:
+    """
+    Select the side with the stronger shoulder-elbow-wrist visibility.
+
+    Returns 'none' if neither side reaches the minimum threshold.
+    """
+    scores = {}
+
+    for side in ("left", "right"):
+        score = feature_visibility_score(
+            landmarks=landmarks,
+            side=side,
+            feature="elbow",
+        )
+
+        if score is not None and score >= minimum_visibility:
+            scores[side] = score
+
+    if not scores:
+        return "none"
+
+    return max(scores, key=scores.get)

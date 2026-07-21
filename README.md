@@ -52,6 +52,20 @@ The current baseline uses provisional operational thresholds:
 
 These thresholds are project-specific development thresholds. They are not universal definitions of correct push-up form and are not medical or injury-risk claims.
 
+
+## Recorded-Video Processing
+
+The baseline analyser can process a saved video so that the same recording can later be evaluated using both the baseline and enhanced methods.
+
+Example:
+
+```bash
+PYTHONPATH=src python src/run_video.py \
+  --video data/raw/development/example.mp4 \
+  --clip-id example \
+  --display
+```
+
 ## Current Limitations
 
 The current baseline does not yet include:

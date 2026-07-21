@@ -3,16 +3,21 @@ import cv2
 
 from analysis.baseline import BaselinePushUpAnalyser
 from capture.webcam import WebcamCapture
+from utils.paths import LOG_DIR, create_project_directories
 from features.angles import calculate_angle
 from pose.estimator import PoseEstimator
 from pose.landmarks import (
     extract_landmarks,
     get_point,
     get_visibility,
-    side_landmarks_available,
+    feature_landmarks_available,
+    feature_visibility_score,
+    select_best_elbow_side,
 )
 from utils.csv_logger import CSVLogger
 
+
+create_project_directories()
 
 def draw_text(frame, text, position, scale=0.8):
     cv2.putText(
@@ -38,7 +43,7 @@ def main():
     baseline_analyser = BaselinePushUpAnalyser()
 
     logger = CSVLogger(
-        output_path="../experiments/logs/live_feature_log.csv",
+        output_path=str(LOG_DIR / "live_feature.csv"),
         fieldnames=[
             "timestamp",
             "fps",
@@ -95,10 +100,10 @@ def main():
                 frame = pose_estimator.draw_landmarks(frame, results)
                 landmarks = extract_landmarks(results, image_width, image_height)
 
-                if side_landmarks_available(landmarks, "left", minimum_visibility=0.5):
-                    selected_side = "left"
-                elif side_landmarks_available(landmarks, "right", minimum_visibility=0.5):
-                    selected_side = "right"
+                selected_side = select_best_elbow_side(
+                    landmarks,
+                    minimum_visibility=0.5,
+                )
 
                 if selected_side != "none":
                     shoulder = get_point(landmarks, f"{selected_side}_shoulder")
@@ -137,7 +142,7 @@ def main():
             )
 
             warnings = baseline_result["warnings"]
-            warning_text = ", ".join(warnings) if warnings else "No warning"
+            warning_text = ", ".join(warnings) if warnings else "No frame warning"
 
             logger.write_row(
                 {
@@ -177,10 +182,10 @@ def main():
 
             draw_text(
                 frame,
-                f"Warning: {warning_text}",
+                f"Baseline frame warning: {warning_text}",
                 (20, 240),
             )
-
+            #the baseline warning are raw frame level outputs. they are not treated as completed repetition classifications.
             cv2.imshow("Real-Time Calisthenics Analysis - Baseline Prototype", frame)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
