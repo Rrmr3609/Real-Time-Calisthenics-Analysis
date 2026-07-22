@@ -1,0 +1,22 @@
+Enhanced phase-detection smoke test — 22 July 2026
+
+Total frames: 497
+Final enhanced repetition count: 3
+Completed-repetition event rows: 3
+Detected phase changes: 14
+Elbow-feature valid rate: 0.799
+Mean processing time per frame: 47.964 ms
+Median processing time per frame: 45.997 ms
+
+Frames by phase:
+{'top': 319, 'waiting': 96, 'bottom': 64, 'descending': 9, 'ascending': 9}
+
+Completed repetition details:
+Rep 1: frames 207-235, bottom frame 215, minimum angle 89.04, ending angle 152.44
+Rep 2: frames 279-308, bottom frame 291, minimum angle 74.55, ending angle 146.34
+Rep 3: frames 350-381, bottom frame 363, minimum angle 84.04, ending angle 152.95
+
+Important:
+This is an engineering smoke test on one setup recording.
+It is not a formal accuracy evaluation and the temporal
+parameters have not yet been calibrated on a development set.

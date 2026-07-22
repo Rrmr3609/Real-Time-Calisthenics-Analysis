@@ -4,6 +4,10 @@ import time
 import cv2
 
 from analysis.enhanced_features import EnhancedFeatureProcessor
+from analysis.phase_state_machine import (
+
+    PushUpPhaseStateMachine,
+)
 from capture.video import VideoFileCapture
 from pose.estimator import PoseEstimator
 from pose.landmarks import extract_landmarks
@@ -86,9 +90,19 @@ def main():
         missing_grace_frames=5,
     )
 
+    phase_machine = PushUpPhaseStateMachine(
+    top_region_threshold=130.0,
+    bottom_region_threshold=120.0,
+    hysteresis=5.0,
+    confirmation_frames=3,
+    missing_grace_frames=5,
+    minimum_rep_frames=8,
+    )
+
+
     output_path = (
         LOG_DIR
-        / f"{args.clip_id}_enhanced_features.csv"
+        / f"{args.clip_id}_enhanced_temporal.csv"
     )
 
     logger = CSVLogger(
@@ -110,6 +124,19 @@ def main():
             "smoothed_elbow_angle",
             "raw_alignment_angle",
             "smoothed_alignment_angle",
+            "phase",
+            "phase_changed",
+            "enhanced_rep_count",
+            "missing_angle_frames",
+            "completed_rep",
+            "completed_rep_id",
+            "completed_start_frame",
+            "completed_bottom_frame",
+            "completed_end_frame",
+            "completed_start_top_angle",
+            "completed_minimum_elbow_angle",
+            "completed_end_top_angle",
+            "completed_duration_frames",
         ],
     )
 
@@ -147,9 +174,61 @@ def main():
                 landmarks
             )
 
+            phase_result = phase_machine.update(
+                elbow_angle=feature_result[
+                    "smoothed_elbow_angle"
+                ],
+                frame_index=capture.frame_index,
+            )
+
+            completed = phase_result[
+                "completed_repetition"
+            ]
+
             processing_time_ms = (
                 time.perf_counter() - start_time
             ) * 1000.0
+
+            completed_fields = {
+                "completed_rep": completed is not None,
+                "completed_rep_id": None,
+                "completed_start_frame": None,
+                "completed_bottom_frame": None,
+                "completed_end_frame": None,
+                "completed_start_top_angle": None,
+                "completed_minimum_elbow_angle": None,
+                "completed_end_top_angle": None,
+                "completed_duration_frames": None,
+            }
+
+            if completed is not None:
+                completed_fields.update(
+                    {
+                        "completed_rep_id": completed.rep_id,
+                        "completed_start_frame": (
+                            completed.start_frame
+                        ),
+                        "completed_bottom_frame": (
+                            completed.bottom_frame
+                        ),
+                        "completed_end_frame": (
+                            completed.end_frame
+                        ),
+                        "completed_start_top_angle": (
+                            completed.start_top_angle
+                        ),
+                        "completed_minimum_elbow_angle": (
+                            completed.minimum_elbow_angle
+                        ),
+                        "completed_end_top_angle": (
+                            completed.end_top_angle
+                        ),
+                        "completed_duration_frames": (
+                            completed.duration_frames
+                        ),
+                    }
+                )
+
 
             logger.write_row(
                 {
@@ -160,6 +239,17 @@ def main():
                     "processing_time_ms": processing_time_ms,
                     "pose_detected": pose_detected,
                     **feature_result,
+                    "phase": phase_result["phase"],
+                    "phase_changed": phase_result[
+                        "phase_changed"
+                    ],
+                    "enhanced_rep_count": phase_result[
+                        "rep_count"
+                    ],
+                    "missing_angle_frames": phase_result[
+                        "missing_angle_frames"
+                    ],
+                    **completed_fields,
                 }
             )
 
@@ -214,6 +304,21 @@ def main():
                     (20, 200),
                 )
 
+                draw_text(
+                    frame,
+                    f"Phase: {phase_result['phase']}",
+                    (20, 240),
+                )
+
+                draw_text(
+                    frame,
+                    (
+                        "Enhanced repetitions: "
+                        f"{phase_result['rep_count']}"
+                    ),
+                    (20, 280),
+                )
+
                 cv2.imshow(
                     "Enhanced Preprocessing Development",
                     frame,
@@ -222,13 +327,17 @@ def main():
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
 
-        print("Enhanced preprocessing completed.")
+        print("Final enhanced repetition count:", phase_machine.rep_count,
+              )
 
     finally:
         logger.close()
         capture.release()
         pose_estimator.close()
         cv2.destroyAllWindows()
+
+
+
 
 
 if __name__ == "__main__":
