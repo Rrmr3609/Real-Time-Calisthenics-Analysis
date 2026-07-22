@@ -53,6 +53,31 @@ The current baseline uses provisional operational thresholds:
 These thresholds are project-specific development thresholds. They are not universal definitions of correct push-up form and are not medical or injury-risk claims.
 
 
+## Enhanced Preprocessing — In Development
+
+An enhanced preprocessing layer has been added separately from the frozen baseline.
+
+The current enhanced preprocessing includes:
+
+- visibility-based body-side scoring;
+- confirmation across multiple frames before acquiring or switching sides;
+- a margin requirement before switching to the opposite side;
+- a short grace period for missing side visibility;
+- exponential moving-average smoothing of elbow and body-alignment angles;
+- raw and smoothed feature logging for recorded videos.
+
+Example:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+python src\run_video_enhanced.py `
+  --video "data\raw\development\example.mp4" `
+  --clip-id "example" `
+  --alpha 0.3 `
+  --display
+  ```
+
 ## Recorded-Video Processing
 
 The baseline analyser can process a saved video so that the same recording can later be evaluated using both the baseline and enhanced methods.

@@ -1,0 +1,17 @@
+Enhanced preprocessing smoke test — 21 July 2026
+
+Total frames: 497
+Pose-detected frame rate: 0.815
+Elbow-feature valid rate: 0.799
+Alignment-feature valid rate: 0.549
+No-selected-side frame rate: 0.129
+Selected-side state changes: 9
+Mean absolute raw elbow frame change: 3.717 degrees
+Mean absolute smoothed elbow frame change: 2.112 degrees
+Mean processing time per frame: 48.610 ms
+Median processing time per frame: 46.456 ms
+
+Important:
+This is an engineering smoke test, not a formal evaluation result.
+The enhanced method does not yet include push-up phase detection,
+repetition counting or repetition-level form classification.
