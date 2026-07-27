@@ -1,0 +1,19 @@
+Enhanced repetition-classification smoke test — 23 July 2026
+
+Completed repetitions classified: 6
+Predicted class counts: {'unscorable': 4, 'incomplete_extension': 2}
+Mean alignment valid ratio: 0.021
+Repetitions with multiple triggered rules: 0
+
+Repetition details:
+Rep 1: class=unscorable, minimum elbow=89.04, top extension=152.44, alignment coverage=0.000, rules=nan
+Rep 2: class=incomplete_extension, minimum elbow=74.55, top extension=146.34, alignment coverage=0.000, rules=incomplete_extension
+Rep 3: class=unscorable, minimum elbow=84.04, top extension=152.95, alignment coverage=0.062, rules=nan
+Rep 1: class=unscorable, minimum elbow=89.04, top extension=152.44, alignment coverage=0.000, rules=nan
+Rep 2: class=incomplete_extension, minimum elbow=74.55, top extension=146.34, alignment coverage=0.000, rules=incomplete_extension
+Rep 3: class=unscorable, minimum elbow=84.04, top extension=152.95, alignment coverage=0.062, rules=nan
+
+Important:
+This is an engineering smoke test using one existing setup video.
+It is not a formal classification evaluation. The thresholds have not
+yet been calibrated using the planned development recordings.

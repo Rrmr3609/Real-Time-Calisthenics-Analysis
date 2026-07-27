@@ -78,7 +78,6 @@ python src\run_video_enhanced.py `
   --display
   ```
 
-
   
 ## Recorded-Video Processing
 

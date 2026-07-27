@@ -12,7 +12,13 @@ from capture.video import VideoFileCapture
 from pose.estimator import PoseEstimator
 from pose.landmarks import extract_landmarks
 from utils.csv_logger import CSVLogger
-from utils.paths import LOG_DIR, create_project_directories
+from utils.paths import LOG_DIR, OUTPUT_DIR, create_project_directories
+from analysis.repetition_aggregator import (
+    RepetitionFeatureAggregator,
+)
+from analysis.repetition_classifier import (
+    RepetitionClassifier,
+)
 
 
 def parse_arguments():
@@ -99,6 +105,20 @@ def main():
     minimum_rep_frames=8,
     )
 
+    repetition_aggregator = RepetitionFeatureAggregator()
+
+    repetition_classifier = RepetitionClassifier(
+        depth_threshold=100.0,
+        extension_threshold=150.0,
+        alignment_minimum=160.0,
+        alignment_deviation_min_frames=3,
+        alignment_deviation_min_ratio=0.20,
+        minimum_alignment_valid_ratio=0.50,
+    )
+
+    feedback_test = ""
+    feedback_frames_remaining = 0
+
 
     output_path = (
         LOG_DIR
@@ -137,8 +157,51 @@ def main():
             "completed_minimum_elbow_angle",
             "completed_end_top_angle",
             "completed_duration_frames",
+            "repetition_predicted_class",
+            "repetition_multiple_rules",
+            "repetition_triggered_rules",
         ],
     )
+
+
+    repetition_output_path = (
+        OUTPUT_DIR
+        / f"{args.clip_id}_enhanced_repetitions.csv"
+    )
+
+    repetition_logger = CSVLogger(
+        output_path=str(repetition_output_path),
+        fieldnames=[
+            "clip_id",
+            "rep_id",
+            "start_frame",
+            "bottom_frame",
+            "end_frame",
+            "duration_frames",
+
+            "start_top_angle",
+            "minimum_elbow_angle",
+            "end_top_angle",
+            "top_extension_angle",
+
+            "minimum_alignment_angle",
+            "alignment_valid_frames",
+            "alignment_valid_ratio",
+            "alignment_deviation_frames",
+            "alignment_deviation_ratio",
+
+            "insufficient_depth_triggered",
+            "incomplete_extension_triggered",
+            "alignment_deviation_triggered",
+            "multiple_rules_triggered",
+            "triggered_rules",
+
+            "predicted_class",
+            "classification_reason",
+
+        ],
+    )
+
 
     try:
         capture.open()
@@ -148,6 +211,7 @@ def main():
         print(f"Source FPS: {capture.source_fps:.2f}")
         print(f"Smoothing alpha: {args.alpha}")
         print(f"Output: {output_path}")
+        print(f"Repetition output: {repetition_output_path}")
 
         while True:
             frame = capture.read()
@@ -181,9 +245,142 @@ def main():
                 frame_index=capture.frame_index,
             )
 
-            completed = phase_result[
-                "completed_repetition"
-            ]
+
+            completed_repetition = (
+                repetition_aggregator.update(
+                    phase=phase_result["phase"],
+                    phase_changed=phase_result[
+                        "phase_changed"
+                    ],
+                    body_alignment_angle=feature_result[
+                        "smoothed_alignment_angle"
+                    ],
+                    completed_repetition=phase_result[
+                        "completed_repetition"
+                    ],
+                )
+            )
+
+            classification = None
+
+            if completed_repetition is not None:
+                classification = repetition_classifier.classify(
+                    completed_repetition
+                )
+                repetition_logger.write_row(
+                {
+                    "clip_id": args.clip_id,
+                    "rep_id": completed_repetition.rep_id,
+                    "start_frame": (
+                        completed_repetition.start_frame
+                    ),
+                    "bottom_frame": (
+                        completed_repetition.bottom_frame
+                    ),
+                    "end_frame": (
+                        completed_repetition.end_frame
+                    ),
+                    "duration_frames": (
+                        completed_repetition.duration_frames
+                    ),
+
+                    "start_top_angle": (
+                        completed_repetition.start_top_angle
+                    ),
+                    "minimum_elbow_angle": (
+                        completed_repetition.minimum_elbow_angle
+                    ),
+                    "end_top_angle": (
+                        completed_repetition.end_top_angle
+                    ),
+                    "top_extension_angle": (
+                        classification.top_extension_angle
+                    ),
+
+                    "minimum_alignment_angle": (
+                        classification.minimum_alignment_angle
+                    ),
+                    "alignment_valid_frames": (
+                        classification.alignment_valid_frames
+                    ),
+                    "alignment_valid_ratio": (
+                        classification.alignment_valid_ratio
+                    ),
+                    "alignment_deviation_frames": (
+                        classification.alignment_deviation_frames
+                    ),
+                    "alignment_deviation_ratio": (
+                        classification.alignment_deviation_ratio
+                    ),
+
+                    "insufficient_depth_triggered": (
+                        classification
+                        .insufficient_depth_triggered
+                    ),
+                    "incomplete_extension_triggered": (
+                        classification
+                        .incomplete_extension_triggered
+                    ),
+                    "alignment_deviation_triggered": (
+                        classification
+                        .alignment_deviation_triggered
+                    ),
+                    "multiple_rules_triggered": (
+                        classification
+                        .multiple_rules_triggered
+                    ),
+                    "triggered_rules": "|".join(
+                        classification.triggered_rules
+                    ),
+
+                    "predicted_class": (
+                        classification.predicted_class
+                    ),
+                    "classification_reason": (
+                        classification.classification_reason
+                    ),
+                }
+            )
+                feedback_messages = {
+                    "correct": (
+                        "Rep complete: no predefined deviation"
+                    ),
+                    "insufficient_depth": (
+                        "Rep complete: insufficient depth"
+                    ),
+                    "incomplete_extension": (
+                        "Rep complete: incomplete extension"
+                    ),
+                    "alignment_deviation": (
+                        "Rep complete: alignment deviation"
+                    ),
+                    "unscorable": (
+                        "Rep complete: unscorable"
+                    ),
+                }
+
+                feedback_text = feedback_messages[
+                    classification.predicted_class
+                ]
+
+                effective_fps = (
+                    capture.source_fps
+                    if capture.source_fps > 0
+                    else 30.0
+                )
+
+                feedback_frames_remaining = max(
+                    1,
+                    int(effective_fps * 1.5),
+                )
+
+            elif feedback_frames_remaining > 0:
+                feedback_frames_remaining -= 1
+
+            else:
+                feedback_text = ""
+
+            completed = completed_repetition
 
             processing_time_ms = (
                 time.perf_counter() - start_time
@@ -230,6 +427,29 @@ def main():
                 )
 
 
+
+            classification_fields = {
+                "repetition_predicted_class": None,
+                "repetition_multiple_rules": None,
+                "repetition_triggered_rules": None,
+            }
+
+
+            if classification is not None:
+                classification_fields.update(
+                    {
+                        "repetition_predicted_class": (
+                            classification.predicted_class
+                        ),
+                        "repetition_multiple_rules": (
+                            classification.multiple_rules_triggered
+                        ),
+                        "repetition_triggered_rules": "|".join(
+                            classification.triggered_rules
+                        ),
+                    }
+                )
+
             logger.write_row(
                 {
                     "clip_id": args.clip_id,
@@ -250,6 +470,7 @@ def main():
                         "missing_angle_frames"
                     ],
                     **completed_fields,
+                    **classification_fields,
                 }
             )
 
@@ -319,6 +540,14 @@ def main():
                     (20, 280),
                 )
 
+                if feedback_text:
+                    draw_text(
+                        frame,
+                        feedback_text,
+                        (20, 320),
+                        scale=0.8,
+                    )
+
                 cv2.imshow(
                     "Enhanced Preprocessing Development",
                     frame,
@@ -327,11 +556,18 @@ def main():
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
 
-        print("Final enhanced repetition count:", phase_machine.rep_count,
-              )
+        print(
+            "Final enhanced repetition count:", 
+            phase_machine.rep_count,
+        )
+        print(
+            "Repetition-level CSV:",
+            repetition_output_path,
+        )
 
     finally:
         logger.close()
+        repetition_logger.close
         capture.release()
         pose_estimator.close()
         cv2.destroyAllWindows()
