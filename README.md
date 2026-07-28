@@ -41,6 +41,13 @@ The current prototype:
 - logs per-frame features and baseline outputs to CSV;
 - applies a provisional raw-threshold baseline for push-up analysis.
 
+Run the live baseline from PowerShell:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+& ".\.venv\Scripts\python.exe" src\main.py
+```
+
 ## Current Baseline Rules
 
 The current baseline uses provisional operational thresholds:
@@ -71,12 +78,12 @@ Example:
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
 
-python src\run_video_enhanced.py `
+& ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
   --alpha 0.3 `
   --display
-  ```
+```
 
   
 ## Recorded-Video Processing
@@ -85,11 +92,35 @@ The baseline analyser can process a saved video so that the same recording can l
 
 Example:
 
-```bash
-PYTHONPATH=src python src/run_video.py \
-  --video data/raw/development/example.mp4 \
-  --clip-id example \
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+& ".\.venv\Scripts\python.exe" src\run_video.py `
+  --video "data\raw\development\example.mp4" `
+  --clip-id "example" `
   --display
+```
+
+## Output File Safety
+
+CSV outputs never append a second complete run. By default, each runner fails
+clearly if its target output already exists:
+
+- live baseline: `experiments/logs/live_feature.csv`;
+- recorded baseline: `experiments/logs/<clip-id>_baseline.csv`;
+- enhanced frame log: `experiments/logs/<clip-id>_enhanced_temporal.csv`;
+- enhanced repetitions: `experiments/outputs/<clip-id>_enhanced_repetitions.csv`.
+
+For the enhanced runner, both output paths are checked before video processing
+begins. To intentionally replace the output or outputs for a runner, add the
+explicit `--overwrite` option:
+
+```powershell
+& ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
+  --video "data\raw\development\example.mp4" `
+  --clip-id "example" `
+  --alpha 0.3 `
+  --overwrite
 ```
 
 ## Current Limitations
@@ -121,3 +152,4 @@ Raw identifiable recordings are not committed to this repository.
 
 ```bash
 pip install -r requirements.txt
+```

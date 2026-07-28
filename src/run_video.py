@@ -1,5 +1,6 @@
 import argparse
 import time
+from contextlib import ExitStack
 
 import cv2
 
@@ -15,7 +16,7 @@ from pose.landmarks import (
     get_visibility,
     select_best_elbow_side,
 )
-from utils.csv_logger import CSVLogger
+from utils.csv_logger import CSVLogger, ensure_output_paths_available
 from utils.paths import LOG_DIR, create_project_directories
 
 
@@ -42,6 +43,12 @@ def parse_arguments():
         help="Display processed frames.",
     )
 
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace an existing output CSV.",
+    )
+
     return parser.parse_args()
 
 
@@ -49,37 +56,49 @@ def main():
     args = parse_arguments()
     create_project_directories()
 
-    capture = VideoFileCapture(args.video)
-    pose_estimator = PoseEstimator(
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
-    )
-    analyser = BaselinePushUpAnalyser()
-
     output_path = LOG_DIR / f"{args.clip_id}_baseline.csv"
-
-    logger = CSVLogger(
-        output_path=str(output_path),
-        fieldnames=[
-            "clip_id",
-            "frame_index",
-            "video_timestamp_ms",
-            "source_fps",
-            "processing_time_ms",
-            "pose_detected",
-            "selected_side",
-            "left_elbow_visibility_score",
-            "right_elbow_visibility_score",
-            "elbow_angle",
-            "body_alignment_angle",
-            "baseline_position",
-            "baseline_rep_count",
-            "baseline_frame_warnings",
-        ],
+    ensure_output_paths_available(
+        [output_path],
+        overwrite=args.overwrite,
     )
+
+    cleanup = ExitStack()
+    cleanup.callback(cv2.destroyAllWindows)
 
     try:
+        capture = VideoFileCapture(args.video)
+        cleanup.callback(capture.release)
         capture.open()
+
+        pose_estimator = PoseEstimator(
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        cleanup.callback(pose_estimator.close)
+
+        analyser = BaselinePushUpAnalyser()
+
+        logger = CSVLogger(
+            output_path=str(output_path),
+            fieldnames=[
+                "clip_id",
+                "frame_index",
+                "video_timestamp_ms",
+                "source_fps",
+                "processing_time_ms",
+                "pose_detected",
+                "selected_side",
+                "left_elbow_visibility_score",
+                "right_elbow_visibility_score",
+                "elbow_angle",
+                "body_alignment_angle",
+                "baseline_position",
+                "baseline_rep_count",
+                "baseline_frame_warnings",
+            ],
+            overwrite=args.overwrite,
+        )
+        cleanup.callback(logger.close)
 
         print(f"Video: {args.video}")
         print(f"Frames: {capture.frame_count}")
@@ -239,10 +258,7 @@ def main():
         )
 
     finally:
-        logger.close()
-        capture.release()
-        pose_estimator.close()
-        cv2.destroyAllWindows()
+        cleanup.close()
 
 
 if __name__ == "__main__":

@@ -1,25 +1,86 @@
 import csv
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Iterable, Mapping
+
+
+def ensure_output_paths_available(
+    output_paths: Iterable[str | Path],
+    overwrite: bool = False,
+) -> None:
+    """
+    Fail before a run starts if any requested output already exists.
+
+    Callers that manage more than one output should pass the complete set so
+    one stale file cannot be combined with a newly created file.
+    """
+    if overwrite:
+        return
+
+    existing_paths = [
+        Path(output_path)
+        for output_path in output_paths
+        if Path(output_path).exists()
+    ]
+
+    if not existing_paths:
+        return
+
+    formatted_paths = "\n".join(
+        f"- {path}" for path in existing_paths
+    )
+    raise FileExistsError(
+        "Output file already exists. Refusing to append or replace it:\n"
+        f"{formatted_paths}\n"
+        "Re-run with --overwrite to replace every requested output."
+    )
 
 
 class CSVLogger:
-    def __init__(self, output_path: str, fieldnames):
+    def __init__(
+        self,
+        output_path: str,
+        fieldnames,
+        overwrite: bool = False,
+    ):
         self.output_path = Path(output_path)
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         self.fieldnames = fieldnames
+        self.file = None
 
-        file_exists = self.output_path.exists()
+        ensure_output_paths_available(
+            [self.output_path],
+            overwrite=overwrite,
+        )
 
-        self.file = self.output_path.open("a", newline="", encoding="utf-8")
-        self.writer = csv.DictWriter(self.file, fieldnames=self.fieldnames)
+        mode = "w" if overwrite else "x"
 
-        if not file_exists:
+        try:
+            self.file = self.output_path.open(
+                mode,
+                newline="",
+                encoding="utf-8",
+            )
+            self.writer = csv.DictWriter(
+                self.file,
+                fieldnames=self.fieldnames,
+            )
             self.writer.writeheader()
+            self.file.flush()
+        except FileExistsError as error:
+            raise FileExistsError(
+                "Output file already exists. Refusing to append or replace "
+                f"it: {self.output_path}. Re-run with --overwrite to replace "
+                "the output."
+            ) from error
+        except Exception:
+            if self.file is not None:
+                self.file.close()
+            raise
 
-    def write_row(self, row: Dict[str, Optional[float]]) -> None:
+    def write_row(self, row: Mapping[str, object]) -> None:
         self.writer.writerow(row)
         self.file.flush()
 
     def close(self) -> None:
-        self.file.close()
+        if self.file is not None and not self.file.closed:
+            self.file.close()
