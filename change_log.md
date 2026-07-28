@@ -1,5 +1,20 @@
 # Project Change Log
 
+## 28 July 2026 — Alignment visibility diagnostics
+
+- Added left/right elbow and body-alignment visibility scores to enhanced
+  frame-level logging.
+- Added an explicit selected-elbow-side field and a diagnostic flag showing
+  whether the opposite side had valid alignment landmarks.
+- Added a development-data diagnostic summary covering elbow and alignment
+  validity, opposite-side rescue opportunities, side changes, phase-grouped
+  availability, repetition alignment coverage and unscorable repetitions.
+- Made repetition summaries reject duplicate `(clip_id, rep_id)` rows.
+- Added focused feature-processing and diagnostic-summary tests.
+
+No selector behaviour, temporal threshold, classifier threshold or classifier
+priority was changed.
+
 ## 28 July 2026 — Output integrity and resource cleanup
 
 - Changed CSV creation to fail clearly when an output already exists instead

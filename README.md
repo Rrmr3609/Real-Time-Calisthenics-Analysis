@@ -71,7 +71,10 @@ The current enhanced preprocessing includes:
 - a margin requirement before switching to the opposite side;
 - a short grace period for missing side visibility;
 - exponential moving-average smoothing of elbow and body-alignment angles;
-- raw and smoothed feature logging for recorded videos.
+- raw and smoothed feature logging for recorded videos;
+- left/right elbow and alignment visibility scores;
+- the elbow-selected side and whether the opposite side could provide valid
+  alignment landmarks.
 
 Example:
 
@@ -84,6 +87,26 @@ $env:PYTHONPATH = "$PWD\src"
   --alpha 0.3 `
   --display
 ```
+
+Create an alignment-availability diagnostic from one enhanced run:
+
+```powershell
+& ".\.venv\Scripts\python.exe" `
+  src\evaluation\summarise_alignment_visibility.py `
+  --frame-input `
+    "experiments\logs\<run-id>_enhanced_temporal.csv" `
+  --repetition-input `
+    "experiments\outputs\<run-id>_enhanced_repetitions.csv" `
+  --output `
+    "results\testing\2026-07-28_alignment_visibility_diagnostic_summary.txt" `
+  --summary-date "2026-07-28"
+```
+
+The diagnostic reports overall and phase-grouped feature availability,
+opposite-side rescue opportunities, elbow-side changes, mean repetition
+alignment coverage and the unscorable count. Repetition summaries reject
+duplicate `(clip_id, rep_id)` rows. These diagnostics do not change the
+elbow-driven selector or any classifier threshold.
 
   
 ## Recorded-Video Processing

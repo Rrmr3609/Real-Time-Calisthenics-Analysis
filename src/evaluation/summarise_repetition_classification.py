@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from evaluation.validation import reject_duplicate_repetitions
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -38,6 +40,10 @@ def main():
     )
 
     data = pd.read_csv(input_path)
+    reject_duplicate_repetitions(
+        data,
+        source_name=str(input_path),
+    )
 
     repetition_count = len(data)
 
