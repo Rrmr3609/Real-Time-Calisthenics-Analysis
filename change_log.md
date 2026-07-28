@@ -1,5 +1,33 @@
 # Project Change Log
 
+## 28 July 2026 - Consistent repetition measurement windows
+
+- Defined each enhanced repetition as one closed, inclusive interval from the
+  maximum genuine top observation before descent through the frame confirming
+  the completed return to top.
+- Made repetition start, end, duration, top angles, minimum elbow angle,
+  body-alignment observations and the alignment-coverage denominator use that
+  same interval.
+- Buffered only the contiguous descent-candidate sequence that confirms the
+  transition. Candidate measurements are backfilled on confirmation, while an
+  interrupted or noisy sequence is discarded before it can affect the
+  repetition window or classification.
+- Restricted the starting extension measurement to genuine top-region
+  observations and the ending extension measurement to the contiguous valid
+  frames that confirm the return to top.
+- Kept tolerated missing-observation frames in the duration and eligible for
+  feature aggregation, without inserting fabricated alignment values.
+- Added integrated state-machine, aggregation and classification tests for
+  complete and missing alignment coverage, non-monotonic candidate descent,
+  brief missing elbow observations, genuine top anchoring, return-to-top
+  measurement and abandoned attempts.
+- Split the alignment diagnostic into final predicted-class `unscorable`
+  repetitions and repetitions with independently unscorable alignment
+  evidence.
+
+No threshold, hysteresis rule, confirmation count, missing-frame tolerance,
+classifier priority or side-selection behaviour was changed.
+
 ## 28 July 2026 — Alignment visibility diagnostics
 
 - Added left/right elbow and body-alignment visibility scores to enhanced

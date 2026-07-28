@@ -265,10 +265,12 @@ def main():
 
             completed_repetition = (
                 repetition_aggregator.update(
-                    phase=phase_result["phase"],
-                    phase_changed=phase_result[
-                        "phase_changed"
-                    ],
+                    frame_index=capture.frame_index,
+                    repetition_window_start_frame=(
+                        phase_result[
+                            "repetition_window_start_frame"
+                        ]
+                    ),
                     body_alignment_angle=feature_result[
                         "smoothed_alignment_angle"
                     ],

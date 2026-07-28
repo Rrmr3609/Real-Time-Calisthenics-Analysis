@@ -64,6 +64,16 @@ def parse_arguments():
         help="Date written into the summary (YYYY-MM-DD).",
     )
 
+    parser.add_argument(
+        "--minimum-alignment-valid-ratio",
+        type=float,
+        default=0.50,
+        help=(
+            "Minimum repetition alignment coverage required for "
+            "independently scorable alignment evidence."
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -117,7 +127,13 @@ def build_summary(
     summary_date: str,
     frame_source: str,
     repetition_source: str,
+    minimum_alignment_valid_ratio: float = 0.50,
 ) -> str:
+    if not 0.0 <= minimum_alignment_valid_ratio <= 1.0:
+        raise ValueError(
+            "minimum_alignment_valid_ratio must be between 0 and 1"
+        )
+
     require_columns(
         frame_data,
         FRAME_COLUMNS,
@@ -232,10 +248,15 @@ def build_summary(
         if pd.notna(mean_alignment_coverage)
         else "nan"
     )
-    unscorable_count = int(
+    final_class_unscorable_count = int(
         repetition_data["predicted_class"]
         .astype(str)
         .eq("unscorable")
+        .sum()
+    )
+    alignment_evidence_unscorable_count = int(
+        alignment_coverage
+        .lt(minimum_alignment_valid_ratio)
         .sum()
     )
 
@@ -273,12 +294,17 @@ Phase-grouped availability:
 Repetition summary:
 Completed repetitions: {len(repetition_data)}
 Mean repetition alignment coverage: {mean_coverage_text}
-Unscorable repetitions: {unscorable_count}
+Final predicted-class unscorable repetitions: {final_class_unscorable_count}
+Alignment-evidence-unscorable repetitions (coverage < {minimum_alignment_valid_ratio:.3f}): {alignment_evidence_unscorable_count}
 
 Definition:
 An opposite-side rescue opportunity is a frame where an elbow side is selected,
 alignment is invalid on that selected side, and the opposite side has valid
 shoulder-hip-ankle visibility under the existing visibility threshold.
+
+The final predicted-class count follows classifier priority. The independent
+alignment-evidence count ignores the final label and reports every repetition
+whose alignment coverage is below the stated minimum valid ratio.
 
 Important:
 This is a diagnostic on development data, not a formal evaluation result.
@@ -304,6 +330,9 @@ def main():
         summary_date=args.summary_date,
         frame_source=str(frame_path),
         repetition_source=str(repetition_path),
+        minimum_alignment_valid_ratio=(
+            args.minimum_alignment_valid_ratio
+        ),
     )
 
     output_path.parent.mkdir(

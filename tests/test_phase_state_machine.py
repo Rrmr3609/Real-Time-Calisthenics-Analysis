@@ -76,6 +76,10 @@ def test_completed_repetition_records_minimum_angle():
 
     repetition = completed[0]
 
+    assert repetition.start_frame == 2
+    assert repetition.end_frame == 15
+    assert repetition.duration_frames == 14
+    assert repetition.start_top_angle == 137.0
     assert repetition.minimum_elbow_angle == 110.0
     assert repetition.bottom_frame == 8
     assert repetition.end_top_angle == 135.0

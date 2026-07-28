@@ -87,7 +87,41 @@ def test_alignment_summary_reports_requested_metrics():
     assert "Direct left/right elbow-side switches: 1" in summary
     assert "- descending: frames=1" in summary
     assert "Mean repetition alignment coverage: 0.500" in summary
-    assert "Unscorable repetitions: 1" in summary
+    assert (
+        "Final predicted-class unscorable repetitions: 1"
+        in summary
+    )
+    assert (
+        "Alignment-evidence-unscorable repetitions "
+        "(coverage < 0.500): 1"
+        in summary
+    )
+
+
+def test_alignment_summary_separates_evidence_from_final_class():
+    repetitions = make_repetition_data()
+    repetitions.loc[0, "predicted_class"] = (
+        "incomplete_extension"
+    )
+
+    summary = build_summary(
+        frame_data=make_frame_data(),
+        repetition_data=repetitions,
+        summary_date="2026-07-28",
+        frame_source="frames.csv",
+        repetition_source="repetitions.csv",
+        minimum_alignment_valid_ratio=0.50,
+    )
+
+    assert (
+        "Final predicted-class unscorable repetitions: 0"
+        in summary
+    )
+    assert (
+        "Alignment-evidence-unscorable repetitions "
+        "(coverage < 0.500): 1"
+        in summary
+    )
 
 
 def test_alignment_summary_rejects_duplicate_repetitions():
