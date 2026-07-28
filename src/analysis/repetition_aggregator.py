@@ -4,26 +4,25 @@ from typing import List, Optional
 from analysis.repetition_result import CompletedRepetition
 
 
-ACTIVE_PHASES = {
-    "descending",
-    "bottom",
-    "ascending",
-}
-
-
 class RepetitionFeatureAggregator:
     """
-    Collect frame-level body-alignment measurements for one active
-    repetition and attach them to its CompletedRepetition object.
+    Collect body-alignment measurements over the state machine's
+    inclusive repetition window.
+
+    The window starts at the maximum genuine top observation that
+    supplies start_top_angle and ends at the frame that confirms the
+    return to top. Missing values remain absent from alignment_angles,
+    while duration_frames retains every frame in the inclusive interval.
     """
 
     def __init__(self):
+        self._window_start_frame: Optional[int] = None
         self._alignment_angles: List[float] = []
 
     def update(
         self,
-        phase: str,
-        phase_changed: bool,
+        frame_index: int,
+        repetition_window_start_frame: Optional[int],
         body_alignment_angle: Optional[float],
         completed_repetition: Optional[CompletedRepetition],
     ) -> Optional[CompletedRepetition]:
@@ -34,25 +33,35 @@ class RepetitionFeatureAggregator:
         has completed. Otherwise returns None.
         """
 
-        # A newly confirmed descending phase begins a new attempt.
-        if phase_changed and phase == "descending":
+        if repetition_window_start_frame is None:
             self.reset()
+            return None
 
-        # Collect valid alignment values while the repetition is active.
         if (
-            phase in ACTIVE_PHASES
+            self._window_start_frame
+            != repetition_window_start_frame
+        ):
+            self.reset()
+            self._window_start_frame = (
+                repetition_window_start_frame
+            )
+
+        if (
+            frame_index >= repetition_window_start_frame
             and body_alignment_angle is not None
         ):
             self._alignment_angles.append(
                 float(body_alignment_angle)
             )
 
-        # On the completion frame, the state machine has already moved
-        # back to "top". Include the final alignment observation once.
         if completed_repetition is not None:
-            if body_alignment_angle is not None:
-                self._alignment_angles.append(
-                    float(body_alignment_angle)
+            if (
+                completed_repetition.start_frame
+                != repetition_window_start_frame
+            ):
+                raise ValueError(
+                    "Completed repetition start frame does not match "
+                    "the active aggregation window"
                 )
 
             enriched = replace(
@@ -62,18 +71,20 @@ class RepetitionFeatureAggregator:
                 ),
             )
 
+            # The completion frame is also the state machine's next top
+            # anchor. Seed the tentative next window so the shared
+            # boundary frame is available if no later top replaces it.
             self.reset()
-            return enriched
+            self._window_start_frame = frame_index
+            if body_alignment_angle is not None:
+                self._alignment_angles.append(
+                    float(body_alignment_angle)
+                )
 
-        # If an attempt returns to top without completion, or is reset
-        # to waiting after missing frames, discard its accumulated data.
-        if (
-            phase_changed
-            and phase in {"top", "waiting"}
-        ):
-            self.reset()
+            return enriched
 
         return None
 
     def reset(self) -> None:
+        self._window_start_frame = None
         self._alignment_angles = []

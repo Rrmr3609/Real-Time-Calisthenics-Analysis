@@ -1,4 +1,7 @@
+import argparse
 import time
+from contextlib import ExitStack
+
 import cv2
 
 from analysis.baseline import BaselinePushUpAnalyser
@@ -14,10 +17,22 @@ from pose.landmarks import (
     feature_visibility_score,
     select_best_elbow_side,
 )
-from utils.csv_logger import CSVLogger
+from utils.csv_logger import CSVLogger, ensure_output_paths_available
 
 
-create_project_directories()
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Run the live webcam baseline analyser."
+    )
+
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace the existing live output CSV.",
+    )
+
+    return parser.parse_args()
+
 
 def draw_text(frame, text, position, scale=0.8):
     cv2.putText(
@@ -33,37 +48,57 @@ def draw_text(frame, text, position, scale=0.8):
 
 
 def main():
-    camera = WebcamCapture(device_index=0, width=1280, height=720)
+    args = parse_arguments()
+    create_project_directories()
 
-    pose_estimator = PoseEstimator(
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
+    output_path = LOG_DIR / "live_feature.csv"
+    ensure_output_paths_available(
+        [output_path],
+        overwrite=args.overwrite,
     )
 
-    baseline_analyser = BaselinePushUpAnalyser()
-
-    logger = CSVLogger(
-        output_path=str(LOG_DIR / "live_feature.csv"),
-        fieldnames=[
-            "timestamp",
-            "fps",
-            "selected_side",
-            "elbow_angle",
-            "body_alignment_angle",
-            "shoulder_visibility",
-            "elbow_visibility",
-            "wrist_visibility",
-            "hip_visibility",
-            "ankle_visibility",
-            "pose_detected",
-            "baseline_position",
-            "baseline_rep_count",
-            "baseline_warnings",
-        ],
-    )
+    cleanup = ExitStack()
+    cleanup.callback(cv2.destroyAllWindows)
 
     try:
+        camera = WebcamCapture(
+            device_index=0,
+            width=1280,
+            height=720,
+        )
+        cleanup.callback(camera.release)
         camera.open()
+
+        pose_estimator = PoseEstimator(
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        cleanup.callback(pose_estimator.close)
+
+        baseline_analyser = BaselinePushUpAnalyser()
+
+        logger = CSVLogger(
+            output_path=str(output_path),
+            fieldnames=[
+                "timestamp",
+                "fps",
+                "selected_side",
+                "elbow_angle",
+                "body_alignment_angle",
+                "shoulder_visibility",
+                "elbow_visibility",
+                "wrist_visibility",
+                "hip_visibility",
+                "ankle_visibility",
+                "pose_detected",
+                "baseline_position",
+                "baseline_rep_count",
+                "baseline_warnings",
+            ],
+            overwrite=args.overwrite,
+        )
+        cleanup.callback(logger.close)
+
         print("Camera opened successfully. Press 'q' to quit.")
 
         previous_time = time.time()
@@ -195,10 +230,7 @@ def main():
         print(f"Error: {error}")
 
     finally:
-        logger.close()
-        camera.release()
-        pose_estimator.close()
-        cv2.destroyAllWindows()
+        cleanup.close()
 
 
 if __name__ == "__main__":

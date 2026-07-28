@@ -47,21 +47,33 @@ class EnhancedFeatureProcessor:
         self.previous_selected_side = "none"
 
     def update(self, landmarks: Dict[str, dict]) -> dict:
-        left_score = feature_visibility_score(
+        left_elbow_score = feature_visibility_score(
             landmarks,
             side="left",
             feature="elbow",
         )
 
-        right_score = feature_visibility_score(
+        right_elbow_score = feature_visibility_score(
             landmarks,
             side="right",
             feature="elbow",
         )
 
+        left_alignment_score = feature_visibility_score(
+            landmarks,
+            side="left",
+            feature="alignment",
+        )
+
+        right_alignment_score = feature_visibility_score(
+            landmarks,
+            side="right",
+            feature="alignment",
+        )
+
         selected_side = self.side_selector.update(
-            left_score=left_score,
-            right_score=right_score,
+            left_score=left_elbow_score,
+            right_score=right_elbow_score,
         )
 
         side_changed = (
@@ -80,8 +92,24 @@ class EnhancedFeatureProcessor:
 
         elbow_feature_valid = False
         alignment_feature_valid = False
+        opposite_alignment_feature_valid = False
 
         if selected_side != "none":
+            opposite_side = (
+                "right"
+                if selected_side == "left"
+                else "left"
+            )
+
+            opposite_alignment_feature_valid = (
+                feature_landmarks_available(
+                    landmarks,
+                    side=opposite_side,
+                    feature="alignment",
+                    minimum_visibility=self.minimum_visibility,
+                )
+            )
+
             elbow_feature_valid = feature_landmarks_available(
                 landmarks,
                 side=selected_side,
@@ -154,11 +182,21 @@ class EnhancedFeatureProcessor:
 
         return {
             "selected_side": selected_side,
+            "selected_elbow_side": selected_side,
             "side_changed": side_changed,
-            "left_elbow_visibility_score": left_score,
-            "right_elbow_visibility_score": right_score,
+            "left_elbow_visibility_score": left_elbow_score,
+            "right_elbow_visibility_score": right_elbow_score,
+            "left_alignment_visibility_score": (
+                left_alignment_score
+            ),
+            "right_alignment_visibility_score": (
+                right_alignment_score
+            ),
             "elbow_feature_valid": elbow_feature_valid,
             "alignment_feature_valid": alignment_feature_valid,
+            "opposite_alignment_feature_valid": (
+                opposite_alignment_feature_valid
+            ),
             "raw_elbow_angle": raw_elbow_angle,
             "smoothed_elbow_angle": smoothed_elbow_angle,
             "raw_alignment_angle": raw_alignment_angle,

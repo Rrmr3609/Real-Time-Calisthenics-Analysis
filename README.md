@@ -41,6 +41,13 @@ The current prototype:
 - logs per-frame features and baseline outputs to CSV;
 - applies a provisional raw-threshold baseline for push-up analysis.
 
+Run the live baseline from PowerShell:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+& ".\.venv\Scripts\python.exe" src\main.py
+```
+
 ## Current Baseline Rules
 
 The current baseline uses provisional operational thresholds:
@@ -64,19 +71,77 @@ The current enhanced preprocessing includes:
 - a margin requirement before switching to the opposite side;
 - a short grace period for missing side visibility;
 - exponential moving-average smoothing of elbow and body-alignment angles;
-- raw and smoothed feature logging for recorded videos.
+- raw and smoothed feature logging for recorded videos;
+- left/right elbow and alignment visibility scores;
+- the elbow-selected side and whether the opposite side could provide valid
+  alignment landmarks.
 
 Example:
 
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
 
-python src\run_video_enhanced.py `
+& ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
   --alpha 0.3 `
   --display
-  ```
+```
+
+Create an alignment-availability diagnostic from one enhanced run:
+
+```powershell
+& ".\.venv\Scripts\python.exe" `
+  src\evaluation\summarise_alignment_visibility.py `
+  --frame-input `
+    "experiments\logs\<run-id>_enhanced_temporal.csv" `
+  --repetition-input `
+    "experiments\outputs\<run-id>_enhanced_repetitions.csv" `
+  --output `
+    "results\testing\2026-07-28_alignment_visibility_diagnostic_summary.txt" `
+  --summary-date "2026-07-28" `
+  --minimum-alignment-valid-ratio 0.50
+```
+
+The diagnostic reports overall and phase-grouped feature availability,
+opposite-side rescue opportunities, elbow-side changes, mean repetition
+alignment coverage, the final predicted-class `unscorable` count and the
+independent count of repetitions whose alignment evidence is unscorable below
+the configured minimum-valid-ratio threshold. Repetition summaries reject
+duplicate `(clip_id, rep_id)` rows. These diagnostics do not change the
+elbow-driven selector or any classifier threshold.
+
+### Enhanced repetition measurement window
+
+Enhanced repetition measurements use one closed, inclusive frame interval.
+The interval starts at the frame containing the maximum genuine top
+observation (`elbow_angle >= top_region_threshold`) available before the
+contiguous descent-confirmation sequence. That anchor is frozen when the
+candidate sequence begins. The interval ends at the final
+consecutive-confirmation frame that completes the return to top. Therefore:
+
+- `duration_frames` is `end_frame - start_frame + 1`;
+- only the contiguous descent-candidate frames that confirm the transition are
+  retained; an interruption discards the earlier candidate sequence and moves
+  the tentative start forward;
+- tolerated missing-elbow frames after descent confirmation remain inside the
+  interval;
+- the minimum elbow angle and bottom frame use every valid elbow observation
+  in the interval, including the retained confirmation candidates;
+- `start_top_angle` comes from the genuine top anchor, while `end_top_angle`
+  uses only the valid frames in the confirmed return-to-top sequence;
+- body-alignment observations are collected from the same start and end
+  frames; missing alignment values are not fabricated;
+- alignment coverage is the number of valid alignment observations divided by
+  `duration_frames`, so valid alignment on every interval frame gives `1.0`.
+
+Hysteresis, consecutive-frame confirmation and missing-frame tolerance still
+control phase transitions. If an attempt returns to top without reaching the
+provisional bottom region, its tentative repetition measurements are discarded
+and a new top frame begins the next tentative window. An interrupted,
+unconfirmed descent candidate is likewise discarded. A new genuine top
+observation is then required before a later candidate sequence can contribute
+to a completed repetition.
 
   
 ## Recorded-Video Processing
@@ -85,11 +150,35 @@ The baseline analyser can process a saved video so that the same recording can l
 
 Example:
 
-```bash
-PYTHONPATH=src python src/run_video.py \
-  --video data/raw/development/example.mp4 \
-  --clip-id example \
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+& ".\.venv\Scripts\python.exe" src\run_video.py `
+  --video "data\raw\development\example.mp4" `
+  --clip-id "example" `
   --display
+```
+
+## Output File Safety
+
+CSV outputs never append a second complete run. By default, each runner fails
+clearly if its target output already exists:
+
+- live baseline: `experiments/logs/live_feature.csv`;
+- recorded baseline: `experiments/logs/<clip-id>_baseline.csv`;
+- enhanced frame log: `experiments/logs/<clip-id>_enhanced_temporal.csv`;
+- enhanced repetitions: `experiments/outputs/<clip-id>_enhanced_repetitions.csv`.
+
+For the enhanced runner, both output paths are checked before video processing
+begins. To intentionally replace the output or outputs for a runner, add the
+explicit `--overwrite` option:
+
+```powershell
+& ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
+  --video "data\raw\development\example.mp4" `
+  --clip-id "example" `
+  --alpha 0.3 `
+  --overwrite
 ```
 
 ## Current Limitations
@@ -104,7 +193,9 @@ The current baseline does not yet include:
 - full repetition-level form classification;
 - formal manually labelled evaluation results.
 
-The enhanced temporal method, labelled evaluation dataset, quantitative evaluation and final result analysis have not yet been completed.
+The enhanced temporal method is implemented. The labelled evaluation dataset,
+quantitative baseline-versus-enhanced evaluation and final result analysis
+have not yet been completed.
 
 ## Repository Structure
 
@@ -121,3 +212,4 @@ Raw identifiable recordings are not committed to this repository.
 
 ```bash
 pip install -r requirements.txt
+```

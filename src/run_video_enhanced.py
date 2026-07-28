@@ -1,5 +1,6 @@
 import argparse
 import time
+from contextlib import ExitStack
 
 import cv2
 
@@ -11,7 +12,7 @@ from analysis.phase_state_machine import (
 from capture.video import VideoFileCapture
 from pose.estimator import PoseEstimator
 from pose.landmarks import extract_landmarks
-from utils.csv_logger import CSVLogger
+from utils.csv_logger import CSVLogger, ensure_output_paths_available
 from utils.paths import LOG_DIR, OUTPUT_DIR, create_project_directories
 from analysis.repetition_aggregator import (
     RepetitionFeatureAggregator,
@@ -53,6 +54,12 @@ def parse_arguments():
         help="Display processed frames.",
     )
 
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace both existing enhanced output CSVs.",
+    )
+
     return parser.parse_args()
 
 
@@ -80,11 +87,17 @@ def main():
     args = parse_arguments()
     create_project_directories()
 
-    capture = VideoFileCapture(args.video)
-
-    pose_estimator = PoseEstimator(
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
+    output_path = (
+        LOG_DIR
+        / f"{args.clip_id}_enhanced_temporal.csv"
+    )
+    repetition_output_path = (
+        OUTPUT_DIR
+        / f"{args.clip_id}_enhanced_repetitions.csv"
+    )
+    ensure_output_paths_available(
+        [output_path, repetition_output_path],
+        overwrite=args.overwrite,
     )
 
     feature_processor = EnhancedFeatureProcessor(
@@ -116,95 +129,99 @@ def main():
         minimum_alignment_valid_ratio=0.50,
     )
 
-    feedback_test = ""
+    feedback_text = ""
     feedback_frames_remaining = 0
 
-
-    output_path = (
-        LOG_DIR
-        / f"{args.clip_id}_enhanced_temporal.csv"
-    )
-
-    logger = CSVLogger(
-        output_path=str(output_path),
-        fieldnames=[
-            "clip_id",
-            "frame_index",
-            "video_timestamp_ms",
-            "source_fps",
-            "processing_time_ms",
-            "pose_detected",
-            "selected_side",
-            "side_changed",
-            "left_elbow_visibility_score",
-            "right_elbow_visibility_score",
-            "elbow_feature_valid",
-            "alignment_feature_valid",
-            "raw_elbow_angle",
-            "smoothed_elbow_angle",
-            "raw_alignment_angle",
-            "smoothed_alignment_angle",
-            "phase",
-            "phase_changed",
-            "enhanced_rep_count",
-            "missing_angle_frames",
-            "completed_rep",
-            "completed_rep_id",
-            "completed_start_frame",
-            "completed_bottom_frame",
-            "completed_end_frame",
-            "completed_start_top_angle",
-            "completed_minimum_elbow_angle",
-            "completed_end_top_angle",
-            "completed_duration_frames",
-            "repetition_predicted_class",
-            "repetition_multiple_rules",
-            "repetition_triggered_rules",
-        ],
-    )
-
-
-    repetition_output_path = (
-        OUTPUT_DIR
-        / f"{args.clip_id}_enhanced_repetitions.csv"
-    )
-
-    repetition_logger = CSVLogger(
-        output_path=str(repetition_output_path),
-        fieldnames=[
-            "clip_id",
-            "rep_id",
-            "start_frame",
-            "bottom_frame",
-            "end_frame",
-            "duration_frames",
-
-            "start_top_angle",
-            "minimum_elbow_angle",
-            "end_top_angle",
-            "top_extension_angle",
-
-            "minimum_alignment_angle",
-            "alignment_valid_frames",
-            "alignment_valid_ratio",
-            "alignment_deviation_frames",
-            "alignment_deviation_ratio",
-
-            "insufficient_depth_triggered",
-            "incomplete_extension_triggered",
-            "alignment_deviation_triggered",
-            "multiple_rules_triggered",
-            "triggered_rules",
-
-            "predicted_class",
-            "classification_reason",
-
-        ],
-    )
-
-
+    cleanup = ExitStack()
+    cleanup.callback(cv2.destroyAllWindows)
     try:
+        capture = VideoFileCapture(args.video)
+        cleanup.callback(capture.release)
         capture.open()
+
+        pose_estimator = PoseEstimator(
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        cleanup.callback(pose_estimator.close)
+
+        logger = CSVLogger(
+            output_path=str(output_path),
+            fieldnames=[
+                "clip_id",
+                "frame_index",
+                "video_timestamp_ms",
+                "source_fps",
+                "processing_time_ms",
+                "pose_detected",
+                "selected_side",
+                "selected_elbow_side",
+                "side_changed",
+                "left_elbow_visibility_score",
+                "right_elbow_visibility_score",
+                "left_alignment_visibility_score",
+                "right_alignment_visibility_score",
+                "elbow_feature_valid",
+                "alignment_feature_valid",
+                "opposite_alignment_feature_valid",
+                "raw_elbow_angle",
+                "smoothed_elbow_angle",
+                "raw_alignment_angle",
+                "smoothed_alignment_angle",
+                "phase",
+                "phase_changed",
+                "enhanced_rep_count",
+                "missing_angle_frames",
+                "completed_rep",
+                "completed_rep_id",
+                "completed_start_frame",
+                "completed_bottom_frame",
+                "completed_end_frame",
+                "completed_start_top_angle",
+                "completed_minimum_elbow_angle",
+                "completed_end_top_angle",
+                "completed_duration_frames",
+                "repetition_predicted_class",
+                "repetition_multiple_rules",
+                "repetition_triggered_rules",
+            ],
+            overwrite=args.overwrite,
+        )
+        cleanup.callback(logger.close)
+
+        repetition_logger = CSVLogger(
+            output_path=str(repetition_output_path),
+            fieldnames=[
+                "clip_id",
+                "rep_id",
+                "start_frame",
+                "bottom_frame",
+                "end_frame",
+                "duration_frames",
+
+                "start_top_angle",
+                "minimum_elbow_angle",
+                "end_top_angle",
+                "top_extension_angle",
+
+                "minimum_alignment_angle",
+                "alignment_valid_frames",
+                "alignment_valid_ratio",
+                "alignment_deviation_frames",
+                "alignment_deviation_ratio",
+
+                "insufficient_depth_triggered",
+                "incomplete_extension_triggered",
+                "alignment_deviation_triggered",
+                "multiple_rules_triggered",
+                "triggered_rules",
+
+                "predicted_class",
+                "classification_reason",
+            ],
+            overwrite=args.overwrite,
+        )
+        cleanup.callback(repetition_logger.close)
 
         print(f"Video: {args.video}")
         print(f"Frames: {capture.frame_count}")
@@ -248,10 +265,12 @@ def main():
 
             completed_repetition = (
                 repetition_aggregator.update(
-                    phase=phase_result["phase"],
-                    phase_changed=phase_result[
-                        "phase_changed"
-                    ],
+                    frame_index=capture.frame_index,
+                    repetition_window_start_frame=(
+                        phase_result[
+                            "repetition_window_start_frame"
+                        ]
+                    ),
                     body_alignment_angle=feature_result[
                         "smoothed_alignment_angle"
                     ],
@@ -566,11 +585,7 @@ def main():
         )
 
     finally:
-        logger.close()
-        repetition_logger.close
-        capture.release()
-        pose_estimator.close()
-        cv2.destroyAllWindows()
+        cleanup.close()
 
 
 

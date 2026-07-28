@@ -1,0 +1,35 @@
+Alignment visibility diagnostic — 2026-07-28
+
+Clip IDs: ['setup_test_2026-07-20_alignment_diag_2026-07-28']
+Frame input: experiments\logs\setup_test_2026-07-20_alignment_diag_2026-07-28_enhanced_temporal.csv
+Repetition input: experiments\outputs\setup_test_2026-07-20_alignment_diag_2026-07-28_enhanced_repetitions.csv
+
+Total frames: 497
+Elbow-valid frames: 397 (0.799)
+Alignment-valid frames on elbow-selected side: 273 (0.549)
+Opposite-side alignment-valid frames: 107 (0.215)
+Selected-side alignment-invalid frames: 160
+Opposite-side rescue opportunities: 8 (0.050 of selected-side alignment-invalid frames)
+Selected elbow-side change frames: 9
+Direct left/right elbow-side switches: 1
+
+Phase-grouped availability:
+- waiting: frames=96, elbow_valid_rate=0.083, alignment_valid_rate=0.000, opposite_side_rescue_frames=1
+- top: frames=319, elbow_valid_rate=0.962, alignment_valid_rate=0.853, opposite_side_rescue_frames=7
+- descending: frames=9, elbow_valid_rate=1.000, alignment_valid_rate=0.000, opposite_side_rescue_frames=0
+- bottom: frames=64, elbow_valid_rate=1.000, alignment_valid_rate=0.000, opposite_side_rescue_frames=0
+- ascending: frames=9, elbow_valid_rate=1.000, alignment_valid_rate=0.111, opposite_side_rescue_frames=0
+
+Repetition summary:
+Completed repetitions: 3
+Mean repetition alignment coverage: 0.021
+Unscorable repetitions: 2
+
+Definition:
+An opposite-side rescue opportunity is a frame where an elbow side is selected,
+alignment is invalid on that selected side, and the opposite side has valid
+shoulder-hip-ankle visibility under the existing visibility threshold.
+
+Important:
+This is a diagnostic on development data, not a formal evaluation result.
+No side-selection behaviour or classifier threshold is changed by this report.

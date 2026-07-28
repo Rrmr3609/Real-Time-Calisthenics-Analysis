@@ -1,5 +1,68 @@
 # Project Change Log
 
+## 28 July 2026 - Consistent repetition measurement windows
+
+- Defined each enhanced repetition as one closed, inclusive interval from the
+  maximum genuine top observation before descent through the frame confirming
+  the completed return to top.
+- Made repetition start, end, duration, top angles, minimum elbow angle,
+  body-alignment observations and the alignment-coverage denominator use that
+  same interval.
+- Buffered only the contiguous descent-candidate sequence that confirms the
+  transition. Candidate measurements are backfilled on confirmation, while an
+  interrupted or noisy sequence is discarded before it can affect the
+  repetition window or classification.
+- Restricted the starting extension measurement to genuine top-region
+  observations and the ending extension measurement to the contiguous valid
+  frames that confirm the return to top.
+- Kept tolerated missing-observation frames in the duration and eligible for
+  feature aggregation, without inserting fabricated alignment values.
+- Added integrated state-machine, aggregation and classification tests for
+  complete and missing alignment coverage, non-monotonic candidate descent,
+  brief missing elbow observations, genuine top anchoring, return-to-top
+  measurement and abandoned attempts.
+- Split the alignment diagnostic into final predicted-class `unscorable`
+  repetitions and repetitions with independently unscorable alignment
+  evidence.
+
+No threshold, hysteresis rule, confirmation count, missing-frame tolerance,
+classifier priority or side-selection behaviour was changed.
+
+## 28 July 2026 — Alignment visibility diagnostics
+
+- Added left/right elbow and body-alignment visibility scores to enhanced
+  frame-level logging.
+- Added an explicit selected-elbow-side field and a diagnostic flag showing
+  whether the opposite side had valid alignment landmarks.
+- Added a development-data diagnostic summary covering elbow and alignment
+  validity, opposite-side rescue opportunities, side changes, phase-grouped
+  availability, repetition alignment coverage and unscorable repetitions.
+- Made repetition summaries reject duplicate `(clip_id, rep_id)` rows.
+- Added focused feature-processing and diagnostic-summary tests.
+
+No selector behaviour, temporal threshold, classifier threshold or classifier
+priority was changed.
+
+## 28 July 2026 — Output integrity and resource cleanup
+
+- Changed CSV creation to fail clearly when an output already exists instead
+  of silently appending another complete run.
+- Added an explicit `--overwrite` option to the live, recorded baseline and
+  recorded enhanced runners.
+- Added a paired preflight check for the enhanced frame-level and
+  repetition-level output paths.
+- Ensured new and explicitly overwritten CSVs always receive a header,
+  including replacement of an existing zero-byte file.
+- Ensured captures, pose estimators, CSV loggers and OpenCV windows are cleaned
+  up when setup or processing raises an exception.
+- Fixed the enhanced repetition logger cleanup and made the feedback text
+  variable consistent.
+- Added focused tests for CSV collision policy, overwrite behaviour,
+  zero-byte files, paired output checks and runner resource cleanup.
+
+No analysis thresholds, temporal behaviour, side selection, baseline semantics
+or classifier priority were changed.
+
 ## 1 July 2026 — Scope reduction
 
 ### Original scope
