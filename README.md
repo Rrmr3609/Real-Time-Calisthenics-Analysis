@@ -143,6 +143,31 @@ unconfirmed descent candidate is likewise discarded. A new genuine top
 observation is then required before a later candidate sequence can contribute
 to a completed repetition.
 
+## Evaluation Data Foundation
+
+The approved baseline-versus-enhanced comparison design is documented in
+`docs/baseline_evaluation_design.md`. The manual procedure and complete CSV
+column definitions are in `docs/manual_annotation_protocol.md`.
+
+Fictional schema examples are provided at:
+
+- `data/manifests/example_dataset_manifest.csv`;
+- `data/annotations/example_repetition_annotations.csv`.
+
+They do not describe real recordings or participants. Validate a manifest and
+annotation file from PowerShell with:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+& ".\.venv\Scripts\python.exe" `
+  src\evaluation\dataset_validation.py `
+  --manifest "data\manifests\example_dataset_manifest.csv" `
+  --annotations "data\annotations\example_repetition_annotations.csv"
+```
+
+Event matching and formal evaluation metrics are not implemented yet.
+
   
 ## Recorded-Video Processing
 

@@ -1,5 +1,21 @@
 # Project Change Log
 
+## 29 July 2026 - Evaluation dataset foundation
+
+- Saved the approved baseline-versus-enhanced comparison design.
+- Defined CSV schemas for clip manifests, evaluable push-up attempts and
+  ambiguous movement fragments.
+- Added validation for allowed splits, camera views, form labels, visibility
+  states, frame ordering and bounds, duplicate identifiers, unknown clips,
+  attempt status and single-label priority.
+- Added fictional manifest and annotation examples without assigning labels to
+  any existing recording.
+- Documented the manual annotation procedure and added focused schema tests.
+
+Event matching and formal evaluation metrics are not implemented in this
+milestone. No analysis threshold, state machine, classifier, side selector or
+UI behaviour was changed.
+
 ## 28 July 2026 - Consistent repetition measurement windows
 
 - Defined each enhanced repetition as one closed, inclusive interval from the

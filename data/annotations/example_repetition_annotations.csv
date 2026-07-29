@@ -1,0 +1,5 @@
+clip_id,ground_truth_attempt_id,is_evaluable_attempt,ambiguity_flag,start_top_frame,bottom_turnaround_frame,completion_end_top_frame,ground_truth_class,insufficient_depth_flag,incomplete_extension_flag,alignment_deviation_flag,source_video_visibility_status,annotator_notes
+fictional_dev_side_001,A001,true,false,90,120,150,correct,false,false,false,sufficient,Fictional evaluable correct attempt.
+fictional_dev_side_001,A002,true,false,300,335,370,insufficient_depth,true,false,false,sufficient,Fictional evaluable attempt with insufficient depth.
+fictional_test_diagonal_001,F001,false,true,500,,540,unscorable,false,false,false,partially_obscured,Fictional ambiguous fragment with no identifiable turnaround.
+fictional_test_diagonal_001,A001,true,false,700,735,770,incomplete_extension,false,true,false,partially_obscured,Fictional evaluable attempt with incomplete extension.
