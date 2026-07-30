@@ -1,5 +1,66 @@
 # Project Change Log
 
+## 30 July 2026 - Repetition-event detection evaluation
+
+- Added validated baseline completion-event extraction from cumulative-count
+  increments without changing baseline processing.
+- Added enhanced repetition-event and evaluable ground-truth event loaders.
+- Added deterministic chronological one-to-one matching that first maximises
+  match count, then minimises total absolute timing error, with a documented
+  deterministic tie rule.
+- Added per-clip, per-method count, matching, precision, recall, F1 and
+  completion-timing summaries with the provisional 0.5-second tolerance.
+- Added a JSON stdout CLI and focused fictional-data tests for tolerance
+  boundaries, ambiguous candidate sets, matching objectives, missed/extra
+  events, delayed completions, variable FPS and malformed inputs.
+
+No classification metric, plot, runtime comparison or final-test evaluation
+was added. No analysis threshold, baseline behavior, segmentation, classifier,
+side selector, UI or historical generated result was changed.
+
+## 30 July 2026 - Runtime configuration and run provenance
+
+- Made `configs/default.yaml` the validated primary settings source for both
+  recorded-video runners while preserving every existing numeric value.
+- Added typed pose, baseline, feature, segmentation and classification
+  configuration objects with required-field, unknown-field, type and range
+  validation.
+- Added mandatory development/test split identity, optional run IDs that
+  default to clip IDs, and an explicit recorded `--alpha` precedence rule.
+- Added a shared run ID to baseline frame, enhanced frame and enhanced
+  repetition CSV rows.
+- Added atomic JSON run metadata containing input/config hashes, source video
+  properties, the complete resolved configuration, explicit overrides,
+  installed core-library versions, Git state, UTC lifecycle timestamps,
+  timing-boundary definitions and generated-output paths.
+- Extended output preflight to each run's complete CSV/metadata set and made
+  explicit overwrite remove that complete old set before opening new writers.
+- Added focused tests for config validation and serialisation, override
+  precedence, split validation, hashing, mocked software/Git provenance,
+  metadata lifecycle and complete-set collision handling.
+- Pinned `requirements.txt` to the compatible versions already installed in
+  the existing Python 3.12 environment; no package was upgraded.
+
+No threshold, temporal behavior, selector behavior, baseline semantics,
+classifier priority, annotation schema, UI behavior or historical experiment
+output was changed. Event matching and formal metrics remain unimplemented.
+
+## 29 July 2026 - Evaluation dataset foundation
+
+- Saved the approved baseline-versus-enhanced comparison design.
+- Defined CSV schemas for clip manifests, evaluable push-up attempts and
+  ambiguous movement fragments.
+- Added validation for allowed splits, camera views, form labels, visibility
+  states, frame ordering and bounds, duplicate identifiers, unknown clips,
+  attempt status and single-label priority.
+- Added fictional manifest and annotation examples without assigning labels to
+  any existing recording.
+- Documented the manual annotation procedure and added focused schema tests.
+
+Event matching and formal evaluation metrics are not implemented in this
+milestone. No analysis threshold, state machine, classifier, side selector or
+UI behaviour was changed.
+
 ## 28 July 2026 - Consistent repetition measurement windows
 
 - Defined each enhanced repetition as one closed, inclusive interval from the

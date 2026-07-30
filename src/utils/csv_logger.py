@@ -35,6 +35,51 @@ def ensure_output_paths_available(
     )
 
 
+def prepare_output_paths(
+    output_paths: Iterable[str | Path],
+    overwrite: bool = False,
+) -> None:
+    """
+    Preflight one complete output set before processing starts.
+
+    With explicit overwrite permission, every existing file in the set is
+    removed together before any new logger or metadata writer is created.
+    """
+    paths = [Path(output_path) for output_path in output_paths]
+
+    if len(paths) != len(set(paths)):
+        raise ValueError(
+            "Output paths for one run must be unique"
+        )
+
+    ensure_output_paths_available(
+        paths,
+        overwrite=overwrite,
+    )
+
+    if not overwrite:
+        return
+
+    non_files = [
+        path
+        for path in paths
+        if path.exists() and not path.is_file()
+    ]
+
+    if non_files:
+        formatted_paths = "\n".join(
+            f"- {path}" for path in non_files
+        )
+        raise IsADirectoryError(
+            "Cannot overwrite non-file output paths:\n"
+            f"{formatted_paths}"
+        )
+
+    for path in paths:
+        if path.exists():
+            path.unlink()
+
+
 class CSVLogger:
     def __init__(
         self,

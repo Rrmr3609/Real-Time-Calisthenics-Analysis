@@ -12,6 +12,8 @@ class VideoFileCapture:
         self.frame_index = -1
         self.source_fps = 0.0
         self.frame_count = 0
+        self.width_px = 0
+        self.height_px = 0
 
     def open(self) -> None:
         if not self.video_path.exists():
@@ -32,6 +34,14 @@ class VideoFileCapture:
 
         self.frame_count = int(
             self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        )
+
+        self.width_px = int(
+            self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        )
+
+        self.height_px = int(
+            self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         )
 
     def read(self):
