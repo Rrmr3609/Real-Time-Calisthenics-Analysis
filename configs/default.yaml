@@ -1,31 +1,36 @@
-camera:
-  device_index: 0
-  width: 1280
-  height: 720
-  target_fps: 30
+config_schema_version: 1
 
 pose:
-  min_detection_confidence: 0.5
-  min_tracking_confidence: 0.5
+  minimum_detection_confidence: 0.5
+  minimum_tracking_confidence: 0.5
 
-landmarks:
-  minimum_visibility: 0.5
+baseline:
+  top_elbow_angle: 150.0
+  bottom_elbow_angle: 100.0
+  top_extension_warning_threshold: 150.0
+  depth_warning_threshold: 100.0
+  alignment_warning_minimum: 160.0
 
-smoothing:
-  enabled: false
-  method: moving_average
-  window_size: 5
+features:
+  minimum_landmark_visibility: 0.5
+  side_acquisition_frames: 3
+  side_switch_frames: 5
+  side_switch_margin: 0.10
+  missing_side_grace_frames: 5
+  ema_alpha: 0.3
 
-state_machine:
-  minimum_consecutive_frames: 3
+segmentation:
+  top_region_threshold: 130.0
+  bottom_region_threshold: 120.0
+  hysteresis: 5.0
+  phase_confirmation_frames: 3
+  missing_angle_grace_frames: 5
+  minimum_repetition_frames: 8
 
-thresholds:
-  top_elbow_angle: null
-  bottom_elbow_angle: null
-  body_alignment_angle: null
-
-feedback:
-  cooldown_seconds: 1.0
-
-logging:
-  save_feature_csv: true
+classification:
+  depth_threshold: 100.0
+  extension_threshold: 150.0
+  alignment_minimum: 160.0
+  alignment_deviation_min_frames: 3
+  alignment_deviation_min_ratio: 0.20
+  minimum_alignment_valid_ratio: 0.50

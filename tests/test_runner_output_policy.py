@@ -1,4 +1,5 @@
 import sys
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -6,6 +7,7 @@ import pytest
 import main as live_runner
 import run_video
 import run_video_enhanced
+from utils.paths import PROJECT_ROOT
 
 
 class FailingReadCapture:
@@ -45,6 +47,41 @@ class FakeLogger:
         self.closed = True
 
 
+def fake_run_metadata(**kwargs):
+    return {
+        "metadata_schema_version": 1,
+        "status": "initialised",
+        "timestamps": {
+            "started_utc": "2026-07-30T10:00:00+00:00"
+        },
+        "input_video": {
+            "path": str(kwargs["video_path"]),
+            "sha256": "mocked",
+            "size_bytes": 1,
+            "source_fps": None,
+            "frame_count": None,
+            "resolution": {
+                "width_px": None,
+                "height_px": None,
+            },
+        },
+    }
+
+
+@pytest.fixture(autouse=True)
+def mock_recorded_runner_provenance(monkeypatch):
+    monkeypatch.setattr(
+        run_video,
+        "create_run_metadata",
+        fake_run_metadata,
+    )
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "create_run_metadata",
+        fake_run_metadata,
+    )
+
+
 @pytest.mark.parametrize(
     ("runner", "arguments"),
     [
@@ -57,6 +94,8 @@ class FakeLogger:
                 "input.mp4",
                 "--clip-id",
                 "clip",
+                "--split",
+                "development",
                 "--overwrite",
             ],
         ),
@@ -68,6 +107,8 @@ class FakeLogger:
                 "input.mp4",
                 "--clip-id",
                 "clip",
+                "--split",
+                "development",
                 "--overwrite",
             ],
         ),
@@ -108,7 +149,10 @@ def test_enhanced_runner_preflights_both_outputs_before_setup(
         lambda: SimpleNamespace(
             video="input.mp4",
             clip_id="clip",
-            alpha=0.3,
+            split="development",
+            run_id=None,
+            config=PROJECT_ROOT / "configs" / "default.yaml",
+            alpha=None,
             display=False,
             overwrite=False,
         ),
@@ -158,7 +202,10 @@ def test_enhanced_overwrite_replaces_both_output_files(
         lambda: SimpleNamespace(
             video="input.mp4",
             clip_id="clip",
-            alpha=0.3,
+            split="development",
+            run_id=None,
+            config=PROJECT_ROOT / "configs" / "default.yaml",
+            alpha=None,
             display=False,
             overwrite=True,
         ),
@@ -193,10 +240,21 @@ def test_enhanced_overwrite_replaces_both_output_files(
         repetition_path.read_text(encoding="utf-8").splitlines()
     )
 
-    assert frame_lines[0].startswith("clip_id,frame_index,")
-    assert repetition_lines[0].startswith("clip_id,rep_id,")
+    metadata_path = (
+        output_dir / "clip_enhanced_metadata.json"
+    )
+
+    assert frame_lines[0].startswith(
+        "run_id,clip_id,frame_index,"
+    )
+    assert repetition_lines[0].startswith(
+        "run_id,clip_id,rep_id,"
+    )
     assert "stale" not in frame_path.read_text(encoding="utf-8")
     assert "stale" not in repetition_path.read_text(encoding="utf-8")
+    assert json.loads(
+        metadata_path.read_text(encoding="utf-8")
+    )["status"] == "completed"
 
 
 def test_enhanced_runner_closes_both_loggers_after_processing_failure(
@@ -229,7 +287,10 @@ def test_enhanced_runner_closes_both_loggers_after_processing_failure(
         lambda: SimpleNamespace(
             video="input.mp4",
             clip_id="clip",
-            alpha=0.3,
+            split="development",
+            run_id=None,
+            config=PROJECT_ROOT / "configs" / "default.yaml",
+            alpha=None,
             display=False,
             overwrite=False,
         ),
@@ -276,6 +337,15 @@ def test_enhanced_runner_closes_both_loggers_after_processing_failure(
     assert len(loggers) == 2
     assert all(logger.closed for logger in loggers)
     assert windows_destroyed == [True]
+    failed_metadata = json.loads(
+        (
+            tmp_path
+            / "outputs"
+            / "clip_enhanced_metadata.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert failed_metadata["status"] == "failed"
+    assert "completed_utc" not in failed_metadata["timestamps"]
 
 
 def test_baseline_runner_releases_capture_when_pose_setup_fails(
@@ -299,6 +369,9 @@ def test_baseline_runner_releases_capture_when_pose_setup_fails(
         lambda: SimpleNamespace(
             video="input.mp4",
             clip_id="clip",
+            split="development",
+            run_id=None,
+            config=PROJECT_ROOT / "configs" / "default.yaml",
             display=False,
             overwrite=False,
         ),
@@ -323,6 +396,15 @@ def test_baseline_runner_releases_capture_when_pose_setup_fails(
     assert len(captures) == 1
     assert captures[0].released
     assert windows_destroyed == [True]
+    failed_metadata = json.loads(
+        (
+            tmp_path
+            / "logs"
+            / "clip_baseline_metadata.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert failed_metadata["status"] == "failed"
+    assert "completed_utc" not in failed_metadata["timestamps"]
 
 
 def test_live_runner_closes_resources_after_processing_failure(

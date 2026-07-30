@@ -11,7 +11,7 @@ The controlled implementation conditions are:
 - one person visible;
 - controlled side-view camera orientation;
 - standard webcam input in the current prototype;
-- recorded-video evaluation input planned for the formal evaluation stage;
+- recorded-video runners for the formal evaluation workflow;
 - repetition counting and movement-state analysis;
 - three predefined observable form-deviation categories;
 - immediate non-medical feedback.
@@ -60,6 +60,18 @@ The current baseline uses provisional operational thresholds:
 These thresholds are project-specific development thresholds. They are not universal definitions of correct push-up form and are not medical or injury-risk claims.
 
 
+## Recorded-run configuration
+
+Both recorded-video runners load validated typed settings from
+`configs/default.yaml`. The complete field reference, precedence rules,
+metadata schema and reproduction commands are documented in
+`docs/runtime_configuration.md`.
+
+Every recorded command requires `--split development|test`. `--run-id`
+defaults to `--clip-id`; use an explicit unique run ID for repeated
+experiments. The enhanced `--alpha` option is an explicit override of
+`features.ema_alpha` and is recorded in metadata.
+
 ## Enhanced Preprocessing — In Development
 
 An enhanced preprocessing layer has been added separately from the frozen baseline.
@@ -84,7 +96,9 @@ $env:PYTHONPATH = "$PWD\src"
 & ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
-  --alpha 0.3 `
+  --split development `
+  --run-id "example_enhanced_001" `
+  --config "configs\default.yaml" `
   --display
 ```
 
@@ -166,7 +180,15 @@ $env:PYTHONPATH = "$PWD\src"
   --annotations "data\annotations\example_repetition_annotations.csv"
 ```
 
-Event matching and formal evaluation metrics are not implemented yet.
+Detection-event extraction, deterministic one-to-one matching and per-clip
+detection metrics are implemented in
+`src/evaluation/detection_evaluation.py`. The matching rule, validation
+behavior and fictional command example are documented in
+`docs/event_detection_evaluation.md`.
+
+This stage reports repetition detection only. Classification metrics,
+confusion matrices, form-category performance, runtime comparisons, plots and
+formal final-test evaluation remain unimplemented.
 
   
 ## Recorded-Video Processing
@@ -181,6 +203,9 @@ $env:PYTHONPATH = "$PWD\src"
 & ".\.venv\Scripts\python.exe" src\run_video.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
+  --split development `
+  --run-id "example_baseline_001" `
+  --config "configs\default.yaml" `
   --display
 ```
 
@@ -190,19 +215,26 @@ CSV outputs never append a second complete run. By default, each runner fails
 clearly if its target output already exists:
 
 - live baseline: `experiments/logs/live_feature.csv`;
-- recorded baseline: `experiments/logs/<clip-id>_baseline.csv`;
-- enhanced frame log: `experiments/logs/<clip-id>_enhanced_temporal.csv`;
-- enhanced repetitions: `experiments/outputs/<clip-id>_enhanced_repetitions.csv`.
+- recorded baseline: `experiments/logs/<run-id>_baseline.csv`;
+- baseline metadata: `experiments/logs/<run-id>_baseline_metadata.json`;
+- enhanced frame log: `experiments/logs/<run-id>_enhanced_temporal.csv`;
+- enhanced repetitions: `experiments/outputs/<run-id>_enhanced_repetitions.csv`;
+- enhanced metadata: `experiments/outputs/<run-id>_enhanced_metadata.json`.
 
-For the enhanced runner, both output paths are checked before video processing
-begins. To intentionally replace the output or outputs for a runner, add the
-explicit `--overwrite` option:
+Each recorded runner checks its complete CSV and metadata output set before
+video processing begins. Every CSV row carries the same `run_id`; metadata
+records the clip/method/split, input and configuration hashes, resolved
+settings and overrides, source properties, software/Git provenance, timing
+definition and output paths. To intentionally replace the complete set, add
+the explicit `--overwrite` option:
 
 ```powershell
 & ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
-  --alpha 0.3 `
+  --split development `
+  --run-id "example_enhanced_001" `
+  --config "configs\default.yaml" `
   --overwrite
 ```
 
@@ -235,6 +267,7 @@ Raw identifiable recordings are not committed to this repository.
 
 ## Installation
 
-```bash
-pip install -r requirements.txt
+```powershell
+& ".\.venv\Scripts\python.exe" -m pip install `
+  -r requirements.txt
 ```
