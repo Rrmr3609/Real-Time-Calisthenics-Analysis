@@ -1,5 +1,23 @@
 # Project Change Log
 
+## 6 August 2026 - Per-clip enhanced formal-evaluation integration
+
+- Added a pure per-clip enhanced evaluation API that composes the existing
+  chronological event matcher, detection summary and matched-repetition
+  classification metrics.
+- Added auditable matched-pair records while keeping unmatched annotations and
+  predictions exclusively as detection misses and extras.
+- Added detection recall stratified by ground-truth form class, including
+  deterministic zero-support rows with undefined recall.
+- Added integration-level label, event-type, matched-reference and metric-total
+  validation with deterministic JSON-compatible output.
+- Added focused tests for chronological matching, classification inclusion,
+  misses, extras, class-stratified recall, empty inputs and serialization.
+
+No CSV loading, CLI, cross-clip aggregation, plot, confidence interval,
+runtime evaluation or final-test execution was added. No matching tolerance,
+threshold, segmentation, classification priority, runner or schema changed.
+
 ## 30 July 2026 - Repetition-event detection evaluation
 
 - Added validated baseline completion-event extraction from cumulative-count

@@ -97,3 +97,7 @@ The two label sequences must have equal lengths because each position denotes
 one already matched repetition. Inputs with blank or unsupported labels are
 rejected. The immutable result preserves label and matrix ordering, while
 `to_dict()` converts it into deterministic JSON-compatible lists and records.
+
+The [per-clip formal-evaluation integration](formal_evaluation_integration.md)
+uses this API only after the existing event matcher has established the
+one-to-one enhanced repetition pairs.
