@@ -27,6 +27,12 @@ For one clip, `evaluate_enhanced_clip` performs these steps:
 There is no second match for classification and no pairing by repetition ID or
 input-list position. The event matcher remains the single source of truth.
 
+The current event-tolerance default is the provisional `0.5` seconds. A caller
+may supply another positive finite value; cross-clip reporting verifies that
+every baseline and enhanced result uses the same supplied value and matching
+frame tolerance. Development evidence must justify and freeze the final value
+before final-test evaluation begins.
+
 ## Misses and extras
 
 An unmatched ground-truth event remains a detection miss. An unmatched
@@ -90,3 +96,6 @@ This layer deliberately provides no:
 - confidence intervals;
 - runtime evaluation;
 - final-test execution.
+
+The subsequent [cross-clip reporting foundation](formal_evaluation_reporting.md)
+pools these native per-clip results without repeating event matching.

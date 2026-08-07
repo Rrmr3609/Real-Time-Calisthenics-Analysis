@@ -1,5 +1,26 @@
 # Project Change Log
 
+## 7 August 2026 - Cross-clip formal-evaluation reporting
+
+- Added validated cross-clip aggregation over native baseline detection and
+  enhanced per-clip formal-evaluation results.
+- Added pooled detection metrics, per-clip count-error summaries and
+  match-weighted completion-timing means without averaging per-clip F1.
+- Pooled raw enhanced confusion-matrix counts and recomputed classification
+  metrics through the shared classification implementation.
+- Added enhanced detection recall aggregated by ground-truth form class.
+- Added deterministic JSON/CSV report files, complete-set collision handling,
+  explicit overwrite, staged metric writes and atomic lifecycle provenance.
+- Retained `0.5` seconds as the provisional convenience default while allowing
+  any supplied positive finite event tolerance and enforcing report-wide
+  consistency against each clip's source FPS.
+- Added focused fictional-data tests for aggregation formulas, validation,
+  exact schemas, deterministic output and completed/failed metadata states.
+
+No video processing, result discovery CLI, baseline classification, plot,
+confidence interval, runtime metric, feature-availability metric, threshold,
+matching rule, runner, annotation or final-test evaluation was added or changed.
+
 ## 6 August 2026 - Per-clip enhanced formal-evaluation integration
 
 - Added a pure per-clip enhanced evaluation API that composes the existing

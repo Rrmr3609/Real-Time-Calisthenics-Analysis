@@ -5,6 +5,7 @@ import pytest
 from evaluation.classification_evaluation import (
     SUPPORTED_FORM_CLASSES,
     evaluate_classification,
+    evaluate_classification_from_confusion_matrix,
 )
 
 
@@ -258,3 +259,43 @@ def test_json_compatible_dictionary_preserves_reporting_order():
         row["label"] for row in payload["per_class"]
     ] == list(SUPPORTED_FORM_CLASSES)
     assert json.loads(encoded) == payload
+
+
+def test_confusion_matrix_api_recomputes_the_same_metrics():
+    from_labels = evaluate_classification(
+        ["correct", "correct", "insufficient_depth"],
+        ["correct", "insufficient_depth", "correct"],
+    )
+    from_matrix = (
+        evaluate_classification_from_confusion_matrix(
+            from_labels.confusion_matrix
+        )
+    )
+
+    assert from_matrix == from_labels
+
+
+@pytest.mark.parametrize(
+    ("matrix", "message"),
+    [
+        (((1, 0), (0, 1)), "dimensions"),
+        (
+            (
+                (1, 0, 0, 0, 0),
+                (0, -1, 0, 0, 0),
+                (0, 0, 0, 0, 0),
+                (0, 0, 0, 0, 0),
+                (0, 0, 0, 0, 0),
+            ),
+            "non-negative integers",
+        ),
+    ],
+)
+def test_confusion_matrix_api_rejects_invalid_counts(
+    matrix,
+    message,
+):
+    with pytest.raises(ValueError, match=message):
+        evaluate_classification_from_confusion_matrix(
+            matrix
+        )

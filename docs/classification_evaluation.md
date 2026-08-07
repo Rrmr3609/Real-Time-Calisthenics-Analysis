@@ -101,3 +101,7 @@ rejected. The immutable result preserves label and matrix ordering, while
 The [per-clip formal-evaluation integration](formal_evaluation_integration.md)
 uses this API only after the existing event matcher has established the
 one-to-one enhanced repetition pairs.
+
+Cross-clip reporting pools raw confusion-matrix counts and uses the same metric
+implementation to recompute the final classification results; it does not
+average per-clip classification scores.

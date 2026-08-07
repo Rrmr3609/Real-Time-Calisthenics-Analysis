@@ -248,6 +248,14 @@ def _atomic_write_json(
             temporary_path.unlink()
 
 
+def write_json_atomically(
+    output_path: str | Path,
+    document: Mapping[str, Any],
+) -> None:
+    """Write one JSON document through an atomic same-directory replace."""
+    _atomic_write_json(Path(output_path), document)
+
+
 class RunMetadataRecorder:
     def __init__(
         self,

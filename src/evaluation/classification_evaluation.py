@@ -123,6 +123,128 @@ def _validate_input_labels(
             )
 
 
+def _validated_confusion_matrix(
+    confusion_matrix: Sequence[Sequence[int]],
+    *,
+    class_count: int,
+) -> tuple[tuple[int, ...], ...]:
+    if isinstance(confusion_matrix, (str, bytes)):
+        raise ValueError(
+            "Confusion matrix must be a square sequence of rows"
+        )
+
+    try:
+        rows = tuple(
+            tuple(row) for row in confusion_matrix
+        )
+    except TypeError as error:
+        raise ValueError(
+            "Confusion matrix must be a square sequence of rows"
+        ) from error
+
+    if len(rows) != class_count or any(
+        len(row) != class_count for row in rows
+    ):
+        raise ValueError(
+            "Confusion matrix dimensions must match the "
+            "configured reporting labels"
+        )
+
+    for row_index, row in enumerate(rows):
+        for column_index, value in enumerate(row):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 0
+            ):
+                raise ValueError(
+                    "Confusion matrix counts must be "
+                    "non-negative integers; invalid cell "
+                    f"({row_index}, {column_index})"
+                )
+
+    return rows
+
+
+def evaluate_classification_from_confusion_matrix(
+    confusion_matrix: Sequence[Sequence[int]],
+    labels: Sequence[str] = SUPPORTED_FORM_CLASSES,
+) -> ClassificationEvaluation:
+    """Recompute classification metrics from raw matrix counts.
+
+    Rows are ground-truth classes and columns are predicted classes.
+    """
+    configured_labels = _validate_reporting_labels(labels)
+    matrix = _validated_confusion_matrix(
+        confusion_matrix,
+        class_count=len(configured_labels),
+    )
+    per_class = []
+
+    for class_index, label in enumerate(configured_labels):
+        true_positives = matrix[class_index][class_index]
+        support = sum(matrix[class_index])
+        false_negatives = support - true_positives
+        false_positives = sum(
+            matrix[row_index][class_index]
+            for row_index in range(len(configured_labels))
+            if row_index != class_index
+        )
+        precision = _safe_divide(
+            true_positives,
+            true_positives + false_positives,
+        )
+        recall = _safe_divide(
+            true_positives,
+            true_positives + false_negatives,
+        )
+        f1 = (
+            2.0 * precision * recall / (precision + recall)
+            if precision + recall > 0.0
+            else 0.0
+        )
+        per_class.append(
+            PerClassMetrics(
+                label=label,
+                true_positives=true_positives,
+                false_positives=false_positives,
+                false_negatives=false_negatives,
+                support=support,
+                precision=precision,
+                recall=recall,
+                f1=f1,
+            )
+        )
+
+    evaluated_count = sum(sum(row) for row in matrix)
+    supported_class_f1_values = [
+        metrics.f1
+        for metrics in per_class
+        if metrics.support > 0
+    ]
+
+    return ClassificationEvaluation(
+        evaluated_matched_repetitions=evaluated_count,
+        labels=configured_labels,
+        confusion_matrix=matrix,
+        per_class=tuple(per_class),
+        accuracy=(
+            sum(
+                matrix[index][index]
+                for index in range(len(configured_labels))
+            )
+            / evaluated_count
+            if evaluated_count > 0
+            else None
+        ),
+        macro_f1=(
+            fmean(supported_class_f1_values)
+            if supported_class_f1_values
+            else None
+        ),
+    )
+
+
 def evaluate_classification(
     ground_truth_labels: Sequence[str],
     predicted_labels: Sequence[str],
@@ -172,69 +294,7 @@ def evaluate_classification(
             label_indices[predicted_label]
         ] += 1
 
-    per_class = []
-
-    for class_index, label in enumerate(configured_labels):
-        true_positives = matrix[class_index][class_index]
-        support = sum(matrix[class_index])
-        false_negatives = support - true_positives
-        false_positives = sum(
-            matrix[row_index][class_index]
-            for row_index in range(len(configured_labels))
-            if row_index != class_index
-        )
-        precision = _safe_divide(
-            true_positives,
-            true_positives + false_positives,
-        )
-        recall = _safe_divide(
-            true_positives,
-            true_positives + false_negatives,
-        )
-        f1 = (
-            2.0 * precision * recall / (precision + recall)
-            if precision + recall > 0.0
-            else 0.0
-        )
-        per_class.append(
-            PerClassMetrics(
-                label=label,
-                true_positives=true_positives,
-                false_positives=false_positives,
-                false_negatives=false_negatives,
-                support=support,
-                precision=precision,
-                recall=recall,
-                f1=f1,
-            )
-        )
-
-    evaluated_count = len(ground_truth)
-    supported_class_f1_values = [
-        metrics.f1
-        for metrics in per_class
-        if metrics.support > 0
-    ]
-
-    return ClassificationEvaluation(
-        evaluated_matched_repetitions=evaluated_count,
+    return evaluate_classification_from_confusion_matrix(
+        matrix,
         labels=configured_labels,
-        confusion_matrix=tuple(
-            tuple(row) for row in matrix
-        ),
-        per_class=tuple(per_class),
-        accuracy=(
-            sum(
-                matrix[index][index]
-                for index in range(len(configured_labels))
-            )
-            / evaluated_count
-            if evaluated_count > 0
-            else None
-        ),
-        macro_f1=(
-            fmean(supported_class_f1_values)
-            if supported_class_f1_values
-            else None
-        ),
     )
