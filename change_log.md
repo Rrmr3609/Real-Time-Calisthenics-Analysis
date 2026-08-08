@@ -1,5 +1,25 @@
 # Project Change Log
 
+## 8 August 2026 - Formal-evaluation execution orchestration
+
+- Added a thin callable API and CLI that composes the existing dataset
+  validation, event loading, per-clip evaluation, cross-clip aggregation and
+  formal report writer over explicit completed-run provenance metadata.
+- Added strict full-clip, run method/split/clip-set, input-hash, source-FPS,
+  referenced-output and loaded-event identity validation without silent clip
+  skipping or result discovery.
+- Kept the supplied positive finite event tolerance unchanged through every
+  clip and method; the `0.5`-second default remains provisional and is not
+  selected or tuned by orchestration.
+- Added an explicit final-test safeguard that refuses the test split unless
+  development decisions have been frozen and `--allow-final-test` is supplied.
+- Documented the development-first execution workflow and added focused tests
+  using only fictional temporary manifests, annotations, metadata and CSVs.
+
+No video processing, file crawler, baseline classification, metric formula,
+event matcher, threshold, state machine, classifier, selector, runner or real
+evaluation result was added or changed.
+
 ## 7 August 2026 - Cross-clip formal-evaluation reporting
 
 - Added validated cross-clip aggregation over native baseline detection and

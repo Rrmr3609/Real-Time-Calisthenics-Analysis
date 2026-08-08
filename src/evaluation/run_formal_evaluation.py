@@ -1,0 +1,630 @@
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+from evaluation.dataset_validation import (
+    ALLOWED_SPLITS,
+    load_and_validate_evaluation_data,
+)
+from evaluation.detection_evaluation import (
+    DetectionSummary,
+    evaluate_detection_for_clip,
+)
+from evaluation.event_matching import (
+    DEFAULT_EVENT_TOLERANCE_SECONDS,
+)
+from evaluation.formal_evaluation import (
+    EnhancedClipEvaluation,
+    evaluate_enhanced_clip,
+)
+from evaluation.formal_reporting import (
+    EvaluationClipContext,
+    FormalEvaluationOutputPaths,
+    aggregate_formal_evaluation,
+    write_formal_evaluation_report,
+)
+from evaluation.repetition_events import (
+    BaselineRepetitionEvent,
+    EnhancedRepetitionEvent,
+    extract_ground_truth_events,
+    load_baseline_events,
+    load_enhanced_events,
+)
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SOURCE_FPS_RELATIVE_TOLERANCE = 1e-6
+SOURCE_FPS_ABSOLUTE_TOLERANCE = 1e-6
+
+
+@dataclass(frozen=True)
+class _RecordedRun:
+    metadata_path: Path
+    run_id: str
+    clip_id: str
+    method: str
+    split: str
+    source_fps: float
+    input_sha256: str
+    output_paths: Mapping[str, Path]
+
+
+def _required_mapping(
+    document: Mapping[str, Any],
+    key: str,
+    source_name: str,
+) -> Mapping[str, Any]:
+    value = document.get(key)
+
+    if not isinstance(value, Mapping):
+        raise ValueError(
+            f"{source_name} requires an object at {key!r}"
+        )
+
+    return value
+
+
+def _required_text(
+    document: Mapping[str, Any],
+    key: str,
+    source_name: str,
+) -> str:
+    value = document.get(key)
+
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            f"{source_name} requires non-blank {key!r}"
+        )
+
+    return value.strip()
+
+
+def _positive_finite_number(
+    value: object,
+    *,
+    description: str,
+) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"{description} must be a positive finite number"
+        ) from error
+
+    if not math.isfinite(number) or number <= 0.0:
+        raise ValueError(
+            f"{description} must be a positive finite number"
+        )
+
+    return number
+
+
+def _resolve_metadata_output_path(raw_path: str) -> Path:
+    path = Path(raw_path)
+
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+
+    return path.resolve()
+
+
+def _load_recorded_run(
+    metadata_path: str | Path,
+    *,
+    expected_method: str,
+    selected_split: str,
+) -> _RecordedRun:
+    path = Path(metadata_path).resolve()
+    source_name = str(path)
+
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Run metadata file does not exist: {path}"
+        )
+
+    try:
+        with path.open(encoding="utf-8") as metadata_file:
+            document = json.load(metadata_file)
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"Run metadata is not valid JSON: {path}"
+        ) from error
+
+    if not isinstance(document, Mapping):
+        raise ValueError(
+            f"Run metadata must contain one JSON object: {path}"
+        )
+
+    if document.get("metadata_schema_version") != 1:
+        raise ValueError(
+            f"{source_name} has an unsupported metadata schema version"
+        )
+
+    status = _required_text(document, "status", source_name)
+
+    if status != "completed":
+        raise ValueError(
+            f"{source_name} is not a completed recorded-video run; "
+            f"status is {status!r}"
+        )
+
+    timestamps = _required_mapping(
+        document,
+        "timestamps",
+        source_name,
+    )
+    _required_text(timestamps, "completed_utc", source_name)
+    processing_summary = _required_mapping(
+        document,
+        "processing_summary",
+        source_name,
+    )
+
+    if processing_summary.get("processed_full_clip") is not True:
+        raise ValueError(
+            f"{source_name} did not process the complete recorded clip"
+        )
+
+    method = _required_text(document, "method", source_name)
+
+    if method != expected_method:
+        raise ValueError(
+            f"{source_name} describes method {method!r}; expected "
+            f"{expected_method!r}"
+        )
+
+    split = _required_text(document, "split", source_name)
+
+    if split != selected_split:
+        raise ValueError(
+            f"{source_name} belongs to split {split!r}; selected split "
+            f"is {selected_split!r}"
+        )
+
+    run_id = _required_text(document, "run_id", source_name)
+    clip_id = _required_text(document, "clip_id", source_name)
+    input_video = _required_mapping(
+        document,
+        "input_video",
+        source_name,
+    )
+    input_sha256 = _required_text(
+        input_video,
+        "sha256",
+        source_name,
+    ).lower()
+    source_fps = _positive_finite_number(
+        input_video.get("source_fps"),
+        description=f"{source_name} source FPS",
+    )
+    raw_outputs = _required_mapping(
+        document,
+        "outputs",
+        source_name,
+    )
+    required_output_names = (
+        ("frame_csv", "metadata_json")
+        if expected_method == "baseline"
+        else ("frame_csv", "repetition_csv", "metadata_json")
+    )
+    missing_output_names = [
+        name
+        for name in required_output_names
+        if name not in raw_outputs
+    ]
+
+    if missing_output_names:
+        raise ValueError(
+            f"{source_name} is missing required output paths: "
+            f"{missing_output_names}"
+        )
+
+    output_paths: dict[str, Path] = {}
+
+    for name, raw_output_path in raw_outputs.items():
+        if (
+            not isinstance(name, str)
+            or not isinstance(raw_output_path, str)
+            or not raw_output_path.strip()
+        ):
+            raise ValueError(
+                f"{source_name} contains an invalid output path entry"
+            )
+
+        resolved_path = _resolve_metadata_output_path(
+            raw_output_path.strip()
+        )
+
+        if not resolved_path.is_file():
+            raise FileNotFoundError(
+                f"{source_name} references a missing output file "
+                f"for {name!r}: {resolved_path}"
+            )
+
+        output_paths[name] = resolved_path
+
+    if output_paths["metadata_json"] != path:
+        raise ValueError(
+            f"{source_name} does not identify itself through "
+            "outputs['metadata_json']"
+        )
+
+    return _RecordedRun(
+        metadata_path=path,
+        run_id=run_id,
+        clip_id=clip_id,
+        method=method,
+        split=split,
+        source_fps=source_fps,
+        input_sha256=input_sha256,
+        output_paths=output_paths,
+    )
+
+
+def _load_recorded_runs(
+    metadata_paths: Sequence[str | Path],
+    *,
+    expected_method: str,
+    selected_split: str,
+) -> dict[str, _RecordedRun]:
+    if not metadata_paths:
+        raise ValueError(
+            f"At least one {expected_method} metadata path is required"
+        )
+
+    runs_by_clip: dict[str, _RecordedRun] = {}
+
+    for metadata_path in metadata_paths:
+        run = _load_recorded_run(
+            metadata_path,
+            expected_method=expected_method,
+            selected_split=selected_split,
+        )
+
+        if run.clip_id in runs_by_clip:
+            raise ValueError(
+                f"Duplicate {expected_method} clip ID "
+                f"{run.clip_id!r} in supplied metadata"
+            )
+
+        runs_by_clip[run.clip_id] = run
+
+    return runs_by_clip
+
+
+def _source_fps_matches(first: float, second: float) -> bool:
+    return math.isclose(
+        first,
+        second,
+        rel_tol=SOURCE_FPS_RELATIVE_TOLERANCE,
+        abs_tol=SOURCE_FPS_ABSOLUTE_TOLERANCE,
+    )
+
+
+def _validate_loaded_events(
+    events: Sequence[
+        BaselineRepetitionEvent | EnhancedRepetitionEvent
+    ],
+    run: _RecordedRun,
+) -> None:
+    inconsistent_events = [
+        event
+        for event in events
+        if event.clip_id != run.clip_id
+        or event.run_id != run.run_id
+        or event.method != run.method
+    ]
+
+    if inconsistent_events:
+        raise ValueError(
+            f"Output referenced by {run.metadata_path} contains events "
+            "whose run, clip or method identity does not match metadata"
+        )
+
+
+def run_formal_evaluation(
+    *,
+    manifest_path: str | Path,
+    annotations_path: str | Path,
+    baseline_metadata_paths: Sequence[str | Path],
+    enhanced_metadata_paths: Sequence[str | Path],
+    split: str,
+    output_directory: str | Path,
+    evaluation_run_id: str,
+    tolerance_seconds: float = (
+        DEFAULT_EVENT_TOLERANCE_SECONDS
+    ),
+    overwrite: bool = False,
+    allow_final_test: bool = False,
+) -> FormalEvaluationOutputPaths:
+    """Evaluate existing recorded-run outputs and write one report set."""
+    selected_split = str(split).strip()
+
+    if selected_split not in ALLOWED_SPLITS:
+        raise ValueError(
+            f"Evaluation split must be one of {sorted(ALLOWED_SPLITS)}"
+        )
+
+    tolerance = _positive_finite_number(
+        tolerance_seconds,
+        description="Event tolerance",
+    )
+
+    if selected_split == "test" and not allow_final_test:
+        raise ValueError(
+            "Test-split evaluation is disabled by default. Freeze all "
+            "development decisions, including event tolerance, before "
+            "setting allow_final_test=True."
+        )
+
+    manifest, annotations = load_and_validate_evaluation_data(
+        Path(manifest_path),
+        Path(annotations_path),
+    )
+    baseline_runs = _load_recorded_runs(
+        baseline_metadata_paths,
+        expected_method="baseline",
+        selected_split=selected_split,
+    )
+    enhanced_runs = _load_recorded_runs(
+        enhanced_metadata_paths,
+        expected_method="enhanced",
+        selected_split=selected_split,
+    )
+    baseline_clip_ids = set(baseline_runs)
+    enhanced_clip_ids = set(enhanced_runs)
+
+    if baseline_clip_ids != enhanced_clip_ids:
+        raise ValueError(
+            "Baseline and enhanced metadata clip sets must match "
+            f"exactly; baseline-only="
+            f"{sorted(baseline_clip_ids - enhanced_clip_ids)}, "
+            f"enhanced-only="
+            f"{sorted(enhanced_clip_ids - baseline_clip_ids)}"
+        )
+
+    manifest_clip_ids = (
+        manifest["clip_id"].astype(str).str.strip()
+    )
+    manifest_splits = manifest["split"].astype(str).str.strip()
+    all_manifest_clip_ids = set(manifest_clip_ids)
+    selected_manifest_clip_ids = set(
+        manifest_clip_ids.loc[
+            manifest_splits.eq(selected_split)
+        ]
+    )
+    unknown_clip_ids = sorted(
+        baseline_clip_ids - all_manifest_clip_ids
+    )
+
+    if unknown_clip_ids:
+        raise ValueError(
+            "Supplied run metadata contains clip IDs absent from the "
+            f"manifest: {unknown_clip_ids}"
+        )
+
+    wrong_split_clip_ids = sorted(
+        baseline_clip_ids - selected_manifest_clip_ids
+    )
+
+    if wrong_split_clip_ids:
+        raise ValueError(
+            f"Supplied clips are not in manifest split "
+            f"{selected_split!r}: {wrong_split_clip_ids}"
+        )
+
+    source_fps_by_clip = {
+        clip_id: float(source_fps)
+        for clip_id, source_fps in zip(
+            manifest_clip_ids,
+            manifest["source_fps"],
+        )
+    }
+
+    for clip_id in sorted(baseline_clip_ids):
+        manifest_fps = source_fps_by_clip[clip_id]
+        baseline_fps = baseline_runs[clip_id].source_fps
+        enhanced_fps = enhanced_runs[clip_id].source_fps
+
+        if not (
+            _source_fps_matches(manifest_fps, baseline_fps)
+            and _source_fps_matches(manifest_fps, enhanced_fps)
+            and _source_fps_matches(baseline_fps, enhanced_fps)
+        ):
+            raise ValueError(
+                f"Clip {clip_id!r} has inconsistent source FPS: "
+                f"manifest={manifest_fps}, baseline={baseline_fps}, "
+                f"enhanced={enhanced_fps}"
+            )
+
+        if (
+            baseline_runs[clip_id].input_sha256
+            != enhanced_runs[clip_id].input_sha256
+        ):
+            raise ValueError(
+                f"Clip {clip_id!r} baseline and enhanced input "
+                "SHA-256 hashes do not match"
+            )
+
+    ground_truth_events = extract_ground_truth_events(
+        annotations,
+        manifest,
+        source_name=str(Path(annotations_path)),
+        manifest_source_name=str(Path(manifest_path)),
+    )
+    ground_truth_by_clip = {
+        clip_id: tuple(
+            event
+            for event in ground_truth_events
+            if event.clip_id == clip_id
+        )
+        for clip_id in baseline_clip_ids
+    }
+    baseline_results: list[DetectionSummary] = []
+    enhanced_results: list[EnhancedClipEvaluation] = []
+    clip_contexts: list[EvaluationClipContext] = []
+
+    for clip_id in sorted(baseline_clip_ids):
+        source_fps = source_fps_by_clip[clip_id]
+        baseline_run = baseline_runs[clip_id]
+        enhanced_run = enhanced_runs[clip_id]
+        baseline_events = load_baseline_events(
+            baseline_run.output_paths["frame_csv"],
+            source_fps_by_clip={clip_id: source_fps},
+        )
+        enhanced_events = load_enhanced_events(
+            enhanced_run.output_paths["repetition_csv"],
+            source_fps_by_clip={clip_id: source_fps},
+        )
+        _validate_loaded_events(baseline_events, baseline_run)
+        _validate_loaded_events(enhanced_events, enhanced_run)
+        clip_ground_truth = ground_truth_by_clip[clip_id]
+        _, baseline_summary = evaluate_detection_for_clip(
+            baseline_events,
+            clip_ground_truth,
+            clip_id=clip_id,
+            method="baseline",
+            source_fps=source_fps,
+            tolerance_seconds=tolerance,
+        )
+        enhanced_result = evaluate_enhanced_clip(
+            enhanced_events,
+            clip_ground_truth,
+            clip_id=clip_id,
+            source_fps=source_fps,
+            tolerance_seconds=tolerance,
+        )
+        baseline_results.append(baseline_summary)
+        enhanced_results.append(enhanced_result)
+        clip_contexts.append(
+            EvaluationClipContext(
+                clip_id=clip_id,
+                split=selected_split,
+                source_fps=source_fps,
+            )
+        )
+
+    report = aggregate_formal_evaluation(
+        baseline_results=baseline_results,
+        enhanced_results=enhanced_results,
+        clip_contexts=clip_contexts,
+        split=selected_split,
+        tolerance_seconds=tolerance,
+    )
+    return write_formal_evaluation_report(
+        report,
+        output_directory=output_directory,
+        run_id=evaluation_run_id,
+        repository_root=PROJECT_ROOT,
+        overwrite=overwrite,
+    )
+
+
+def parse_arguments(
+    argv: Sequence[str] | None = None,
+) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run formal evaluation over explicit completed baseline and "
+            "enhanced recorded-run metadata files."
+        )
+    )
+    parser.add_argument(
+        "--manifest",
+        required=True,
+        help="Validated dataset manifest CSV.",
+    )
+    parser.add_argument(
+        "--annotations",
+        required=True,
+        help="Validated manual repetition annotations CSV.",
+    )
+    parser.add_argument(
+        "--baseline-metadata",
+        nargs="+",
+        required=True,
+        help="Explicit baseline provenance metadata JSON paths.",
+    )
+    parser.add_argument(
+        "--enhanced-metadata",
+        nargs="+",
+        required=True,
+        help="Explicit enhanced provenance metadata JSON paths.",
+    )
+    parser.add_argument(
+        "--split",
+        choices=sorted(ALLOWED_SPLITS),
+        required=True,
+        help="Dataset split to evaluate.",
+    )
+    parser.add_argument(
+        "--tolerance-seconds",
+        type=float,
+        default=DEFAULT_EVENT_TOLERANCE_SECONDS,
+        help=(
+            "Positive event-matching tolerance. The default 0.5 seconds "
+            "is provisional."
+        ),
+    )
+    parser.add_argument(
+        "--output-directory",
+        required=True,
+        help="Directory for the complete formal report set.",
+    )
+    parser.add_argument(
+        "--run-id",
+        required=True,
+        help="Safe evaluation run identifier used in output filenames.",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace the complete report output set for this run ID.",
+    )
+    parser.add_argument(
+        "--allow-final-test",
+        action="store_true",
+        help=(
+            "Allow test-split evaluation only after development "
+            "decisions have been frozen."
+        ),
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parse_arguments(argv)
+
+    try:
+        output_paths = run_formal_evaluation(
+            manifest_path=args.manifest,
+            annotations_path=args.annotations,
+            baseline_metadata_paths=args.baseline_metadata,
+            enhanced_metadata_paths=args.enhanced_metadata,
+            split=args.split,
+            tolerance_seconds=args.tolerance_seconds,
+            output_directory=args.output_directory,
+            evaluation_run_id=args.run_id,
+            overwrite=args.overwrite,
+            allow_final_test=args.allow_final_test,
+        )
+    except (OSError, ValueError) as error:
+        print(f"Formal evaluation failed: {error}", file=sys.stderr)
+        return 2
+
+    print("Formal evaluation completed.")
+
+    for name, path in output_paths.named_paths().items():
+        print(f"{name}: {path}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -186,9 +186,14 @@ detection metrics are implemented in
 behavior and fictional command example are documented in
 `docs/event_detection_evaluation.md`.
 
-This stage reports repetition detection only. Classification metrics,
-confusion matrices, form-category performance, runtime comparisons, plots and
-formal final-test evaluation remain unimplemented.
+Enhanced matched-repetition classification and cross-clip formal reporting are
+also implemented. The development-first command that composes these existing
+layers over explicit completed-run metadata is documented in
+`docs/formal_evaluation_execution.md`. Baseline reporting remains
+detection-only, the `0.5`-second event tolerance remains provisional, and test
+execution requires an explicit safeguard after development decisions have been
+frozen. Runtime comparisons, plots and real formal results have not yet been
+produced.
 
   
 ## Recorded-Video Processing
