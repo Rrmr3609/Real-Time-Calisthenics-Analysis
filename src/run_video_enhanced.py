@@ -474,6 +474,56 @@ def main():
                             completed_repetition
                         )
                     )
+                    feedback_messages = {
+                        "correct": (
+                            "Rep complete: no predefined "
+                            "deviation"
+                        ),
+                        "insufficient_depth": (
+                            "Rep complete: insufficient depth"
+                        ),
+                        "incomplete_extension": (
+                            "Rep complete: incomplete "
+                            "extension"
+                        ),
+                        "alignment_deviation": (
+                            "Rep complete: alignment deviation"
+                        ),
+                        "unscorable": (
+                            "Rep complete: unscorable"
+                        ),
+                    }
+
+                    feedback_text = feedback_messages[
+                        classification.predicted_class
+                    ]
+
+                    effective_fps = (
+                        capture.source_fps
+                        if capture.source_fps > 0
+                        else 30.0
+                    )
+
+                    feedback_frames_remaining = max(
+                        1,
+                        int(effective_fps * 1.5),
+                    )
+
+                elif feedback_frames_remaining > 0:
+                    feedback_frames_remaining -= 1
+
+                else:
+                    feedback_text = ""
+
+                processing_time_ms = (
+                    time.perf_counter() - start_time
+                ) * 1000.0
+                processed_frames += 1
+                measured_processing_seconds += (
+                    processing_time_ms / 1000.0
+                )
+
+                if completed_repetition is not None:
                     repetition_logger.write_row(
                         {
                             "run_id": run_id,
@@ -559,54 +609,6 @@ def main():
                             ),
                         }
                     )
-                    feedback_messages = {
-                        "correct": (
-                            "Rep complete: no predefined "
-                            "deviation"
-                        ),
-                        "insufficient_depth": (
-                            "Rep complete: insufficient depth"
-                        ),
-                        "incomplete_extension": (
-                            "Rep complete: incomplete "
-                            "extension"
-                        ),
-                        "alignment_deviation": (
-                            "Rep complete: alignment deviation"
-                        ),
-                        "unscorable": (
-                            "Rep complete: unscorable"
-                        ),
-                    }
-
-                    feedback_text = feedback_messages[
-                        classification.predicted_class
-                    ]
-
-                    effective_fps = (
-                        capture.source_fps
-                        if capture.source_fps > 0
-                        else 30.0
-                    )
-
-                    feedback_frames_remaining = max(
-                        1,
-                        int(effective_fps * 1.5),
-                    )
-
-                elif feedback_frames_remaining > 0:
-                    feedback_frames_remaining -= 1
-
-                else:
-                    feedback_text = ""
-
-                processing_time_ms = (
-                    time.perf_counter() - start_time
-                ) * 1000.0
-                processed_frames += 1
-                measured_processing_seconds += (
-                    processing_time_ms / 1000.0
-                )
 
                 completed_fields = {
                     "completed_rep": (

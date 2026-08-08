@@ -1,5 +1,16 @@
 # Project Change Log
 
+## 8 August 2026 - Enhanced processing timing boundary
+
+- Finalized enhanced per-frame processing time before repetition-level CSV
+  serialization so recorded timing matches the existing provenance definition
+  and the baseline runner's CSV-exclusion convention.
+- Added a fake-clock regression test proving a delayed repetition write does
+  not increase frame processing time while the repetition row is still written.
+
+No threshold, state machine, repetition value, classifier, selector, output
+schema, baseline behavior or event-matching behavior was changed.
+
 ## 8 August 2026 - Formal-evaluation execution orchestration
 
 - Added a thin callable API and CLI that composes the existing dataset

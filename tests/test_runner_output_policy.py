@@ -257,6 +257,208 @@ def test_enhanced_overwrite_replaces_both_output_files(
     )["status"] == "completed"
 
 
+def test_enhanced_timing_excludes_repetition_csv_write(
+    tmp_path,
+    monkeypatch,
+):
+    class FakeClock:
+        def __init__(self):
+            self.current = 0.0
+
+        def perf_counter(self):
+            return self.current
+
+    class OneFrameCapture(FailingReadCapture):
+        def __init__(self, *_args, **_kwargs):
+            super().__init__()
+            self.frame_index = -1
+            self.width_px = 640
+            self.height_px = 480
+
+        def read(self):
+            if self.frame_index >= 0:
+                return None
+
+            self.frame_index = 0
+            return SimpleNamespace(shape=(480, 640, 3))
+
+        def timestamp_ms(self):
+            return 0.0
+
+    clock = FakeClock()
+    frame_rows = []
+    repetition_rows = []
+    completed_repetition = SimpleNamespace(
+        rep_id=1,
+        start_frame=10,
+        bottom_frame=12,
+        end_frame=14,
+        duration_frames=5,
+        start_top_angle=155.0,
+        minimum_elbow_angle=90.0,
+        end_top_angle=154.0,
+    )
+    classification = SimpleNamespace(
+        top_extension_angle=154.0,
+        minimum_alignment_angle=170.0,
+        alignment_valid_frames=5,
+        alignment_valid_ratio=1.0,
+        alignment_deviation_frames=0,
+        alignment_deviation_ratio=0.0,
+        insufficient_depth_triggered=False,
+        incomplete_extension_triggered=False,
+        alignment_deviation_triggered=False,
+        multiple_rules_triggered=False,
+        triggered_rules=(),
+        predicted_class="correct",
+        classification_reason="No predefined deviation detected.",
+    )
+    feature_result = {
+        "selected_side": "left",
+        "selected_elbow_side": "left",
+        "side_changed": False,
+        "left_elbow_visibility_score": 0.9,
+        "right_elbow_visibility_score": 0.8,
+        "left_alignment_visibility_score": 0.9,
+        "right_alignment_visibility_score": 0.8,
+        "elbow_feature_valid": True,
+        "alignment_feature_valid": True,
+        "opposite_alignment_feature_valid": True,
+        "raw_elbow_angle": 154.0,
+        "smoothed_elbow_angle": 154.0,
+        "raw_alignment_angle": 170.0,
+        "smoothed_alignment_angle": 170.0,
+    }
+    phase_result = {
+        "repetition_window_start_frame": 10,
+        "completed_repetition": completed_repetition,
+        "phase": "top",
+        "phase_changed": True,
+        "rep_count": 1,
+        "missing_angle_frames": 0,
+    }
+
+    class TimedPoseEstimator(FakePoseEstimator):
+        def process(self, _frame):
+            clock.current += 1.0
+            return SimpleNamespace(pose_landmarks=None)
+
+    class CapturingLogger(FakeLogger):
+        def __init__(self, output_path, **_kwargs):
+            super().__init__()
+            self.is_repetition_logger = (
+                "enhanced_repetitions" in output_path
+            )
+
+        def write_row(self, row):
+            if self.is_repetition_logger:
+                clock.current += 100.0
+                repetition_rows.append(dict(row))
+            else:
+                frame_rows.append(dict(row))
+
+    feature_processor = SimpleNamespace(
+        update=lambda _landmarks: feature_result,
+    )
+    phase_machine = SimpleNamespace(
+        update=lambda **_kwargs: phase_result,
+        rep_count=1,
+    )
+    repetition_classifier = SimpleNamespace(
+        classify=lambda _repetition: classification,
+    )
+    repetition_aggregator = SimpleNamespace(
+        update=lambda **_kwargs: completed_repetition,
+    )
+
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "parse_arguments",
+        lambda: SimpleNamespace(
+            video="input.mp4",
+            clip_id="clip",
+            split="development",
+            run_id=None,
+            config=PROJECT_ROOT / "configs" / "default.yaml",
+            alpha=None,
+            display=False,
+            overwrite=False,
+        ),
+    )
+    monkeypatch.setattr(run_video_enhanced, "LOG_DIR", tmp_path / "logs")
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "OUTPUT_DIR",
+        tmp_path / "outputs",
+    )
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "create_project_directories",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "VideoFileCapture",
+        OneFrameCapture,
+    )
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "PoseEstimator",
+        TimedPoseEstimator,
+    )
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "CSVLogger",
+        CapturingLogger,
+    )
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "_build_analysis_components",
+        lambda _config: (
+            feature_processor,
+            phase_machine,
+            repetition_classifier,
+        ),
+    )
+    monkeypatch.setattr(
+        run_video_enhanced,
+        "RepetitionFeatureAggregator",
+        lambda: repetition_aggregator,
+    )
+    monkeypatch.setattr(
+        run_video_enhanced.time,
+        "perf_counter",
+        clock.perf_counter,
+    )
+    monkeypatch.setattr(
+        run_video_enhanced.cv2,
+        "destroyAllWindows",
+        lambda: None,
+    )
+
+    run_video_enhanced.main()
+
+    assert len(frame_rows) == 1
+    assert frame_rows[0]["processing_time_ms"] == pytest.approx(1000.0)
+    assert frame_rows[0]["completed_rep_id"] == 1
+    assert len(repetition_rows) == 1
+    assert repetition_rows[0]["rep_id"] == 1
+    assert repetition_rows[0]["start_frame"] == 10
+    assert repetition_rows[0]["end_frame"] == 14
+    assert repetition_rows[0]["predicted_class"] == "correct"
+
+    metadata = json.loads(
+        (
+            tmp_path
+            / "outputs"
+            / "clip_enhanced_metadata.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert metadata["processing_summary"][
+        "measured_processing_seconds"
+    ] == pytest.approx(1.0)
+
+
 def test_enhanced_runner_closes_both_loggers_after_processing_failure(
     tmp_path,
     monkeypatch,
