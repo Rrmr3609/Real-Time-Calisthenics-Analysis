@@ -1,5 +1,10 @@
 # Project Change Log
 
+## 9 August 2026 - Runtime result-path policy cleanup
+
+- Removed obsolete result-directory creation so operational runner setup
+  follows the current development/formal results layout.
+
 ## 9 August 2026 - Operational runner documentation polish
 
 - Documented runner, CLI, runtime-configuration and operational-path semantics
