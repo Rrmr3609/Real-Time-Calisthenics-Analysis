@@ -1,4 +1,5 @@
 import argparse
+import math
 import re
 from pathlib import Path
 from typing import Iterable
@@ -138,7 +139,12 @@ def _positive_numeric_series(
         data[column],
         errors="coerce",
     )
-    invalid_mask = numeric.isna() | numeric.le(0)
+    finite = numeric.map(
+        lambda value: math.isfinite(value)
+        if pd.notna(value)
+        else False
+    )
+    invalid_mask = numeric.isna() | ~finite | numeric.le(0)
 
     if integer:
         invalid_mask |= numeric.mod(1).ne(0)

@@ -1,5 +1,21 @@
 # Project Change Log
 
+## 8 August 2026 - Formal input integrity
+
+- Required baseline and enhanced metadata to cover the complete selected
+  manifest split, with missing and extra clip IDs rejected explicitly.
+- Required evidence of manual review through at least one annotation row per
+  formal clip while preserving the exclusion of ambiguous fragments from
+  ground-truth event metrics.
+- Added whole-file baseline frame CSV header, run/clip identity, frame sequence
+  and completed frame-count validation before event extraction.
+- Bound manifest FPS, frame count and resolution to both completed-run metadata
+  records and rejected non-finite manifest FPS values.
+- Added focused fictional-data regression coverage for the new safeguards.
+
+No event matching, metric, tolerance, threshold, segmentation, classifier,
+side-selection or runner analysis behaviour was changed.
+
 ## 8 August 2026 - Enhanced processing timing boundary
 
 - Finalized enhanced per-frame processing time before repetition-level CSV

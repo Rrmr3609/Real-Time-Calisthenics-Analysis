@@ -26,7 +26,7 @@ Each manifest row represents one recorded clip.
 | `video_path` | text | Required project-relative local path |
 | `participant_id` | text | Required anonymised identifier |
 | `camera_view` | enum | `side` or `side_diagonal` |
-| `source_fps` | number | Greater than zero |
+| `source_fps` | number | Finite and greater than zero |
 | `frame_count` | integer | Greater than zero |
 | `width_px` | integer | Greater than zero |
 | `height_px` | integer | Greater than zero |
@@ -36,6 +36,11 @@ Each manifest row represents one recorded clip.
 Assign the development/test split before formal analysis. Development clips may
 support calibration and protocol refinement. Test clips must not be used to
 tune thresholds, matching tolerances, or decision rules.
+
+Formal execution requires both methods to cover every manifest clip in the
+chosen split. It also checks manifest FPS, frame count, width and height against
+both completed-run provenance records rather than silently preferring either
+source.
 
 ## Repetition annotation schema
 
@@ -121,6 +126,13 @@ confidently be identified as a complete attempt. Set all deviation flags to
 Ambiguous fragments are retained for auditability but are not ground-truth
 repetitions for count or event evaluation.
 
+For formal execution, every selected manifest clip must have at least one
+annotation row to prove that it was manually reviewed. An ambiguous row counts
+as this review evidence while remaining excluded from event metrics. Do not
+invent an annotation for a genuine zero-attempt clip: the current annotation
+workflow has no explicit review-complete representation for such clips, so
+zero-attempt formal clips are not currently supported.
+
 ## Visibility and unscorable attempts
 
 - `sufficient`: the source video clearly supports the temporal and form labels.
@@ -164,7 +176,8 @@ medical or universal form judgements.
 7. Add notes for ambiguity, insufficient visibility, or difficult decisions.
 8. Run schema validation.
 9. Resolve validation errors before freezing the annotations.
-10. Preserve the frozen annotation file unchanged during formal evaluation.
+10. Confirm every clip in the formal split has at least one annotation row.
+11. Preserve the frozen annotation file unchanged during formal evaluation.
 
 ## Validation command
 
@@ -182,7 +195,9 @@ $env:PYTHONPATH = "$PWD\src"
 The validator checks required columns, allowed labels and splits, numeric
 metadata, duplicate identifiers, unknown clips, frame ordering, clip bounds,
 attempt/fragment status, visibility rules, deviation flags, and single-label
-priority. It does not perform event matching or calculate evaluation metrics.
+priority. Formal orchestration additionally checks complete split coverage,
+per-clip annotation presence and manifest/run provenance agreement. It does not
+change ambiguity handling, perform new event matching or alter metrics.
 
 ## Quality control
 

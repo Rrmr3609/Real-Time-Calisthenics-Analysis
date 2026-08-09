@@ -44,6 +44,24 @@ ANNOTATION_COLUMNS = (
     "annotator_notes",
 )
 
+BASELINE_FRAME_COLUMNS = (
+    "run_id",
+    "clip_id",
+    "frame_index",
+    "video_timestamp_ms",
+    "source_fps",
+    "processing_time_ms",
+    "pose_detected",
+    "selected_side",
+    "left_elbow_visibility_score",
+    "right_elbow_visibility_score",
+    "elbow_angle",
+    "body_alignment_angle",
+    "baseline_position",
+    "baseline_rep_count",
+    "baseline_frame_warnings",
+)
+
 
 @dataclass
 class FictionalInputs:
@@ -125,6 +143,58 @@ def annotation_row(
     }
 
 
+def ambiguous_annotation_row(clip_id):
+    row = annotation_row(
+        clip_id,
+        "unscorable",
+        completion_frame=15,
+    )
+    row.update(
+        {
+            "ground_truth_attempt_id": "F001",
+            "is_evaluable_attempt": False,
+            "ambiguity_flag": True,
+            "bottom_turnaround_frame": "",
+            "source_video_visibility_status": (
+                "partially_obscured"
+            ),
+            "annotator_notes": (
+                "Fictional ambiguous fragment proving review."
+            ),
+        }
+    )
+    return row
+
+
+def baseline_frame_row(
+    *,
+    run_id,
+    clip_id,
+    frame_index,
+    source_fps,
+    repetition_count,
+):
+    return {
+        "run_id": run_id,
+        "clip_id": clip_id,
+        "frame_index": frame_index,
+        "video_timestamp_ms": (
+            frame_index / source_fps * 1000.0
+        ),
+        "source_fps": source_fps,
+        "processing_time_ms": 1.0,
+        "pose_detected": True,
+        "selected_side": "left",
+        "left_elbow_visibility_score": 0.9,
+        "right_elbow_visibility_score": 0.8,
+        "elbow_angle": 155.0,
+        "body_alignment_angle": 170.0,
+        "baseline_position": "top",
+        "baseline_rep_count": repetition_count,
+        "baseline_frame_warnings": "No frame warning",
+    }
+
+
 def recorded_run_metadata(
     *,
     metadata_path,
@@ -184,31 +254,18 @@ def create_run_files(root, clip_id, split, fps, predicted_class):
 
     write_csv(
         baseline_csv,
-        (
-            "run_id",
-            "clip_id",
-            "frame_index",
-            "video_timestamp_ms",
-            "source_fps",
-            "baseline_rep_count",
-        ),
-        (
-            {
-                "run_id": baseline_run_id,
-                "clip_id": clip_id,
-                "frame_index": 0,
-                "video_timestamp_ms": 0.0,
-                "source_fps": fps,
-                "baseline_rep_count": 0,
-            },
-            {
-                "run_id": baseline_run_id,
-                "clip_id": clip_id,
-                "frame_index": 15,
-                "video_timestamp_ms": 15 / fps * 1000.0,
-                "source_fps": fps,
-                "baseline_rep_count": 1,
-            },
+        BASELINE_FRAME_COLUMNS,
+        tuple(
+            baseline_frame_row(
+                run_id=baseline_run_id,
+                clip_id=clip_id,
+                frame_index=frame_index,
+                source_fps=fps,
+                repetition_count=(
+                    1 if frame_index >= 15 else 0
+                ),
+            )
+            for frame_index in range(100)
         ),
     )
     write_csv(
@@ -421,26 +478,23 @@ def test_complete_formal_report_output_set_is_produced(tmp_path):
     assert metadata["event_tolerance_seconds"] == 0.75
 
 
-def test_metadata_referenced_baseline_path_is_used(tmp_path):
+def test_valid_baseline_zero_detection_file_is_accepted(tmp_path):
     inputs = create_fictional_inputs(tmp_path)
     metadata_path = inputs.baseline_metadata_paths[0]
     metadata = read_json(metadata_path)
     alternate_csv = metadata_path.parent / "alternate_baseline.csv"
     write_csv(
         alternate_csv,
-        (
-            "run_id",
-            "clip_id",
-            "frame_index",
-            "baseline_rep_count",
-        ),
-        (
-            {
-                "run_id": metadata["run_id"],
-                "clip_id": metadata["clip_id"],
-                "frame_index": 0,
-                "baseline_rep_count": 0,
-            },
+        BASELINE_FRAME_COLUMNS,
+        tuple(
+            baseline_frame_row(
+                run_id=metadata["run_id"],
+                clip_id=metadata["clip_id"],
+                frame_index=frame_index,
+                source_fps=metadata["input_video"]["source_fps"],
+                repetition_count=0,
+            )
+            for frame_index in range(100)
         ),
     )
     metadata["outputs"]["frame_csv"] = str(alternate_csv.resolve())
@@ -453,6 +507,112 @@ def test_metadata_referenced_baseline_path_is_used(tmp_path):
     }
 
     assert per_clip["fictional-clip-a"]["baseline_predicted_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("identity_field", "wrong_value", "message"),
+    [
+        (
+            "clip_id",
+            "wrong-fictional-clip",
+            "clip IDs.*do not match completed-run metadata",
+        ),
+        (
+            "run_id",
+            "wrong-fictional-run",
+            "run IDs.*do not match completed-run metadata",
+        ),
+    ],
+)
+def test_zero_detection_baseline_file_rejects_wrong_identity(
+    tmp_path,
+    identity_field,
+    wrong_value,
+    message,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    metadata = read_json(inputs.baseline_metadata_paths[0])
+    baseline_csv = Path(metadata["outputs"]["frame_csv"])
+
+    rows = []
+
+    for frame_index in range(100):
+        row = baseline_frame_row(
+            run_id=metadata["run_id"],
+            clip_id=metadata["clip_id"],
+            frame_index=frame_index,
+            source_fps=metadata["input_video"]["source_fps"],
+            repetition_count=0,
+        )
+        if frame_index == 50:
+            row[identity_field] = wrong_value
+        rows.append(row)
+
+    write_csv(
+        baseline_csv,
+        BASELINE_FRAME_COLUMNS,
+        rows,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        run_inputs(inputs)
+
+
+def test_baseline_frame_row_count_must_match_run_metadata(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    metadata = read_json(inputs.baseline_metadata_paths[0])
+    baseline_csv = Path(metadata["outputs"]["frame_csv"])
+    write_csv(
+        baseline_csv,
+        BASELINE_FRAME_COLUMNS,
+        tuple(
+            baseline_frame_row(
+                run_id=metadata["run_id"],
+                clip_id=metadata["clip_id"],
+                frame_index=frame_index,
+                source_fps=metadata["input_video"]["source_fps"],
+                repetition_count=0,
+            )
+            for frame_index in range(99)
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="contains 99 frame rows.*records 100 frames",
+    ):
+        run_inputs(inputs)
+
+
+def test_baseline_frame_csv_requires_current_runner_header(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    metadata = read_json(inputs.baseline_metadata_paths[0])
+    baseline_csv = Path(metadata["outputs"]["frame_csv"])
+    incomplete_header = (
+        "run_id",
+        "clip_id",
+        "frame_index",
+        "baseline_rep_count",
+    )
+    write_csv(
+        baseline_csv,
+        incomplete_header,
+        (
+            {
+                "run_id": metadata["run_id"],
+                "clip_id": metadata["clip_id"],
+                "frame_index": frame_index,
+                "baseline_rep_count": 0,
+            }
+            for frame_index in range(100)
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="missing required columns.*processing_time_ms",
+    ):
+        run_inputs(inputs)
 
 
 def test_duplicate_baseline_clip_ids_are_rejected(tmp_path):
@@ -489,12 +649,50 @@ def test_duplicate_enhanced_clip_ids_are_rejected(tmp_path):
         )
 
 
-def test_baseline_and_enhanced_clip_set_mismatch_is_rejected(tmp_path):
+def test_missing_baseline_clip_is_rejected(tmp_path):
     inputs = create_fictional_inputs(tmp_path)
 
-    with pytest.raises(ValueError, match="clip sets must match exactly"):
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Baseline metadata must cover the complete.*"
+            "missing=.*fictional-clip-b"
+        ),
+    ):
         run_inputs(
             inputs,
+            baseline_metadata_paths=inputs.baseline_metadata_paths[:1],
+        )
+
+
+def test_missing_enhanced_clip_is_rejected(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Enhanced metadata must cover the complete.*"
+            "missing=.*fictional-clip-b"
+        ),
+    ):
+        run_inputs(
+            inputs,
+            enhanced_metadata_paths=inputs.enhanced_metadata_paths[:1],
+        )
+
+
+def test_manifest_split_clip_omitted_from_both_methods_is_rejected(
+    tmp_path,
+):
+    inputs = create_fictional_inputs(tmp_path)
+
+    with pytest.raises(
+        ValueError,
+        match="complete.*missing=.*fictional-clip-b",
+    ):
+        run_inputs(
+            inputs,
+            baseline_metadata_paths=inputs.baseline_metadata_paths[:1],
             enhanced_metadata_paths=inputs.enhanced_metadata_paths[:1],
         )
 
@@ -589,7 +787,9 @@ def test_missing_required_metadata_output_path_is_rejected(tmp_path):
         run_inputs(inputs)
 
 
-def test_manifest_clip_missing_is_rejected(tmp_path):
+def test_supplied_clip_absent_from_manifest_is_rejected_as_extra(
+    tmp_path,
+):
     inputs = create_fictional_inputs(tmp_path)
     with inputs.manifest_path.open(encoding="utf-8") as input_file:
         manifest_rows = list(csv.DictReader(input_file))
@@ -608,7 +808,10 @@ def test_manifest_clip_missing_is_rejected(tmp_path):
         annotation_rows[:1],
     )
 
-    with pytest.raises(ValueError, match="absent from the manifest"):
+    with pytest.raises(
+        ValueError,
+        match="extra=.*fictional-clip-b",
+    ):
         run_inputs(inputs)
 
 
@@ -629,6 +832,49 @@ def test_unknown_annotation_clip_is_rejected_by_existing_validation(
 
     with pytest.raises(ValueError, match="unknown clip IDs"):
         run_inputs(inputs)
+
+
+def test_selected_clip_without_annotation_rows_is_rejected(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    with inputs.annotations_path.open(encoding="utf-8") as input_file:
+        annotation_rows = list(csv.DictReader(input_file))
+
+    write_csv(
+        inputs.annotations_path,
+        ANNOTATION_COLUMNS,
+        annotation_rows[:1],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="at least one annotation row.*fictional-clip-b",
+    ):
+        run_inputs(inputs)
+
+
+def test_ambiguous_row_counts_as_annotation_review_evidence(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    write_csv(
+        inputs.annotations_path,
+        ANNOTATION_COLUMNS,
+        (
+            annotation_row("fictional-clip-a", "correct"),
+            ambiguous_annotation_row("fictional-clip-b"),
+        ),
+    )
+
+    output_paths = run_inputs(inputs)
+    report = read_json(output_paths.report_json)
+    per_clip = {
+        row["clip_id"]: row
+        for row in report["per_clip_metrics"]
+    }
+
+    assert per_clip["fictional-clip-b"][
+        "ground_truth_repetition_count"
+    ] == 0
+    assert per_clip["fictional-clip-b"]["baseline_extras"] == 1
+    assert per_clip["fictional-clip-b"]["enhanced_extras"] == 1
 
 
 def test_positive_non_default_tolerance_passes_through(tmp_path):
@@ -728,6 +974,64 @@ def test_inconsistent_source_fps_is_rejected(tmp_path):
     )
 
     with pytest.raises(ValueError, match="inconsistent source FPS"):
+        run_inputs(inputs)
+
+
+@pytest.mark.parametrize(
+    ("metadata_list_name", "method"),
+    [
+        ("baseline_metadata_paths", "baseline"),
+        ("enhanced_metadata_paths", "enhanced"),
+    ],
+)
+def test_manifest_frame_count_must_match_each_run(
+    tmp_path,
+    metadata_list_name,
+    method,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    metadata_path = getattr(inputs, metadata_list_name)[0]
+
+    def change_frame_count(document):
+        document["input_video"]["frame_count"] = 99
+        document["processing_summary"]["processed_frames"] = 99
+
+    rewrite_metadata(metadata_path, change_frame_count)
+
+    with pytest.raises(
+        ValueError,
+        match=f"{method} frame count 99 does not match manifest 100",
+    ):
+        run_inputs(inputs)
+
+
+@pytest.mark.parametrize(
+    ("manifest_field", "dimension"),
+    [
+        ("width_px", "width"),
+        ("height_px", "height"),
+    ],
+)
+def test_manifest_resolution_must_match_run_metadata(
+    tmp_path,
+    manifest_field,
+    dimension,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    with inputs.manifest_path.open(encoding="utf-8") as input_file:
+        manifest_rows = list(csv.DictReader(input_file))
+
+    manifest_rows[0][manifest_field] = "641"
+    write_csv(
+        inputs.manifest_path,
+        MANIFEST_COLUMNS,
+        manifest_rows,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=f"baseline {dimension} .*does not match manifest 641",
+    ):
         run_inputs(inputs)
 
 

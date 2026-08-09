@@ -19,6 +19,24 @@ BASELINE_REQUIRED_COLUMNS = (
     "baseline_rep_count",
 )
 
+FORMAL_BASELINE_FRAME_COLUMNS = (
+    "run_id",
+    "clip_id",
+    "frame_index",
+    "video_timestamp_ms",
+    "source_fps",
+    "processing_time_ms",
+    "pose_detected",
+    "selected_side",
+    "left_elbow_visibility_score",
+    "right_elbow_visibility_score",
+    "elbow_angle",
+    "body_alignment_angle",
+    "baseline_position",
+    "baseline_rep_count",
+    "baseline_frame_warnings",
+)
+
 ENHANCED_REQUIRED_COLUMNS = (
     "run_id",
     "clip_id",
@@ -249,17 +267,82 @@ def _validate_event_identifiers(
         )
 
 
+def _validate_expected_baseline_frames(
+    *,
+    run_ids: pd.Series,
+    clip_ids: pd.Series,
+    frames: pd.Series,
+    source_name: str,
+    expected_run_id: str | None,
+    expected_clip_id: str | None,
+    expected_frame_count: int | None,
+) -> None:
+    if expected_run_id is not None:
+        actual_run_ids = sorted(set(run_ids))
+
+        if actual_run_ids != [expected_run_id]:
+            raise ValueError(
+                f"{source_name} run IDs {actual_run_ids} do not "
+                f"match completed-run metadata {expected_run_id!r}"
+            )
+
+    if expected_clip_id is not None:
+        actual_clip_ids = sorted(set(clip_ids))
+
+        if actual_clip_ids != [expected_clip_id]:
+            raise ValueError(
+                f"{source_name} clip IDs {actual_clip_ids} do not "
+                f"match completed-run metadata {expected_clip_id!r}"
+            )
+
+    if expected_frame_count is None:
+        return
+
+    if len(frames) != expected_frame_count:
+        raise ValueError(
+            f"{source_name} contains {len(frames)} frame rows; "
+            "completed-run metadata records "
+            f"{expected_frame_count} frames"
+        )
+
+    expected_frames = list(range(expected_frame_count))
+
+    if frames.tolist() != expected_frames:
+        raise ValueError(
+            f"{source_name} frame indices must cover every frame "
+            f"from 0 to {expected_frame_count - 1} in order"
+        )
+
+
 def extract_baseline_events(
     frame_data: pd.DataFrame,
     *,
     source_name: str = "Baseline frame data",
     source_fps_by_clip: Mapping[str, float] | None = None,
+    expected_run_id: str | None = None,
+    expected_clip_id: str | None = None,
+    expected_frame_count: int | None = None,
 ) -> list[BaselineRepetitionEvent]:
     require_columns(
         frame_data,
         BASELINE_REQUIRED_COLUMNS,
         source_name,
     )
+
+    if any(
+        value is not None
+        for value in (
+            expected_run_id,
+            expected_clip_id,
+            expected_frame_count,
+        )
+    ):
+        require_columns(
+            frame_data,
+            FORMAL_BASELINE_FRAME_COLUMNS,
+            source_name,
+        )
+
     source_fps = _normalise_source_fps(
         source_fps_by_clip
     )
@@ -284,6 +367,15 @@ def extract_baseline_events(
         "baseline_rep_count",
         source_name,
         minimum=0,
+    )
+    _validate_expected_baseline_frames(
+        run_ids=run_ids,
+        clip_ids=clip_ids,
+        frames=frames,
+        source_name=source_name,
+        expected_run_id=expected_run_id,
+        expected_clip_id=expected_clip_id,
+        expected_frame_count=expected_frame_count,
     )
     timestamps = _optional_nonnegative_number_series(
         frame_data,
@@ -393,12 +485,18 @@ def load_baseline_events(
     csv_path: str | Path,
     *,
     source_fps_by_clip: Mapping[str, float] | None = None,
+    expected_run_id: str | None = None,
+    expected_clip_id: str | None = None,
+    expected_frame_count: int | None = None,
 ) -> list[BaselineRepetitionEvent]:
     path = Path(csv_path)
     return extract_baseline_events(
         pd.read_csv(path),
         source_name=str(path),
         source_fps_by_clip=source_fps_by_clip,
+        expected_run_id=expected_run_id,
+        expected_clip_id=expected_clip_id,
+        expected_frame_count=expected_frame_count,
     )
 
 

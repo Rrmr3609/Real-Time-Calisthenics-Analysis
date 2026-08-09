@@ -87,6 +87,14 @@ def test_manifest_rejects_invalid_split():
         validate_dataset_manifest(manifest)
 
 
+def test_manifest_rejects_infinite_source_fps():
+    manifest = make_manifest()
+    manifest.loc[0, "source_fps"] = float("inf")
+
+    with pytest.raises(ValueError, match="positive numbers"):
+        validate_dataset_manifest(manifest)
+
+
 def test_manifest_rejects_duplicate_clip_id():
     manifest = pd.concat(
         [make_manifest(), make_manifest()],

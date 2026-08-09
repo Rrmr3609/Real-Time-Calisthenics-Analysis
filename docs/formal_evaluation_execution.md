@@ -23,14 +23,15 @@ metadata.
 
 The orchestration command consumes the metadata JSON paths, not guessed output
 filenames. Each metadata document identifies its run, clip, method, split,
-source FPS and generated output paths.
+source FPS, frame count, resolution and generated output paths.
 
 ### 2. Prepare the dataset manifest
 
 Create one manifest row per clip using the schema in
 `manual_annotation_protocol.md`. Assign `development` or `test` before formal
 analysis. Do not change a test clip to development to bypass the execution
-safeguard.
+safeguard. Formal execution always covers every manifest clip in the chosen
+split; neither method may supply only a subset or add another clip.
 
 ### 3. Prepare and validate annotations
 
@@ -49,6 +50,13 @@ $env:PYTHONPATH = "$PWD\src"
 
 The supplied example CSVs are fictional schema examples only. They do not
 describe real recordings, participants or evaluation results.
+
+Every clip in the selected formal split must have at least one annotation row
+as evidence that it was manually reviewed. An ambiguous-fragment row satisfies
+this review-presence safeguard, but remains excluded from ground-truth event
+metrics under the existing ambiguity rule. The current schema has no explicit
+review-complete representation for a genuine zero-attempt clip, so such clips
+are not supported by this formal workflow.
 
 ### 4. Run development evaluation
 
@@ -75,9 +83,10 @@ $env:PYTHONPATH = "$PWD\src"
 ```
 
 `--baseline-metadata` and `--enhanced-metadata` each accept one or more paths.
-The clip sets must match exactly. The default tolerance is the current
-provisional `0.5` seconds, but another positive finite value may be supplied.
-The command passes that value through unchanged to every clip and method.
+Each method's clip set must equal the complete chosen manifest split. The
+default tolerance is the current provisional `0.5` seconds, but another
+positive finite value may be supplied. The command passes that value through
+unchanged to every clip and method.
 
 Existing report files cause a clear failure. Add `--overwrite` only when the
 complete report set for that evaluation run ID should be replaced.
@@ -116,11 +125,15 @@ The orchestrator rejects the complete run rather than skipping a bad clip when:
 - completed metadata lacks a completion timestamp;
 - baseline/enhanced metadata has the wrong method or selected split;
 - a clip ID is duplicated within one method;
-- baseline and enhanced clip sets differ;
-- a supplied clip is absent from the manifest or its selected split;
+- either method omits a selected manifest clip or supplies an extra clip;
+- a selected manifest clip has no annotation row proving manual review;
 - source FPS differs between manifest, baseline and enhanced provenance;
+- frame count, width or height differs between the manifest and either run;
 - baseline and enhanced input SHA-256 hashes differ for one clip;
 - a required metadata output path is missing or its file does not exist;
+- the baseline frame CSV lacks the current runner header, contains a run or
+  clip identity contradicting metadata, omits/duplicates frame indices, or has
+  a row count different from completed-run metadata;
 - loaded event run, clip or method identity contradicts its metadata;
 - event tolerance is zero, negative, NaN or infinite;
 - test evaluation lacks the explicit final-test flag; or
@@ -130,6 +143,10 @@ Project-relative output paths in runner metadata are resolved from the
 repository root. Absolute paths are used as recorded. Baseline events are
 loaded from the metadata `frame_csv`; enhanced events are loaded from the
 metadata `repetition_csv`.
+
+The current baseline frame CSV has `run_id` and `clip_id` columns but no method
+column. Formal loading validates every identity field that exists in that CSV;
+the baseline method identity itself is validated from completed-run metadata.
 
 ## Generated report files
 

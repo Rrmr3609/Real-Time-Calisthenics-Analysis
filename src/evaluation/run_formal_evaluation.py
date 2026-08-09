@@ -51,6 +51,10 @@ class _RecordedRun:
     method: str
     split: str
     source_fps: float
+    frame_count: int
+    width_px: int
+    height_px: int
+    processed_frames: int
     input_sha256: str
     output_paths: Mapping[str, Path]
 
@@ -103,6 +107,35 @@ def _positive_finite_number(
         )
 
     return number
+
+
+def _positive_integer(
+    value: object,
+    *,
+    description: str,
+) -> int:
+    if isinstance(value, bool):
+        raise ValueError(
+            f"{description} must be a positive integer"
+        )
+
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"{description} must be a positive integer"
+        ) from error
+
+    if (
+        not math.isfinite(number)
+        or number <= 0.0
+        or not number.is_integer()
+    ):
+        raise ValueError(
+            f"{description} must be a positive integer"
+        )
+
+    return int(number)
 
 
 def _resolve_metadata_output_path(raw_path: str) -> Path:
@@ -171,6 +204,11 @@ def _load_recorded_run(
             f"{source_name} did not process the complete recorded clip"
         )
 
+    processed_frames = _positive_integer(
+        processing_summary.get("processed_frames"),
+        description=f"{source_name} processed frame count",
+    )
+
     method = _required_text(document, "method", source_name)
 
     if method != expected_method:
@@ -203,6 +241,31 @@ def _load_recorded_run(
         input_video.get("source_fps"),
         description=f"{source_name} source FPS",
     )
+    frame_count = _positive_integer(
+        input_video.get("frame_count"),
+        description=f"{source_name} input frame count",
+    )
+    resolution = _required_mapping(
+        input_video,
+        "resolution",
+        source_name,
+    )
+    width_px = _positive_integer(
+        resolution.get("width_px"),
+        description=f"{source_name} input width",
+    )
+    height_px = _positive_integer(
+        resolution.get("height_px"),
+        description=f"{source_name} input height",
+    )
+
+    if processed_frames != frame_count:
+        raise ValueError(
+            f"{source_name} processed frame count "
+            f"{processed_frames} does not match input frame count "
+            f"{frame_count}"
+        )
+
     raw_outputs = _required_mapping(
         document,
         "outputs",
@@ -262,6 +325,10 @@ def _load_recorded_run(
         method=method,
         split=split,
         source_fps=source_fps,
+        frame_count=frame_count,
+        width_px=width_px,
+        height_px=height_px,
+        processed_frames=processed_frames,
         input_sha256=input_sha256,
         output_paths=output_paths,
     )
@@ -305,6 +372,103 @@ def _source_fps_matches(first: float, second: float) -> bool:
         rel_tol=SOURCE_FPS_RELATIVE_TOLERANCE,
         abs_tol=SOURCE_FPS_ABSOLUTE_TOLERANCE,
     )
+
+
+def _validate_complete_split_coverage(
+    supplied_clip_ids: set[str],
+    selected_manifest_clip_ids: set[str],
+    *,
+    method: str,
+    split: str,
+) -> None:
+    missing_clip_ids = sorted(
+        selected_manifest_clip_ids - supplied_clip_ids
+    )
+    extra_clip_ids = sorted(
+        supplied_clip_ids - selected_manifest_clip_ids
+    )
+
+    if missing_clip_ids or extra_clip_ids:
+        raise ValueError(
+            f"{method.title()} metadata must cover the complete "
+            f"manifest split {split!r}; missing={missing_clip_ids}, "
+            f"extra={extra_clip_ids}"
+        )
+
+
+def _validate_annotation_presence(
+    annotations,
+    selected_manifest_clip_ids: set[str],
+    *,
+    split: str,
+) -> None:
+    annotated_clip_ids = set(
+        annotations["clip_id"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+    missing_clip_ids = sorted(
+        selected_manifest_clip_ids - annotated_clip_ids
+    )
+
+    if missing_clip_ids:
+        raise ValueError(
+            f"Every clip in formal manifest split {split!r} must "
+            "have at least one annotation row; missing="
+            f"{missing_clip_ids}"
+        )
+
+
+def _validate_manifest_run_metadata(
+    *,
+    clip_id: str,
+    manifest_fps: float,
+    manifest_frame_count: int,
+    manifest_width_px: int,
+    manifest_height_px: int,
+    baseline_run: _RecordedRun,
+    enhanced_run: _RecordedRun,
+) -> None:
+    if not (
+        _source_fps_matches(manifest_fps, baseline_run.source_fps)
+        and _source_fps_matches(
+            manifest_fps,
+            enhanced_run.source_fps,
+        )
+        and _source_fps_matches(
+            baseline_run.source_fps,
+            enhanced_run.source_fps,
+        )
+    ):
+        raise ValueError(
+            f"Clip {clip_id!r} has inconsistent source FPS: "
+            f"manifest={manifest_fps}, "
+            f"baseline={baseline_run.source_fps}, "
+            f"enhanced={enhanced_run.source_fps}"
+        )
+
+    for run in (baseline_run, enhanced_run):
+        if run.frame_count != manifest_frame_count:
+            raise ValueError(
+                f"Clip {clip_id!r} {run.method} frame count "
+                f"{run.frame_count} does not match manifest "
+                f"{manifest_frame_count}"
+            )
+
+        if run.width_px != manifest_width_px:
+            raise ValueError(
+                f"Clip {clip_id!r} {run.method} width "
+                f"{run.width_px} does not match manifest "
+                f"{manifest_width_px}"
+            )
+
+        if run.height_px != manifest_height_px:
+            raise ValueError(
+                f"Clip {clip_id!r} {run.method} height "
+                f"{run.height_px} does not match manifest "
+                f"{manifest_height_px}"
+            )
 
 
 def _validate_loaded_events(
@@ -380,44 +544,32 @@ def run_formal_evaluation(
     baseline_clip_ids = set(baseline_runs)
     enhanced_clip_ids = set(enhanced_runs)
 
-    if baseline_clip_ids != enhanced_clip_ids:
-        raise ValueError(
-            "Baseline and enhanced metadata clip sets must match "
-            f"exactly; baseline-only="
-            f"{sorted(baseline_clip_ids - enhanced_clip_ids)}, "
-            f"enhanced-only="
-            f"{sorted(enhanced_clip_ids - baseline_clip_ids)}"
-        )
-
     manifest_clip_ids = (
         manifest["clip_id"].astype(str).str.strip()
     )
     manifest_splits = manifest["split"].astype(str).str.strip()
-    all_manifest_clip_ids = set(manifest_clip_ids)
     selected_manifest_clip_ids = set(
         manifest_clip_ids.loc[
             manifest_splits.eq(selected_split)
         ]
     )
-    unknown_clip_ids = sorted(
-        baseline_clip_ids - all_manifest_clip_ids
+    _validate_complete_split_coverage(
+        baseline_clip_ids,
+        selected_manifest_clip_ids,
+        method="baseline",
+        split=selected_split,
     )
-
-    if unknown_clip_ids:
-        raise ValueError(
-            "Supplied run metadata contains clip IDs absent from the "
-            f"manifest: {unknown_clip_ids}"
-        )
-
-    wrong_split_clip_ids = sorted(
-        baseline_clip_ids - selected_manifest_clip_ids
+    _validate_complete_split_coverage(
+        enhanced_clip_ids,
+        selected_manifest_clip_ids,
+        method="enhanced",
+        split=selected_split,
     )
-
-    if wrong_split_clip_ids:
-        raise ValueError(
-            f"Supplied clips are not in manifest split "
-            f"{selected_split!r}: {wrong_split_clip_ids}"
-        )
+    _validate_annotation_presence(
+        annotations,
+        selected_manifest_clip_ids,
+        split=selected_split,
+    )
 
     source_fps_by_clip = {
         clip_id: float(source_fps)
@@ -426,22 +578,39 @@ def run_formal_evaluation(
             manifest["source_fps"],
         )
     }
+    frame_count_by_clip = {
+        clip_id: int(frame_count)
+        for clip_id, frame_count in zip(
+            manifest_clip_ids,
+            manifest["frame_count"],
+        )
+    }
+    width_by_clip = {
+        clip_id: int(width_px)
+        for clip_id, width_px in zip(
+            manifest_clip_ids,
+            manifest["width_px"],
+        )
+    }
+    height_by_clip = {
+        clip_id: int(height_px)
+        for clip_id, height_px in zip(
+            manifest_clip_ids,
+            manifest["height_px"],
+        )
+    }
 
     for clip_id in sorted(baseline_clip_ids):
         manifest_fps = source_fps_by_clip[clip_id]
-        baseline_fps = baseline_runs[clip_id].source_fps
-        enhanced_fps = enhanced_runs[clip_id].source_fps
-
-        if not (
-            _source_fps_matches(manifest_fps, baseline_fps)
-            and _source_fps_matches(manifest_fps, enhanced_fps)
-            and _source_fps_matches(baseline_fps, enhanced_fps)
-        ):
-            raise ValueError(
-                f"Clip {clip_id!r} has inconsistent source FPS: "
-                f"manifest={manifest_fps}, baseline={baseline_fps}, "
-                f"enhanced={enhanced_fps}"
-            )
+        _validate_manifest_run_metadata(
+            clip_id=clip_id,
+            manifest_fps=manifest_fps,
+            manifest_frame_count=frame_count_by_clip[clip_id],
+            manifest_width_px=width_by_clip[clip_id],
+            manifest_height_px=height_by_clip[clip_id],
+            baseline_run=baseline_runs[clip_id],
+            enhanced_run=enhanced_runs[clip_id],
+        )
 
         if (
             baseline_runs[clip_id].input_sha256
@@ -477,6 +646,9 @@ def run_formal_evaluation(
         baseline_events = load_baseline_events(
             baseline_run.output_paths["frame_csv"],
             source_fps_by_clip={clip_id: source_fps},
+            expected_run_id=baseline_run.run_id,
+            expected_clip_id=baseline_run.clip_id,
+            expected_frame_count=baseline_run.frame_count,
         )
         enhanced_events = load_enhanced_events(
             enhanced_run.output_paths["repetition_csv"],
