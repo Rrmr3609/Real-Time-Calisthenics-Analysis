@@ -26,6 +26,7 @@ from evaluation.formal_evaluation import (
 from evaluation.formal_reporting import (
     EvaluationClipContext,
     FormalEvaluationOutputPaths,
+    SourceRunProvenance,
     aggregate_formal_evaluation,
     write_formal_evaluation_report,
 )
@@ -35,6 +36,10 @@ from evaluation.repetition_events import (
     extract_ground_truth_events,
     load_baseline_events,
     load_enhanced_events,
+)
+from utils.run_provenance import (
+    sha256_canonical_json,
+    sha256_file,
 )
 
 
@@ -57,6 +62,12 @@ class _RecordedRun:
     processed_frames: int
     input_sha256: str
     output_paths: Mapping[str, Path]
+    metadata_sha256: str
+    consumed_output_name: str
+    consumed_output_sha256: str
+    source_git_commit: str | None
+    source_git_dirty: bool | None
+    resolved_configuration_sha256: str | None
 
 
 def _required_mapping(
@@ -138,6 +149,59 @@ def _positive_integer(
     return int(number)
 
 
+def _source_file_sha256(
+    file_path: Path,
+    *,
+    description: str,
+) -> str:
+    try:
+        return sha256_file(file_path)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"{description} disappeared before formal report writing: "
+            f"{file_path}"
+        ) from error
+    except OSError as error:
+        raise OSError(
+            f"Could not hash {description}: {file_path}"
+        ) from error
+
+
+def _optional_source_git(
+    document: Mapping[str, Any],
+) -> tuple[str | None, bool | None]:
+    git = document.get("git")
+
+    if not isinstance(git, Mapping):
+        return None, None
+
+    raw_commit = git.get("commit")
+    commit = (
+        raw_commit.strip()
+        if isinstance(raw_commit, str) and raw_commit.strip()
+        else None
+    )
+    raw_dirty = git.get("dirty")
+    dirty = raw_dirty if isinstance(raw_dirty, bool) else None
+    return commit, dirty
+
+
+def _optional_resolved_configuration_sha256(
+    document: Mapping[str, Any],
+) -> str | None:
+    configuration = document.get("configuration")
+
+    if not isinstance(configuration, Mapping):
+        return None
+
+    resolved = configuration.get("resolved")
+
+    if not isinstance(resolved, Mapping):
+        return None
+
+    return sha256_canonical_json(resolved)
+
+
 def _resolve_metadata_output_path(raw_path: str) -> Path:
     path = Path(raw_path)
 
@@ -161,6 +225,11 @@ def _load_recorded_run(
             f"Run metadata file does not exist: {path}"
         )
 
+    metadata_sha256 = _source_file_sha256(
+        path,
+        description="Source-run metadata file",
+    )
+
     try:
         with path.open(encoding="utf-8") as metadata_file:
             document = json.load(metadata_file)
@@ -172,6 +241,14 @@ def _load_recorded_run(
     if not isinstance(document, Mapping):
         raise ValueError(
             f"Run metadata must contain one JSON object: {path}"
+        )
+
+    if _source_file_sha256(
+        path,
+        description="Source-run metadata file",
+    ) != metadata_sha256:
+        raise RuntimeError(
+            f"Source-run metadata changed while being read: {path}"
         )
 
     if document.get("metadata_schema_version") != 1:
@@ -318,6 +395,24 @@ def _load_recorded_run(
             "outputs['metadata_json']"
         )
 
+    consumed_output_name = (
+        "frame_csv"
+        if expected_method == "baseline"
+        else "repetition_csv"
+    )
+    consumed_output_sha256 = _source_file_sha256(
+        output_paths[consumed_output_name],
+        description=(
+            f"{expected_method.title()} consumed output CSV"
+        ),
+    )
+    source_git_commit, source_git_dirty = (
+        _optional_source_git(document)
+    )
+    resolved_configuration_sha256 = (
+        _optional_resolved_configuration_sha256(document)
+    )
+
     return _RecordedRun(
         metadata_path=path,
         run_id=run_id,
@@ -331,6 +426,14 @@ def _load_recorded_run(
         processed_frames=processed_frames,
         input_sha256=input_sha256,
         output_paths=output_paths,
+        metadata_sha256=metadata_sha256,
+        consumed_output_name=consumed_output_name,
+        consumed_output_sha256=consumed_output_sha256,
+        source_git_commit=source_git_commit,
+        source_git_dirty=source_git_dirty,
+        resolved_configuration_sha256=(
+            resolved_configuration_sha256
+        ),
     )
 
 
@@ -363,6 +466,83 @@ def _load_recorded_runs(
         runs_by_clip[run.clip_id] = run
 
     return runs_by_clip
+
+
+def _verify_source_files_unchanged(run: _RecordedRun) -> None:
+    current_metadata_sha256 = _source_file_sha256(
+        run.metadata_path,
+        description="Source-run metadata file",
+    )
+
+    if current_metadata_sha256 != run.metadata_sha256:
+        raise RuntimeError(
+            "Source-run metadata changed after validation: "
+            f"{run.metadata_path}"
+        )
+
+    consumed_output_path = run.output_paths[
+        run.consumed_output_name
+    ]
+    current_output_sha256 = _source_file_sha256(
+        consumed_output_path,
+        description=(
+            f"{run.method.title()} consumed output CSV"
+        ),
+    )
+
+    if current_output_sha256 != run.consumed_output_sha256:
+        raise RuntimeError(
+            f"{run.method.title()} consumed output CSV changed "
+            f"after validation: {consumed_output_path}"
+        )
+
+
+def _source_identity_path(
+    file_path: Path,
+    repository_root: Path,
+) -> str:
+    resolved_path = file_path.resolve()
+
+    try:
+        return resolved_path.relative_to(
+            repository_root.resolve()
+        ).as_posix()
+    except ValueError:
+        return resolved_path.name
+
+
+def _build_source_run_provenance(
+    run: _RecordedRun,
+    *,
+    repository_root: Path,
+) -> SourceRunProvenance:
+    _verify_source_files_unchanged(run)
+    consumed_output_path = run.output_paths[
+        run.consumed_output_name
+    ]
+    return SourceRunProvenance(
+        clip_id=run.clip_id,
+        method=run.method,
+        source_run_id=run.run_id,
+        split=run.split,
+        source_metadata_path=_source_identity_path(
+            run.metadata_path,
+            repository_root,
+        ),
+        source_metadata_sha256=run.metadata_sha256,
+        consumed_output_name=run.consumed_output_name,
+        consumed_output_path=_source_identity_path(
+            consumed_output_path,
+            repository_root,
+        ),
+        consumed_output_sha256=run.consumed_output_sha256,
+        source_input_video_sha256=run.input_sha256,
+        source_git_commit=run.source_git_commit,
+        source_git_dirty=run.source_git_dirty,
+        resolved_configuration_sha256=(
+            run.resolved_configuration_sha256
+        ),
+    )
 
 
 def _source_fps_matches(first: float, second: float) -> bool:
@@ -656,6 +836,8 @@ def run_formal_evaluation(
         )
         _validate_loaded_events(baseline_events, baseline_run)
         _validate_loaded_events(enhanced_events, enhanced_run)
+        _verify_source_files_unchanged(baseline_run)
+        _verify_source_files_unchanged(enhanced_run)
         clip_ground_truth = ground_truth_by_clip[clip_id]
         _, baseline_summary = evaluate_detection_for_clip(
             baseline_events,
@@ -689,11 +871,25 @@ def run_formal_evaluation(
         split=selected_split,
         tolerance_seconds=tolerance,
     )
+    source_run_provenance = tuple(
+        _build_source_run_provenance(
+            baseline_runs[clip_id],
+            repository_root=PROJECT_ROOT,
+        )
+        for clip_id in sorted(baseline_runs)
+    ) + tuple(
+        _build_source_run_provenance(
+            enhanced_runs[clip_id],
+            repository_root=PROJECT_ROOT,
+        )
+        for clip_id in sorted(enhanced_runs)
+    )
     return write_formal_evaluation_report(
         report,
         output_directory=output_directory,
         run_id=evaluation_run_id,
         repository_root=PROJECT_ROOT,
+        source_run_provenance=source_run_provenance,
         overwrite=overwrite,
     )
 

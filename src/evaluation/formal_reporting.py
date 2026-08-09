@@ -89,6 +89,50 @@ class EvaluationClipContext:
 
 
 @dataclass(frozen=True)
+class SourceRunProvenance:
+    clip_id: str
+    method: str
+    source_run_id: str
+    split: str
+    source_metadata_path: str
+    source_metadata_sha256: str
+    consumed_output_name: str
+    consumed_output_path: str
+    consumed_output_sha256: str
+    source_input_video_sha256: str
+    source_git_commit: str | None
+    source_git_dirty: bool | None
+    resolved_configuration_sha256: str | None
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "clip_id": self.clip_id,
+            "method": self.method,
+            "source_run_id": self.source_run_id,
+            "split": self.split,
+            "source_metadata_file": {
+                "path": self.source_metadata_path,
+                "sha256": self.source_metadata_sha256,
+            },
+            "consumed_output_csv": {
+                "output_name": self.consumed_output_name,
+                "path": self.consumed_output_path,
+                "sha256": self.consumed_output_sha256,
+            },
+            "source_input_video_sha256": (
+                self.source_input_video_sha256
+            ),
+            "source_git": {
+                "commit": self.source_git_commit,
+                "dirty": self.source_git_dirty,
+            },
+            "resolved_configuration_sha256": (
+                self.resolved_configuration_sha256
+            ),
+        }
+
+
+@dataclass(frozen=True)
 class DetectionAggregate:
     evaluated_clips: int
     total_ground_truth_repetitions: int
@@ -1198,6 +1242,90 @@ def _metadata_path(
         return str(resolved)
 
 
+def _ordered_source_run_metadata(
+    report: FormalEvaluationReport,
+    source_run_provenance: Sequence[SourceRunProvenance],
+) -> dict[str, list[dict[str, object]]]:
+    records = tuple(source_run_provenance)
+
+    if any(
+        not isinstance(record, SourceRunProvenance)
+        for record in records
+    ):
+        raise ValueError(
+            "Source-run provenance must contain only "
+            "SourceRunProvenance records"
+        )
+
+    record_keys = [
+        (record.method, record.clip_id)
+        for record in records
+    ]
+
+    if len(record_keys) != len(set(record_keys)):
+        raise ValueError(
+            "Source-run provenance contains duplicate method/clip "
+            "records"
+        )
+
+    report_clip_ids = set(report.ordered_clip_ids)
+    grouped: dict[str, list[SourceRunProvenance]] = {
+        "baseline": [],
+        "enhanced": [],
+    }
+
+    for record in records:
+        if record.method not in grouped:
+            raise ValueError(
+                "Source-run provenance method must be baseline or "
+                "enhanced"
+            )
+
+        for source_path in (
+            record.source_metadata_path,
+            record.consumed_output_path,
+        ):
+            if (
+                not isinstance(source_path, str)
+                or not source_path.strip()
+                or Path(source_path).is_absolute()
+            ):
+                raise ValueError(
+                    "Source-run provenance paths must be "
+                    "privacy-safe relative identifiers"
+                )
+
+        if record.split != report.split:
+            raise ValueError(
+                f"Source-run provenance for clip {record.clip_id!r} "
+                "does not match the report split"
+            )
+
+        grouped[record.method].append(record)
+
+    for method, method_records in grouped.items():
+        method_clip_ids = {
+            record.clip_id for record in method_records
+        }
+
+        if method_clip_ids != report_clip_ids:
+            raise ValueError(
+                f"{method.title()} source-run provenance must match "
+                "the report clip set exactly"
+            )
+
+    return {
+        method: [
+            record.to_dict()
+            for record in sorted(
+                method_records,
+                key=lambda record: record.clip_id,
+            )
+        ]
+        for method, method_records in grouped.items()
+    }
+
+
 def _base_evaluation_metadata(
     report: FormalEvaluationReport,
     output_paths: FormalEvaluationOutputPaths,
@@ -1205,6 +1333,7 @@ def _base_evaluation_metadata(
     run_id: str,
     repository_root: Path,
     started_utc: str,
+    source_runs: Mapping[str, Sequence[Mapping[str, object]]],
     software_versions: Mapping[str, Any] | None,
     git_state: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
@@ -1219,6 +1348,10 @@ def _base_evaluation_metadata(
         "event_tolerance_seconds": (
             report.event_tolerance_seconds
         ),
+        "source_runs": {
+            method: [dict(record) for record in records]
+            for method, records in source_runs.items()
+        },
         "outputs": {
             name: _metadata_path(path, repository_root)
             for name, path in output_paths.named_paths().items()
@@ -1245,6 +1378,7 @@ def write_formal_evaluation_report(
     output_directory: str | Path,
     run_id: str,
     repository_root: str | Path,
+    source_run_provenance: Sequence[SourceRunProvenance],
     overwrite: bool = False,
     software_versions: Mapping[str, Any] | None = None,
     git_state: Mapping[str, Any] | None = None,
@@ -1255,6 +1389,11 @@ def write_formal_evaluation_report(
         raise ValueError(
             "Report must be a FormalEvaluationReport instance"
         )
+
+    source_runs = _ordered_source_run_metadata(
+        report,
+        source_run_provenance,
+    )
 
     output_paths = formal_evaluation_output_paths(
         output_directory,
@@ -1274,6 +1413,7 @@ def write_formal_evaluation_report(
         run_id=run_id,
         repository_root=repository,
         started_utc=started_utc,
+        source_runs=source_runs,
         software_versions=software_versions,
         git_state=git_state,
     )

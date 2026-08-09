@@ -172,8 +172,26 @@ The metadata file is separate from deterministic metric content. It records:
 - start and completion or failure timestamps;
 - `running`, `completed` or `failed` lifecycle status.
 
-This aggregation layer does not invent input-video hashes. Those remain in the
-source run metadata where they were actually calculated.
+It additionally contains baseline and enhanced source-run records ordered by
+clip ID. Each record binds the result to the source clip, method, run ID and
+split; the source metadata file path and SHA-256; the consumed baseline frame
+CSV or enhanced repetition CSV path and SHA-256; the input-video SHA-256
+inherited from source metadata; source Git commit and dirty state where
+present; and a canonical resolved-configuration SHA-256 where available.
+
+Source metadata and CSV hashing is streamed. Resolved configuration hashing
+uses UTF-8 canonical JSON with sorted keys and stable compact separators.
+Repository-contained source paths are recorded relative to the repository with
+POSIX separators. External source paths are represented by basename only, so
+absolute machine-specific paths are not published; hashes retain exact file
+identity.
+
+The source records are lifecycle provenance only. They are not added to
+`FormalEvaluationReport.to_dict()` or any metric file, so identical metric
+inputs continue to produce identical deterministic metric content. Missing
+upstream Git or resolved-configuration values are recorded as `None`, not
+fabricated. Input videos are not rehashed by evaluation; their existing source
+metadata hashes are preserved.
 
 ## Current limitations and evaluation warning
 

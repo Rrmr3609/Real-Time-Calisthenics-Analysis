@@ -1,6 +1,7 @@
 import json
 import math
 from collections import Counter
+from dataclasses import replace
 
 import pytest
 
@@ -18,6 +19,7 @@ from evaluation.formal_evaluation import (
 from evaluation.formal_reporting import (
     PER_CLIP_COLUMNS,
     EvaluationClipContext,
+    SourceRunProvenance,
     aggregate_formal_evaluation,
     formal_evaluation_output_paths,
     write_formal_evaluation_report,
@@ -26,6 +28,36 @@ from evaluation.formal_reporting import (
 
 FPS = 10.0
 TOLERANCE = 0.5
+
+
+def source_run_provenance(clip_id, method):
+    return SourceRunProvenance(
+        clip_id=clip_id,
+        method=method,
+        source_run_id=f"{method}-{clip_id}-run",
+        split="development",
+        source_metadata_path=(
+            f"runs/{method}-{clip_id}_metadata.json"
+        ),
+        source_metadata_sha256=(
+            "a" * 64 if method == "baseline" else "b" * 64
+        ),
+        consumed_output_name=(
+            "frame_csv"
+            if method == "baseline"
+            else "repetition_csv"
+        ),
+        consumed_output_path=(
+            f"runs/{method}-{clip_id}.csv"
+        ),
+        consumed_output_sha256=(
+            "c" * 64 if method == "baseline" else "d" * 64
+        ),
+        source_input_video_sha256="e" * 64,
+        source_git_commit="abc123",
+        source_git_dirty=False,
+        resolved_configuration_sha256="f" * 64,
+    )
 
 
 def detection(
@@ -911,11 +943,20 @@ def write_report(report, output_directory, **kwargs):
             "2026-08-07T10:02:00+00:00",
         ]
     )
+    provenance = kwargs.pop(
+        "source_run_provenance",
+        tuple(
+            source_run_provenance(clip_id, method)
+            for method in ("baseline", "enhanced")
+            for clip_id in report.ordered_clip_ids
+        ),
+    )
     return write_formal_evaluation_report(
         report,
         output_directory=output_directory,
         run_id="fictional-evaluation",
         repository_root=output_directory,
+        source_run_provenance=provenance,
         software_versions={
             "python": "3.12.4",
             "packages": {"pandas": "2.2.2"},
@@ -1053,6 +1094,17 @@ def test_writer_metadata_is_completed_atomically(tmp_path):
     assert metadata["evaluated_clip_count"] == 1
     assert report_document["event_tolerance_seconds"] == 0.75
     assert metadata["event_tolerance_seconds"] == 0.75
+    assert "source_runs" not in report_document
+    assert set(metadata["source_runs"]) == {
+        "baseline",
+        "enhanced",
+    }
+    assert metadata["source_runs"]["baseline"][0][
+        "source_run_id"
+    ] == "baseline-clip-a-run"
+    assert metadata["source_runs"]["enhanced"][0][
+        "consumed_output_csv"
+    ]["output_name"] == "repetition_csv"
     assert metadata["software"]["python"] == "3.12.4"
     assert metadata["git"]["commit"] == "abc123"
     assert metadata["timestamps"] == {
@@ -1065,6 +1117,46 @@ def test_writer_metadata_is_completed_atomically(tmp_path):
     )
     assert not list(tmp_path.glob("*.tmp"))
     assert not list(tmp_path.glob(".*.tmp"))
+
+
+def test_writer_requires_complete_source_provenance(tmp_path):
+    with pytest.raises(
+        ValueError,
+        match="Enhanced source-run provenance",
+    ):
+        write_report(
+            perfect_report(),
+            tmp_path,
+            source_run_provenance=(
+                source_run_provenance("clip-a", "baseline"),
+            ),
+        )
+
+    paths = formal_evaluation_output_paths(
+        tmp_path,
+        "fictional-evaluation",
+    )
+    assert not any(path.exists() for path in paths.all_paths())
+
+
+def test_writer_rejects_absolute_source_provenance_path(tmp_path):
+    baseline = source_run_provenance("clip-a", "baseline")
+    unsafe_baseline = replace(
+        baseline,
+        source_metadata_path=str(
+            (tmp_path / "source.json").resolve()
+        ),
+    )
+
+    with pytest.raises(ValueError, match="privacy-safe"):
+        write_report(
+            perfect_report(),
+            tmp_path,
+            source_run_provenance=(
+                unsafe_baseline,
+                source_run_provenance("clip-a", "enhanced"),
+            ),
+        )
 
 
 def test_failed_write_records_failed_metadata(

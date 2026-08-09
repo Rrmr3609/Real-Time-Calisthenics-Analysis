@@ -39,6 +39,18 @@ def sha256_file(
     return digest.hexdigest()
 
 
+def sha256_canonical_json(value: Any) -> str:
+    """Hash one JSON value using deterministic canonical serialization."""
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def collect_software_versions(
     version_reader: Callable[[str], str] = metadata.version,
 ) -> dict[str, Any]:

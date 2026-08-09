@@ -1,10 +1,12 @@
 import csv
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
+import evaluation.run_formal_evaluation as runner_module
 from evaluation.formal_reporting import (
     formal_evaluation_output_paths,
 )
@@ -96,6 +98,32 @@ def write_json(path, document):
 
 def read_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def sha256_bytes(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def canonical_json_sha256(value):
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def expected_source_identity_path(path, repository_root):
+    resolved_path = Path(path).resolve()
+
+    try:
+        return resolved_path.relative_to(
+            Path(repository_root).resolve()
+        ).as_posix()
+    except ValueError:
+        return resolved_path.name
 
 
 def manifest_row(clip_id, split, fps):
@@ -231,6 +259,22 @@ def recorded_run_metadata(
                 "width_px": 640,
                 "height_px": 480,
             },
+        },
+        "configuration": {
+            "resolved": {
+                "method": method,
+                "source_fps": source_fps,
+                "fictional_setting": (
+                    "baseline-value"
+                    if method == "baseline"
+                    else "enhanced-value"
+                ),
+            },
+        },
+        "git": {
+            "commit": f"{method}-{clip_id}-commit",
+            "branch": "codex/fictional",
+            "dirty": method == "enhanced",
         },
         "outputs": {
             **{
@@ -476,6 +520,292 @@ def test_complete_formal_report_output_set_is_produced(tmp_path):
     metadata = read_json(output_paths.metadata_json)
     assert metadata["status"] == "completed"
     assert metadata["event_tolerance_seconds"] == 0.75
+
+
+def test_evaluation_metadata_binds_exact_source_runs(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    baseline_paths = list(reversed(inputs.baseline_metadata_paths))
+    enhanced_paths = list(reversed(inputs.enhanced_metadata_paths))
+    output_paths = run_inputs(
+        inputs,
+        baseline_metadata_paths=baseline_paths,
+        enhanced_metadata_paths=enhanced_paths,
+    )
+    metadata = read_json(output_paths.metadata_json)
+    source_runs = metadata["source_runs"]
+
+    assert [
+        record["clip_id"] for record in source_runs["baseline"]
+    ] == ["fictional-clip-a", "fictional-clip-b"]
+    assert [
+        record["clip_id"] for record in source_runs["enhanced"]
+    ] == ["fictional-clip-a", "fictional-clip-b"]
+
+    for method, metadata_paths in (
+        ("baseline", inputs.baseline_metadata_paths),
+        ("enhanced", inputs.enhanced_metadata_paths),
+    ):
+        documents_by_clip = {
+            read_json(path)["clip_id"]: (path, read_json(path))
+            for path in metadata_paths
+        }
+
+        for record in source_runs[method]:
+            metadata_path, document = documents_by_clip[
+                record["clip_id"]
+            ]
+            output_name = (
+                "frame_csv"
+                if method == "baseline"
+                else "repetition_csv"
+            )
+            consumed_path = Path(
+                document["outputs"][output_name]
+            )
+
+            assert record["method"] == method
+            assert record["source_run_id"] == document["run_id"]
+            assert record["split"] == "development"
+            assert record["source_metadata_file"] == {
+                "path": expected_source_identity_path(
+                    metadata_path,
+                    runner_module.PROJECT_ROOT,
+                ),
+                "sha256": sha256_bytes(metadata_path),
+            }
+            assert record["consumed_output_csv"] == {
+                "output_name": output_name,
+                "path": expected_source_identity_path(
+                    consumed_path,
+                    runner_module.PROJECT_ROOT,
+                ),
+                "sha256": sha256_bytes(consumed_path),
+            }
+            assert record["source_input_video_sha256"] == (
+                document["input_video"]["sha256"]
+            )
+            assert record["source_git"] == {
+                "commit": document["git"]["commit"],
+                "dirty": document["git"]["dirty"],
+            }
+            assert record[
+                "resolved_configuration_sha256"
+            ] == canonical_json_sha256(
+                document["configuration"]["resolved"]
+            )
+
+    assert source_runs["baseline"][0][
+        "resolved_configuration_sha256"
+    ] != source_runs["enhanced"][0][
+        "resolved_configuration_sha256"
+    ]
+    assert str(tmp_path.resolve()) not in json.dumps(source_runs)
+
+
+def test_repository_source_paths_are_relative_and_posix(
+    tmp_path,
+    monkeypatch,
+):
+    repository_root = tmp_path / "fictional-repository"
+    inputs = create_fictional_inputs(repository_root)
+    monkeypatch.setattr(
+        runner_module,
+        "PROJECT_ROOT",
+        repository_root,
+    )
+
+    output_paths = run_inputs(inputs)
+    source_runs = read_json(output_paths.metadata_json)[
+        "source_runs"
+    ]
+
+    for method_records in source_runs.values():
+        for record in method_records:
+            for file_record in (
+                record["source_metadata_file"],
+                record["consumed_output_csv"],
+            ):
+                assert file_record["path"].startswith("runs/")
+                assert "\\" not in file_record["path"]
+                assert not Path(file_record["path"]).is_absolute()
+
+
+def test_external_source_paths_use_privacy_safe_identifiers(
+    tmp_path,
+    monkeypatch,
+):
+    repository_root = tmp_path / "fictional-repository"
+    repository_root.mkdir()
+    external_root = tmp_path / "fictional-external-sources"
+    inputs = create_fictional_inputs(external_root)
+    monkeypatch.setattr(
+        runner_module,
+        "PROJECT_ROOT",
+        repository_root,
+    )
+    output_paths = run_inputs(
+        inputs,
+        output_directory=repository_root / "reports",
+    )
+    metadata = read_json(output_paths.metadata_json)
+    source_runs = metadata["source_runs"]
+    baseline_metadata_path = inputs.baseline_metadata_paths[0]
+    baseline_metadata = read_json(baseline_metadata_path)
+    baseline_csv = Path(baseline_metadata["outputs"]["frame_csv"])
+    baseline_record = source_runs["baseline"][0]
+
+    assert baseline_record["source_metadata_file"] == {
+        "path": baseline_metadata_path.name,
+        "sha256": sha256_bytes(baseline_metadata_path),
+    }
+    assert baseline_record["consumed_output_csv"] == {
+        "output_name": "frame_csv",
+        "path": baseline_csv.name,
+        "sha256": sha256_bytes(baseline_csv),
+    }
+
+    metadata_text = json.dumps(metadata)
+    assert str(external_root.resolve()) not in metadata_text
+    assert not any(
+        Path(file_record["path"]).is_absolute()
+        for method_records in source_runs.values()
+        for record in method_records
+        for file_record in (
+            record["source_metadata_file"],
+            record["consumed_output_csv"],
+        )
+    )
+
+
+def test_repeated_evaluation_preserves_source_provenance_and_metrics(
+    tmp_path,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    first_paths = run_inputs(inputs, run_id="first-evaluation")
+    second_paths = run_inputs(inputs, run_id="second-evaluation")
+
+    assert read_json(first_paths.metadata_json)["source_runs"] == (
+        read_json(second_paths.metadata_json)["source_runs"]
+    )
+    assert first_paths.report_json.read_bytes() == (
+        second_paths.report_json.read_bytes()
+    )
+    assert "source_runs" not in read_json(first_paths.report_json)
+
+
+@pytest.mark.parametrize(
+    "removed_source",
+    ["metadata", "csv"],
+)
+def test_source_disappearing_before_provenance_capture_fails(
+    tmp_path,
+    monkeypatch,
+    removed_source,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    baseline_metadata_path = inputs.baseline_metadata_paths[0]
+    baseline_metadata = read_json(baseline_metadata_path)
+    source_path = (
+        baseline_metadata_path
+        if removed_source == "metadata"
+        else Path(baseline_metadata["outputs"]["frame_csv"])
+    )
+    original_aggregate = runner_module.aggregate_formal_evaluation
+
+    def aggregate_then_remove_source(*args, **kwargs):
+        report = original_aggregate(*args, **kwargs)
+        source_path.unlink()
+        return report
+
+    monkeypatch.setattr(
+        runner_module,
+        "aggregate_formal_evaluation",
+        aggregate_then_remove_source,
+    )
+
+    with pytest.raises(FileNotFoundError, match="disappeared"):
+        run_inputs(inputs, run_id="missing-source-evaluation")
+
+    output_paths = formal_evaluation_output_paths(
+        inputs.output_directory,
+        "missing-source-evaluation",
+    )
+    assert not any(path.exists() for path in output_paths.all_paths())
+
+
+def test_consumed_csv_mutation_changes_recorded_hash(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    first_paths = run_inputs(inputs, run_id="first-evaluation")
+    baseline_metadata = read_json(inputs.baseline_metadata_paths[0])
+    baseline_csv = Path(baseline_metadata["outputs"]["frame_csv"])
+    baseline_csv.write_text(
+        baseline_csv.read_text(encoding="utf-8") + "\n",
+        encoding="utf-8",
+    )
+    second_paths = run_inputs(inputs, run_id="second-evaluation")
+    first_hash = read_json(first_paths.metadata_json)["source_runs"][
+        "baseline"
+    ][0]["consumed_output_csv"]["sha256"]
+    second_hash = read_json(second_paths.metadata_json)["source_runs"][
+        "baseline"
+    ][0]["consumed_output_csv"]["sha256"]
+
+    assert first_hash != second_hash
+    assert second_hash == sha256_bytes(baseline_csv)
+
+
+def test_source_mutation_before_provenance_capture_fails(
+    tmp_path,
+    monkeypatch,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    baseline_metadata = read_json(inputs.baseline_metadata_paths[0])
+    baseline_csv = Path(baseline_metadata["outputs"]["frame_csv"])
+    original_aggregate = runner_module.aggregate_formal_evaluation
+
+    def aggregate_then_mutate_source(*args, **kwargs):
+        report = original_aggregate(*args, **kwargs)
+        baseline_csv.write_text(
+            baseline_csv.read_text(encoding="utf-8") + "\n",
+            encoding="utf-8",
+        )
+        return report
+
+    monkeypatch.setattr(
+        runner_module,
+        "aggregate_formal_evaluation",
+        aggregate_then_mutate_source,
+    )
+
+    with pytest.raises(RuntimeError, match="changed after validation"):
+        run_inputs(inputs, run_id="mutated-source-evaluation")
+
+    output_paths = formal_evaluation_output_paths(
+        inputs.output_directory,
+        "mutated-source-evaluation",
+    )
+    assert not any(path.exists() for path in output_paths.all_paths())
+
+
+def test_absent_optional_source_provenance_is_not_invented(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    metadata_path = inputs.baseline_metadata_paths[0]
+
+    def remove_optional_provenance(document):
+        document.pop("git")
+        document.pop("configuration")
+
+    rewrite_metadata(metadata_path, remove_optional_provenance)
+    output_paths = run_inputs(inputs)
+    baseline_record = read_json(output_paths.metadata_json)[
+        "source_runs"
+    ]["baseline"][0]
+
+    assert baseline_record["source_git"] == {
+        "commit": None,
+        "dirty": None,
+    }
+    assert baseline_record["resolved_configuration_sha256"] is None
 
 
 def test_valid_baseline_zero_detection_file_is_accepted(tmp_path):

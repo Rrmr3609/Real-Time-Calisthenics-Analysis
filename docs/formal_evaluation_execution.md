@@ -25,6 +25,13 @@ The orchestration command consumes the metadata JSON paths, not guessed output
 filenames. Each metadata document identifies its run, clip, method, split,
 source FPS, frame count, resolution and generated output paths.
 
+The evaluation metadata captures a streaming SHA-256 identity for every
+supplied source-run metadata file and for the exact CSV consumed from it:
+baseline `frame_csv` and enhanced `repetition_csv`. It also inherits the input
+video SHA-256, source Git commit/dirty state and a deterministic hash of the
+resolved configuration when those values exist in the source metadata. Source
+metadata files are not modified.
+
 ### 2. Prepare the dataset manifest
 
 Create one manifest row per clip using the schema in
@@ -135,6 +142,8 @@ The orchestrator rejects the complete run rather than skipping a bad clip when:
   clip identity contradicting metadata, omits/duplicates frame indices, or has
   a row count different from completed-run metadata;
 - loaded event run, clip or method identity contradicts its metadata;
+- a source metadata file or consumed CSV disappears or changes after it has
+  been accepted and before formal report writing;
 - event tolerance is zero, negative, NaN or infinite;
 - test evaluation lacks the explicit final-test flag; or
 - any report output already exists without `--overwrite`.
@@ -147,6 +156,11 @@ metadata `repetition_csv`.
 The current baseline frame CSV has `run_id` and `clip_id` columns but no method
 column. Formal loading validates every identity field that exists in that CSV;
 the baseline method identity itself is validated from completed-run metadata.
+
+Source metadata and consumed CSV paths stored in final evaluation metadata are
+repository-relative POSIX-style paths when the files are inside the repository.
+For external files, only the basename is published; the streaming SHA-256 still
+provides deterministic file identity without exposing an absolute machine path.
 
 ## Generated report files
 

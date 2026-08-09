@@ -10,6 +10,7 @@ from utils.run_provenance import (
     collect_git_state,
     collect_software_versions,
     create_run_metadata,
+    sha256_canonical_json,
     sha256_file,
 )
 
@@ -38,6 +39,36 @@ def test_sha256_file_is_deterministic(tmp_path):
 
     assert sha256_file(input_path) == expected
     assert sha256_file(input_path) == expected
+
+
+def test_canonical_json_sha256_is_deterministic_and_order_independent():
+    first = {
+        "features": {"ema_alpha": 0.4, "enabled": True},
+        "threshold": 130,
+    }
+    reordered = {
+        "threshold": 130,
+        "features": {"enabled": True, "ema_alpha": 0.4},
+    }
+    expected_bytes = json.dumps(
+        first,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+
+    assert sha256_canonical_json(first) == hashlib.sha256(
+        expected_bytes
+    ).hexdigest()
+    assert sha256_canonical_json(first) == (
+        sha256_canonical_json(reordered)
+    )
+    assert sha256_canonical_json(first) != (
+        sha256_canonical_json(
+            {**first, "threshold": 131}
+        )
+    )
 
 
 def test_software_versions_use_mocked_distribution_data():

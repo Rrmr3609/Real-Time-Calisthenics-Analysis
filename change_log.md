@@ -1,5 +1,22 @@
 # Project Change Log
 
+## 9 August 2026 - Formal source-run provenance linkage
+
+- Bound evaluation metadata to every consumed baseline and enhanced source run
+  using source run IDs, source metadata hashes, consumed CSV hashes, inherited
+  input-video hashes, source Git state and canonical resolved-config hashes.
+- Reused streaming file hashing and added stable canonical-JSON hashing for
+  resolved configuration identity.
+- Stored repository-contained source paths relatively and reduced external
+  source paths to basenames to avoid publishing machine-specific locations.
+- Reverified source metadata and consumed CSV identities before report writing
+  while keeping provenance out of deterministic metric content.
+- Added fictional focused tests for ordering, exact hashes, privacy,
+  determinism, optional values, mutation/disappearance and lifecycle safety.
+
+No metric, event-matching, tolerance, annotation, threshold, segmentation,
+classifier, side-selection or runner analysis behaviour was changed.
+
 ## 8 August 2026 - Formal input integrity
 
 - Required baseline and enhanced metadata to cover the complete selected
