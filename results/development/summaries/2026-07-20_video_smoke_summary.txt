@@ -1,4 +1,4 @@
-﻿Recorded-video smoke test - 20 July 2026
+Recorded-video smoke test - 20 July 2026
 
 Total frames: 497
 Pose-detected frame rate: 0.815

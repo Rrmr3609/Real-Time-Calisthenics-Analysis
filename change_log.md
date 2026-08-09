@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 9 August 2026 - Historical evidence encoding normalised
+
+- Converted legacy tracked development text evidence to UTF-8 without a BOM
+  for repository portability and readability while preserving its historical
+  decoded content exactly.
+
 ## 9 August 2026 - Development evidence separated
 
 - Relocated historical development evidence and setup metadata into explicit
