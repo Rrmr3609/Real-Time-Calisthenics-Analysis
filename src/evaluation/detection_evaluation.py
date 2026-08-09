@@ -1,3 +1,5 @@
+"""Evaluate per-clip repetition completion-event detection."""
+
 from __future__ import annotations
 
 import argparse
@@ -26,6 +28,13 @@ from evaluation.repetition_events import (
 
 @dataclass(frozen=True)
 class DetectionSummary:
+    """Detection and completion-timing metrics for one clip and method.
+
+    Signed count error is predicted count minus GT count. Completion-timing
+    means are measured in seconds and are absent when there are no matches;
+    event precision, recall and F1 use ``0.0`` for zero denominators.
+    """
+
     run_id: str | None
     clip_id: str
     method: str
@@ -49,12 +58,20 @@ class DetectionSummary:
     tolerance_frames: int
 
     def to_dict(self) -> dict[str, object]:
+        """Return the summary fields in a serialization-ready mapping."""
         return asdict(self)
 
 
 def summarise_detection(
     match_result: EventMatchResult,
 ) -> DetectionSummary:
+    """Summarise matches, misses and extras from one matching result.
+
+    A match is a true-positive completion event, an unmatched annotation is a
+    miss and an unmatched prediction is an extra. Empty prediction and/or GT
+    sets remain valid and produce zero event rates; timing means require at
+    least one matched pair.
+    """
     ground_truth_count = (
         len(match_result.matched_pairs)
         + len(match_result.unmatched_annotations)
@@ -154,6 +171,12 @@ def evaluate_detection_for_clip(
         DEFAULT_EVENT_TOLERANCE_SECONDS
     ),
 ) -> tuple[EventMatchResult, DetectionSummary]:
+    """Match one clip's events and return its detection-only summary.
+
+    ``source_fps`` converts frame differences to seconds when recorded
+    timestamps are unavailable. Classification is deliberately outside this
+    function.
+    """
     match_result = match_repetition_events(
         predictions,
         annotations,
@@ -171,6 +194,7 @@ def _match_payload(
     match_result: EventMatchResult,
     summary: DetectionSummary,
 ) -> dict[str, object]:
+    """Build the detailed, detection-only JSON payload used by the CLI."""
     return {
         "summary": summary.to_dict(),
         "matched_event_pairs": [
@@ -213,6 +237,7 @@ def _match_payload(
 
 
 def parse_arguments(argv=None) -> argparse.Namespace:
+    """Parse arguments for one-clip detection evaluation."""
     parser = argparse.ArgumentParser(
         description=(
             "Extract and match repetition completion events, "
@@ -260,6 +285,7 @@ def parse_arguments(argv=None) -> argparse.Namespace:
 
 
 def main() -> None:
+    """Validate inputs and print one clip's detection result as JSON."""
     args = parse_arguments()
     manifest, annotations = (
         load_and_validate_evaluation_data(

@@ -1,3 +1,10 @@
+"""Orchestrate formal evaluation from completed recorded-run artefacts.
+
+This command validates manifests, annotations, source metadata and generated
+CSVs before evaluating them. It consumes existing files only and never opens or
+processes source videos.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -49,6 +56,8 @@ SOURCE_FPS_ABSOLUTE_TOLERANCE = 1e-6
 
 @dataclass(frozen=True)
 class _RecordedRun:
+    """Validated identity and immutable file hashes for one source run."""
+
     metadata_path: Path
     run_id: str
     clip_id: str
@@ -153,6 +162,7 @@ def _source_file_sha256(
     *,
     description: str,
 ) -> str:
+    """Hash a required source file with context-rich disappearance errors."""
     try:
         return sha256_file(file_path)
     except FileNotFoundError as error:
@@ -216,6 +226,13 @@ def _load_recorded_run(
     expected_method: str,
     selected_split: str,
 ) -> _RecordedRun:
+    """Load and bind one completed source-run metadata document.
+
+    The metadata must identify the expected method and selected split, prove
+    full-clip processing, provide positive FPS/frame/resolution values and
+    resolve all method-required outputs. The metadata file and consumed event
+    CSV are hashed so later mutation can be detected.
+    """
     path = Path(metadata_path).resolve()
     source_name = str(path)
 
@@ -442,6 +459,7 @@ def _load_recorded_runs(
     expected_method: str,
     selected_split: str,
 ) -> dict[str, _RecordedRun]:
+    """Load exactly one source run per unique clip for one method."""
     if not metadata_paths:
         raise ValueError(
             f"At least one {expected_method} metadata path is required"
@@ -468,6 +486,7 @@ def _load_recorded_runs(
 
 
 def _verify_source_files_unchanged(run: _RecordedRun) -> None:
+    """Re-hash source metadata and its consumed CSV after validation."""
     current_metadata_sha256 = _source_file_sha256(
         run.metadata_path,
         description="Source-run metadata file",
@@ -500,6 +519,7 @@ def _source_identity_path(
     file_path: Path,
     repository_root: Path,
 ) -> str:
+    """Return a repository-relative path or privacy-safe external basename."""
     resolved_path = file_path.resolve()
 
     try:
@@ -515,6 +535,7 @@ def _build_source_run_provenance(
     *,
     repository_root: Path,
 ) -> SourceRunProvenance:
+    """Create privacy-safe, hash-bound provenance for one consumed run."""
     _verify_source_files_unchanged(run)
     consumed_output_path = run.output_paths[
         run.consumed_output_name
@@ -560,6 +581,7 @@ def _validate_complete_split_coverage(
     method: str,
     split: str,
 ) -> None:
+    """Require a method's source runs to equal the selected manifest split."""
     missing_clip_ids = sorted(
         selected_manifest_clip_ids - supplied_clip_ids
     )
@@ -581,6 +603,12 @@ def _validate_annotation_presence(
     *,
     split: str,
 ) -> None:
+    """Require evidence that every selected clip received annotation review.
+
+    At least one annotation row is required per clip. The row may describe an
+    evaluable attempt or an ambiguous fragment; row semantics were validated
+    earlier by ``dataset_validation``.
+    """
     annotated_clip_ids = set(
         annotations["clip_id"]
         .fillna("")
@@ -609,6 +637,7 @@ def _validate_manifest_run_metadata(
     baseline_run: _RecordedRun,
     enhanced_run: _RecordedRun,
 ) -> None:
+    """Bind manifest FPS, frame count and resolution to both source runs."""
     if not (
         _source_fps_matches(manifest_fps, baseline_run.source_fps)
         and _source_fps_matches(
@@ -656,6 +685,7 @@ def _validate_loaded_events(
     ],
     run: _RecordedRun,
 ) -> None:
+    """Require every loaded event to retain its source-run identity."""
     inconsistent_events = [
         event
         for event in events
@@ -686,7 +716,21 @@ def run_formal_evaluation(
     overwrite: bool = False,
     allow_final_test: bool = False,
 ) -> FormalEvaluationOutputPaths:
-    """Evaluate existing recorded-run outputs and write one report set."""
+    """Validate and evaluate one complete manifest split from existing runs.
+
+    Exactly one baseline and one enhanced completed run must cover every clip
+    in the selected split, with no extras. Manifest FPS, frame count and
+    resolution are checked against both runs, and baseline/enhanced input-video
+    SHA-256 hashes must agree. Every clip requires annotation-review evidence.
+    Source metadata and consumed CSV hashes are captured and reverified before
+    reporting, together with available source Git and resolved-configuration
+    identity.
+
+    Test-split evaluation is blocked unless ``allow_final_test`` explicitly
+    confirms that development decisions, including tolerance, have been frozen.
+    Validation and I/O failures propagate before a successful report is
+    returned. This orchestration does not process videos or tune parameters.
+    """
     selected_split = str(split).strip()
 
     if selected_split not in ALLOWED_SPLITS:
@@ -896,6 +940,7 @@ def run_formal_evaluation(
 def parse_arguments(
     argv: Sequence[str] | None = None,
 ) -> argparse.Namespace:
+    """Parse explicit source-run bindings and formal-report options."""
     parser = argparse.ArgumentParser(
         description=(
             "Run formal evaluation over explicit completed baseline and "
@@ -966,6 +1011,7 @@ def parse_arguments(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run the CLI, returning zero or a validation/I/O failure code."""
     args = parse_arguments(argv)
 
     try:

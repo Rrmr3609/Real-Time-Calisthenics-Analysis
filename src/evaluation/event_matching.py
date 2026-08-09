@@ -1,3 +1,5 @@
+"""Match predicted and GT completion events with deterministic chronology."""
+
 from __future__ import annotations
 
 import math
@@ -16,6 +18,13 @@ DEFAULT_EVENT_TOLERANCE_SECONDS = 0.5
 
 @dataclass(frozen=True)
 class MatchedEventPair:
+    """One prediction/annotation match and its completion-time error.
+
+    Signed errors are prediction minus GT, so positive values mean the
+    predicted completion occurred later. Timing errors are expressed in
+    seconds; ``matching_basis`` records whether timestamps or frames were used.
+    """
+
     prediction: PredictedRepetitionEvent
     annotation: GroundTruthRepetitionEvent
     signed_frame_error: int
@@ -26,6 +35,8 @@ class MatchedEventPair:
 
 @dataclass(frozen=True)
 class EventMatchResult:
+    """Complete one-to-one result for one clip, method and tolerance."""
+
     clip_id: str
     method: str
     source_fps: float
@@ -42,6 +53,8 @@ class EventMatchResult:
 
 @dataclass(frozen=True)
 class _Solution:
+    """One chronological dynamic-programming solution candidate."""
+
     pair_indices: tuple[tuple[int, int], ...]
     total_absolute_error_seconds: float
 
@@ -108,6 +121,7 @@ def _timing_difference(
     tolerance_seconds: float,
     tolerance_frames: int,
 ) -> tuple[bool, float, str]:
+    """Return eligibility, signed seconds and the available timing basis."""
     if (
         prediction.completion_timestamp_ms is not None
         and annotation.completion_timestamp_ms is not None
@@ -137,6 +151,11 @@ def _is_better(
     candidate: _Solution,
     incumbent: _Solution,
 ) -> bool:
+    """Apply the matching objective and deterministic final tie-break.
+
+    More pairs always win; equal-cardinality solutions minimise total absolute
+    timing error. Remaining ties use lexicographic ordered-event indices.
+    """
     candidate_count = len(candidate.pair_indices)
     incumbent_count = len(incumbent.pair_indices)
 
@@ -168,6 +187,21 @@ def match_repetition_events(
         DEFAULT_EVENT_TOLERANCE_SECONDS
     ),
 ) -> EventMatchResult:
+    """Match events one-to-one without allowing chronological crossings.
+
+    Predictions and annotations are ordered by completion frame and stable
+    identifier before dynamic programming. The objective first maximises the
+    number of pairs within the supplied non-negative tolerance, then minimises
+    total absolute timing error, and finally selects the lexicographically
+    earliest sequence of ordered index pairs. This last rule makes repeated
+    evaluation deterministic when scientifically equivalent solutions remain.
+
+    If both events have recorded timestamps, tolerance and error are evaluated
+    in seconds. Otherwise frame differences are used, with the supplied seconds
+    converted to ``ceil(tolerance * source_fps)`` frames; returned timing errors
+    remain in seconds. The default is provisional rather than a permanently
+    fixed formal-evaluation value.
+    """
     try:
         fps = float(source_fps)
         tolerance = float(tolerance_seconds)

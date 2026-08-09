@@ -1,3 +1,5 @@
+"""Load validated completion events from baseline, enhanced and GT tables."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -50,6 +52,12 @@ ENHANCED_REQUIRED_COLUMNS = (
 
 @dataclass(frozen=True)
 class BaselineRepetitionEvent:
+    """A baseline count increment at its observed completion frame.
+
+    ``predicted_rep_id`` is the resulting cumulative count. The timestamp is in
+    milliseconds when recorded or derivable from FPS.
+    """
+
     run_id: str
     clip_id: str
     predicted_rep_id: int
@@ -61,6 +69,12 @@ class BaselineRepetitionEvent:
 
 @dataclass(frozen=True)
 class EnhancedRepetitionEvent:
+    """An enhanced repetition ending at its confirmed return-to-top frame.
+
+    Start, bottom and completion fields are integer frame identities. The class
+    is the enhanced repetition-level prediction, not a baseline warning.
+    """
+
     run_id: str
     clip_id: str
     predicted_rep_id: int
@@ -74,6 +88,8 @@ class EnhancedRepetitionEvent:
 
 @dataclass(frozen=True)
 class GroundTruthRepetitionEvent:
+    """An evaluable annotated attempt at its completion/end-top frame."""
+
     clip_id: str
     ground_truth_attempt_id: str
     completion_frame: int
@@ -235,6 +251,7 @@ def _completion_timestamp(
     row_source_fps: pd.Series,
     source_fps_by_clip: Mapping[str, float],
 ) -> float | None:
+    """Use a recorded millisecond timestamp or derive one from frame and FPS."""
     recorded_timestamp = recorded_timestamps.loc[row_index]
 
     if pd.notna(recorded_timestamp):
@@ -277,6 +294,7 @@ def _validate_expected_baseline_frames(
     expected_clip_id: str | None,
     expected_frame_count: int | None,
 ) -> None:
+    """Bind a formal baseline table to completed-run identity and coverage."""
     if expected_run_id is not None:
         actual_run_ids = sorted(set(run_ids))
 
@@ -323,6 +341,18 @@ def extract_baseline_events(
     expected_clip_id: str | None = None,
     expected_frame_count: int | None = None,
 ) -> list[BaselineRepetitionEvent]:
+    """Validate a baseline frame table before extracting count increments.
+
+    Each increase of exactly one in ``baseline_rep_count`` defines a completion
+    event on that row's frame. Frames must increase and counts must never fall
+    or jump. When completed-run expectations are supplied, the full baseline
+    frame schema, exact run/clip identity and every frame from zero through the
+    recorded frame count are required before extraction. A structurally
+    complete file with no count increases is valid and returns no events.
+
+    Baseline positions, warnings and feature columns remain diagnostic; formal
+    event identity comes from run, clip, frame and cumulative-count fields.
+    """
     require_columns(
         frame_data,
         BASELINE_REQUIRED_COLUMNS,
@@ -489,6 +519,7 @@ def load_baseline_events(
     expected_clip_id: str | None = None,
     expected_frame_count: int | None = None,
 ) -> list[BaselineRepetitionEvent]:
+    """Read a baseline frame CSV and extract its validated completion events."""
     path = Path(csv_path)
     return extract_baseline_events(
         pd.read_csv(path),
@@ -506,6 +537,12 @@ def extract_enhanced_events(
     source_name: str = "Enhanced repetition data",
     source_fps_by_clip: Mapping[str, float] | None = None,
 ) -> list[EnhancedRepetitionEvent]:
+    """Validate enhanced repetition rows and load completion events.
+
+    IDs must be unique within each clip and frames must satisfy start <= bottom
+    <= completion. ``end_frame`` is the formal completion event; recorded
+    millisecond timestamps are preferred and FPS supplies the fallback.
+    """
     require_columns(
         repetition_data,
         ENHANCED_REQUIRED_COLUMNS,
@@ -629,6 +666,7 @@ def load_enhanced_events(
     *,
     source_fps_by_clip: Mapping[str, float] | None = None,
 ) -> list[EnhancedRepetitionEvent]:
+    """Read an enhanced repetition CSV and load its validated events."""
     path = Path(csv_path)
     return extract_enhanced_events(
         pd.read_csv(path),
@@ -644,6 +682,12 @@ def extract_ground_truth_events(
     source_name: str = "Repetition annotations",
     manifest_source_name: str = "Dataset manifest",
 ) -> list[GroundTruthRepetitionEvent]:
+    """Extract evaluable GT events after full annotation validation.
+
+    The annotated completion/end-top frame is the formal event identity.
+    Ambiguous fragments remain documented annotation rows but are deliberately
+    excluded because ``is_evaluable_attempt`` is false.
+    """
     validate_repetition_annotations(
         annotations,
         manifest,

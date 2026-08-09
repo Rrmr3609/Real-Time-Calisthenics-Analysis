@@ -1,3 +1,5 @@
+"""Compute form-class metrics for matched enhanced repetitions only."""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -16,6 +18,12 @@ SUPPORTED_FORM_CLASSES: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class PerClassMetrics:
+    """Metrics for one ground-truth class in the reporting order.
+
+    ``support`` is the number of matched repetitions whose GT label is this
+    class. Precision, recall and F1 are zero when their denominator is zero.
+    """
+
     label: str
     true_positives: int
     false_positives: int
@@ -26,11 +34,19 @@ class PerClassMetrics:
     f1: float
 
     def to_dict(self) -> dict[str, object]:
+        """Return the metric fields in a serialization-ready mapping."""
         return asdict(self)
 
 
 @dataclass(frozen=True)
 class ClassificationEvaluation:
+    """Classification metrics derived from matched enhanced events.
+
+    Confusion-matrix rows are GT classes and columns are predicted classes in
+    ``labels`` order. The standard formal report uses
+    ``SUPPORTED_FORM_CLASSES`` as its fixed order.
+    """
+
     evaluated_matched_repetitions: int
     labels: tuple[str, ...]
     confusion_matrix: tuple[tuple[int, ...], ...]
@@ -39,6 +55,7 @@ class ClassificationEvaluation:
     macro_f1: float | None
 
     def to_dict(self) -> dict[str, object]:
+        """Return lists and mappings suitable for JSON serialization."""
         return {
             "evaluated_matched_repetitions": (
                 self.evaluated_matched_repetitions
@@ -170,9 +187,13 @@ def evaluate_classification_from_confusion_matrix(
     confusion_matrix: Sequence[Sequence[int]],
     labels: Sequence[str] = SUPPORTED_FORM_CLASSES,
 ) -> ClassificationEvaluation:
-    """Recompute classification metrics from raw matrix counts.
+    """Recompute matched-repetition metrics from raw matrix counts.
 
     Rows are ground-truth classes and columns are predicted classes.
+    Class support is the corresponding row total. Zero-denominator precision,
+    recall and F1 are reported as ``0.0``. Macro F1 averages only classes with
+    positive GT support, so it is ``None`` when the entire matrix is empty;
+    accuracy is also ``None`` for an empty evaluation.
     """
     configured_labels = _validate_reporting_labels(labels)
     matrix = _validated_confusion_matrix(
@@ -254,7 +275,9 @@ def evaluate_classification(
 
     Confusion-matrix rows are ground-truth classes and columns are
     enhanced predicted classes. Detection misses and extras must not be
-    passed to this function.
+    passed to this function, and baseline frame warnings are not formal class
+    predictions. Empty matched sequences produce an empty evaluation under the
+    same zero-denominator rules as the matrix-based function.
     """
     configured_labels = _validate_reporting_labels(labels)
     ground_truth = tuple(ground_truth_labels)

@@ -1,3 +1,10 @@
+"""Validate dataset manifests and manual repetition annotations.
+
+The same schemas support fictional examples and real evaluation inputs. This
+module owns row/schema semantics, not complete-split review evidence or binding
+to recorded source runs; formal execution performs those checks separately.
+"""
+
 import argparse
 import math
 import re
@@ -244,6 +251,14 @@ def validate_dataset_manifest(
     manifest: pd.DataFrame,
     source_name: str = "Dataset manifest",
 ) -> None:
+    """Validate clip identity, split, source metadata and local path fields.
+
+    Clip IDs must be unique, split values must use the configured development
+    or test vocabulary, camera views must be allowed, and video paths must be
+    project-relative. FPS must be positive and finite; frame counts and pixel
+    dimensions must be positive integers. Validation does not assert that the
+    referenced video exists or change a clip's assigned split.
+    """
     require_columns(
         manifest,
         MANIFEST_COLUMNS,
@@ -339,6 +354,7 @@ def _expected_single_label(
     incomplete_extension: bool,
     alignment_deviation: bool,
 ) -> str:
+    """Apply the annotation protocol's deterministic deviation priority."""
     if insufficient_depth:
         return "insufficient_depth"
 
@@ -357,6 +373,16 @@ def validate_repetition_annotations(
     source_name: str = "Repetition annotations",
     manifest_source_name: str = "Dataset manifest",
 ) -> None:
+    """Validate annotation identity, frames, ambiguity and class semantics.
+
+    Each ``(clip_id, ground_truth_attempt_id)`` pair is unique and must refer to
+    a manifest clip. Evaluable attempts require ordered start, turnaround and
+    completion frame indices. Ambiguous fragments are explicitly non-evaluable,
+    retain at least one locating frame, use the ``unscorable`` class, assert no
+    deviation flags and include annotator notes. Evaluable rows follow the
+    documented single-label priority, while insufficient source visibility
+    requires ``unscorable`` and notes.
+    """
     validate_dataset_manifest(
         manifest,
         source_name=manifest_source_name,
@@ -647,6 +673,7 @@ def load_and_validate_evaluation_data(
     manifest_path: Path,
     annotations_path: Path,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load both CSVs and validate annotations against manifest identities."""
     manifest = pd.read_csv(manifest_path)
     annotations = pd.read_csv(annotations_path)
 
@@ -661,6 +688,7 @@ def load_and_validate_evaluation_data(
 
 
 def parse_arguments() -> argparse.Namespace:
+    """Parse paths for the standalone dataset-validation command."""
     parser = argparse.ArgumentParser(
         description=(
             "Validate a formal-evaluation dataset manifest and "
@@ -681,6 +709,7 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Validate both CSVs and print their accepted row counts."""
     args = parse_arguments()
     manifest, annotations = load_and_validate_evaluation_data(
         manifest_path=Path(args.manifest),

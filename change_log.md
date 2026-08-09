@@ -1,5 +1,10 @@
 # Project Change Log
 
+## 9 August 2026 - Evaluation and provenance documentation polish
+
+- Documented evaluation, validation, reporting and provenance responsibilities,
+  invariants and units without changing executable or scientific behaviour.
+
 ## 9 August 2026 - Core scientific documentation polish
 
 - Documented the responsibilities, units, state, missing-data behaviour and

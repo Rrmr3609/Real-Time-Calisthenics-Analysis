@@ -1,3 +1,10 @@
+"""Record reproducible identity and lifecycle metadata for processing runs.
+
+This module describes recorded-run inputs, configuration, software, Git state,
+outputs and completion/failure status. It does not own deterministic formal
+metric content; formal reporting binds selected source runs separately.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -22,6 +29,7 @@ PACKAGE_DISTRIBUTIONS = {
 
 
 def utc_timestamp() -> str:
+    """Return the current timezone-aware UTC timestamp in ISO 8601 form."""
     return datetime.now(timezone.utc).isoformat()
 
 
@@ -29,6 +37,7 @@ def sha256_file(
     file_path: str | Path,
     chunk_size: int = 1024 * 1024,
 ) -> str:
+    """Return a streaming SHA-256 digest without loading the file at once."""
     path = Path(file_path)
     digest = hashlib.sha256()
 
@@ -40,7 +49,11 @@ def sha256_file(
 
 
 def sha256_canonical_json(value: Any) -> str:
-    """Hash one JSON value using deterministic canonical serialization."""
+    """Hash one JSON value using deterministic canonical serialization.
+
+    Object keys are sorted, insignificant whitespace is removed, UTF-8 is used
+    directly and non-finite numbers are rejected by the JSON encoder.
+    """
     encoded = json.dumps(
         value,
         sort_keys=True,
@@ -54,6 +67,11 @@ def sha256_canonical_json(value: Any) -> str:
 def collect_software_versions(
     version_reader: Callable[[str], str] = metadata.version,
 ) -> dict[str, Any]:
+    """Collect Python and relevant installed package versions.
+
+    A missing distribution is represented by ``None`` rather than making
+    provenance collection fail.
+    """
     packages = {}
 
     for output_name, distribution_name in (
@@ -79,6 +97,13 @@ def _metadata_path(
     path: str | Path,
     repository_root: Path,
 ) -> str:
+    """Represent repository files relatively and external files absolutely.
+
+    This is the local recorded-run metadata policy. Formal evaluation does not
+    copy external absolute source paths into report provenance; its orchestration
+    reduces those source identifiers to privacy-safe basenames and binds them by
+    SHA-256 instead.
+    """
     resolved_path = Path(path).resolve()
 
     try:
@@ -125,6 +150,11 @@ def collect_git_state(
         ..., subprocess.CompletedProcess[str]
     ] = subprocess.run,
 ) -> dict[str, Any]:
+    """Return commit, branch and dirty state when Git is available.
+
+    Unavailable commands produce ``None`` fields rather than preventing a
+    processing run from recording its remaining provenance.
+    """
     root = Path(repository_root)
     commit = _run_git_command(
         root,
@@ -168,6 +198,13 @@ def create_run_metadata(
     git_state: Mapping[str, Any] | None = None,
     timestamp_factory: Callable[[], str] = utc_timestamp,
 ) -> dict[str, Any]:
+    """Build initial metadata for one identified clip-processing run.
+
+    The document binds run, clip, method and split to the input-video digest,
+    source and fully resolved configuration, explicit overrides, output paths,
+    software/Git state and the declared processing-time definition. Source FPS,
+    frame count and resolution are populated when the run is finalised.
+    """
     video = Path(video_path)
     config = Path(config_path)
     root = Path(repository_root)
@@ -229,6 +266,7 @@ def _atomic_write_json(
     output_path: Path,
     document: Mapping[str, Any],
 ) -> None:
+    """Flush JSON to a same-directory temporary file and atomically replace."""
     output_path.parent.mkdir(
         parents=True,
         exist_ok=True,
@@ -269,6 +307,13 @@ def write_json_atomically(
 
 
 class RunMetadataRecorder:
+    """Finalise one processing-run metadata document exactly once.
+
+    Completion and failure paths add distinct UTC lifecycle timestamps. Failure
+    metadata records the exception type and message and can retain partial video
+    or processing summaries supplied by the caller.
+    """
+
     def __init__(
         self,
         output_path: str | Path,
@@ -314,6 +359,7 @@ class RunMetadataRecorder:
         source_video: Mapping[str, Any],
         processing_summary: Mapping[str, Any],
     ) -> None:
+        """Write completed metadata with final source and processing values."""
         self._finalise(
             "completed",
             {
@@ -331,6 +377,7 @@ class RunMetadataRecorder:
         source_video: Mapping[str, Any] | None = None,
         processing_summary: Mapping[str, Any] | None = None,
     ) -> None:
+        """Write failed metadata with error identity and available summaries."""
         updates: dict[str, Any] = {
             "failure": {
                 "error_type": type(error).__name__,

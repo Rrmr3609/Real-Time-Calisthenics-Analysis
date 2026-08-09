@@ -1,3 +1,5 @@
+"""Integrate enhanced event detection with matched-only classification."""
+
 from __future__ import annotations
 
 from collections import Counter
@@ -25,6 +27,8 @@ from evaluation.repetition_events import (
 
 @dataclass(frozen=True)
 class MatchedClassificationPair:
+    """Matched GT/prediction labels with completion timing diagnostics."""
+
     ground_truth_attempt_id: str
     predicted_rep_id: int
     ground_truth_completion_frame: int
@@ -37,11 +41,18 @@ class MatchedClassificationPair:
     matching_basis: str
 
     def to_dict(self) -> dict[str, object]:
+        """Return the matched pair in a serialization-ready mapping."""
         return asdict(self)
 
 
 @dataclass(frozen=True)
 class GroundTruthClassDetectionRecall:
+    """Detection recall for one GT class before classification scoring.
+
+    Support counts all evaluable GT events of the class. Recall is ``None``
+    when that class has no GT support.
+    """
+
     label: str
     ground_truth_support: int
     matched_ground_truth_repetitions: int
@@ -49,11 +60,18 @@ class GroundTruthClassDetectionRecall:
     recall: float | None
 
     def to_dict(self) -> dict[str, object]:
+        """Return the class-stratified detection fields as a mapping."""
         return asdict(self)
 
 
 @dataclass(frozen=True)
 class EnhancedClipEvaluation:
+    """Detection and matched-classification results for one enhanced clip.
+
+    Unmatched GT attempts and predictions remain detection misses and extras;
+    they are not inserted into the classification confusion matrix.
+    """
+
     detection: DetectionSummary
     matched_pairs: tuple[MatchedClassificationPair, ...]
     unmatched_prediction_ids: tuple[int, ...]
@@ -64,6 +82,7 @@ class EnhancedClipEvaluation:
     ]
 
     def to_dict(self) -> dict[str, object]:
+        """Return the complete clip result as JSON-compatible structures."""
         return {
             "detection": self.detection.to_dict(),
             "matched_pairs": [
@@ -205,6 +224,7 @@ def _summarise_detection_recall_by_class(
     match_result: EventMatchResult,
     detection: DetectionSummary,
 ) -> tuple[GroundTruthClassDetectionRecall, ...]:
+    """Stratify GT support, matches and misses in fixed class order."""
     support_counts = Counter(
         event.ground_truth_class
         for event in annotations
@@ -288,7 +308,14 @@ def evaluate_enhanced_clip(
         DEFAULT_EVENT_TOLERANCE_SECONDS
     ),
 ) -> EnhancedClipEvaluation:
-    """Evaluate detection and matched classification for one clip."""
+    """Evaluate enhanced detection and matched classification for one clip.
+
+    Inputs are already-extracted evaluable GT events, so ambiguous annotation
+    fragments have been excluded by the annotation protocol. Event matching is
+    performed first. Only matched enhanced predictions contribute class labels;
+    misses and extras remain detection-only outcomes. GT-class detection recall
+    still includes both matched and missed evaluable attempts.
+    """
     enhanced_predictions = tuple(predictions)
     ground_truth_annotations = tuple(annotations)
     _validate_events(

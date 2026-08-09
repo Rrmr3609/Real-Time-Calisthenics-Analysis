@@ -1,3 +1,10 @@
+"""Aggregate evaluated clips and write formal metric/provenance outputs.
+
+This module does not load videos, extract events or perform event matching. It
+validates already evaluated clip results, builds deterministic metric content
+and writes a separate evaluation-run metadata record containing provenance.
+"""
+
 from __future__ import annotations
 
 import csv
@@ -83,6 +90,8 @@ DETECTION_RECALL_COLUMNS = (
 
 @dataclass(frozen=True)
 class EvaluationClipContext:
+    """Manifest identity, split and source FPS for one evaluated clip."""
+
     clip_id: str
     split: str
     source_fps: float
@@ -90,6 +99,13 @@ class EvaluationClipContext:
 
 @dataclass(frozen=True)
 class SourceRunProvenance:
+    """Identity and hashes for one consumed baseline or enhanced source run.
+
+    Source file paths are privacy-safe relative identifiers; hashes bind the
+    exact metadata, consumed CSV, input video and resolved configuration used
+    by the evaluation.
+    """
+
     clip_id: str
     method: str
     source_run_id: str
@@ -134,6 +150,13 @@ class SourceRunProvenance:
 
 @dataclass(frozen=True)
 class DetectionAggregate:
+    """Cross-clip pooled detection totals and derived summary metrics.
+
+    Event rates pool matches, misses and extras across clips. Count-error means
+    average clip-level errors, while completion-timing means are weighted by
+    matched events and expressed in seconds.
+    """
+
     evaluated_clips: int
     total_ground_truth_repetitions: int
     total_predicted_repetitions: int
@@ -162,6 +185,8 @@ class DetectionAggregate:
 
 @dataclass(frozen=True)
 class PerClipFormalMetrics:
+    """Side-by-side baseline/enhanced metrics for one manifest clip."""
+
     clip_id: str
     ground_truth_repetition_count: int
     baseline_predicted_count: int
@@ -192,6 +217,13 @@ class PerClipFormalMetrics:
 
 @dataclass(frozen=True)
 class FormalEvaluationReport:
+    """Deterministic scientific content for one split and shared tolerance.
+
+    Clip IDs are sorted deterministically rather than by input sequence;
+    enhanced class rows use ``SUPPORTED_FORM_CLASSES`` order. Runtime metadata,
+    timestamps, software and Git state are deliberately outside this value.
+    """
+
     report_schema_version: int
     split: str
     event_tolerance_seconds: float
@@ -236,6 +268,13 @@ class FormalEvaluationReport:
 
 @dataclass(frozen=True)
 class FormalEvaluationOutputPaths:
+    """The complete JSON, CSV and metadata output set for one report run.
+
+    Metric outputs comprise the report JSON, per-clip table, enhanced confusion
+    matrix, enhanced per-class metrics and GT-class detection recall. The final
+    path is the separate evaluation-run metadata/provenance document.
+    """
+
     report_json: Path
     per_clip_csv: Path
     confusion_matrix_csv: Path
@@ -629,6 +668,7 @@ def _validate_enhanced_result(
 def _aggregate_detection(
     results: Sequence[DetectionSummary],
 ) -> DetectionAggregate:
+    """Pool event counts and matched-event timing across evaluated clips."""
     evaluated_clips = len(results)
     total_ground_truth = sum(
         result.ground_truth_event_count for result in results
@@ -728,6 +768,7 @@ def _aggregate_detection(
 def _aggregate_classification(
     enhanced_results: Sequence[EnhancedClipEvaluation],
 ) -> ClassificationEvaluation:
+    """Pool enhanced matched classifications through summed matrix cells."""
     class_count = len(SUPPORTED_FORM_CLASSES)
     pooled_matrix = [
         [0 for _ in range(class_count)]
@@ -751,6 +792,7 @@ def _aggregate_detection_recall_by_class(
     enhanced_results: Sequence[EnhancedClipEvaluation],
     enhanced_detection: DetectionAggregate,
 ) -> tuple[GroundTruthClassDetectionRecall, ...]:
+    """Pool enhanced GT support, matches and misses in fixed class order."""
     rows = []
 
     for class_index, label in enumerate(
@@ -823,7 +865,15 @@ def aggregate_formal_evaluation(
         DEFAULT_EVENT_TOLERANCE_SECONDS
     ),
 ) -> FormalEvaluationReport:
-    """Pool already evaluated baseline and enhanced clip results."""
+    """Pool complete baseline and enhanced results for one manifest split.
+
+    Both methods and clip contexts must cover exactly the same clips and use one
+    supplied positive finite tolerance. Per-clip tolerance frames are checked
+    against each source FPS. Detection metrics pool counts across clips;
+    enhanced-only classification pools confusion-matrix cells from matched
+    events. Per-clip rows and class rows use deterministic ordering. No event
+    matching, parameter selection or provenance capture occurs here.
+    """
     try:
         tolerance = float(tolerance_seconds)
     except (TypeError, ValueError) as error:
@@ -1042,6 +1092,7 @@ def formal_evaluation_output_paths(
     output_directory: str | Path,
     run_id: str,
 ) -> FormalEvaluationOutputPaths:
+    """Derive every output filename from one safe evaluation run ID."""
     if not isinstance(run_id, str) or not run_id.strip():
         raise ValueError(
             "Evaluation run ID must be a non-blank string"
@@ -1143,6 +1194,7 @@ def _write_report_temporary_files(
     output_paths: FormalEvaluationOutputPaths,
     staged_paths: Mapping[Path, Path],
 ) -> None:
+    """Stage deterministic metric JSON/CSVs before final-path replacement."""
     _write_json_file(
         staged_paths[output_paths.report_json],
         report.to_dict(),
@@ -1246,6 +1298,7 @@ def _ordered_source_run_metadata(
     report: FormalEvaluationReport,
     source_run_provenance: Sequence[SourceRunProvenance],
 ) -> dict[str, list[dict[str, object]]]:
+    """Validate complete privacy-safe source binding and order it by method/clip."""
     records = tuple(source_run_provenance)
 
     if any(
@@ -1337,6 +1390,7 @@ def _base_evaluation_metadata(
     software_versions: Mapping[str, Any] | None,
     git_state: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    """Build non-metric evaluation metadata in its initial running state."""
     return {
         "metadata_schema_version": 1,
         "status": "running",
@@ -1384,7 +1438,16 @@ def write_formal_evaluation_report(
     git_state: Mapping[str, Any] | None = None,
     timestamp_factory: Callable[[], str] = utc_timestamp,
 ) -> FormalEvaluationOutputPaths:
-    """Write one complete deterministic report set and provenance."""
+    """Write deterministic metrics plus separate evaluation provenance.
+
+    The complete output set is collision-checked before directories or files
+    are created; replacement requires explicit ``overwrite``. Metric files are
+    written to same-directory temporary paths, flushed and then moved to their
+    final names. Metadata is atomically replaced as running, completed or
+    failed and records timestamps, software, Git state and exact source-run
+    bindings; those environment-dependent fields are not part of deterministic
+    scientific metric content. Temporary metric files are removed on failure.
+    """
     if not isinstance(report, FormalEvaluationReport):
         raise ValueError(
             "Report must be a FormalEvaluationReport instance"

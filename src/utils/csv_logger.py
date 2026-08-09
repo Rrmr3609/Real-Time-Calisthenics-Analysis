@@ -1,3 +1,5 @@
+"""Create caller-schema CSV outputs without silently mixing complete runs."""
+
 import csv
 from pathlib import Path
 from typing import Iterable, Mapping
@@ -11,7 +13,9 @@ def ensure_output_paths_available(
     Fail before a run starts if any requested output already exists.
 
     Callers that manage more than one output should pass the complete set so
-    one stale file cannot be combined with a newly created file.
+    one stale file cannot be combined with a newly created file. This check
+    does not remove anything; explicit overwrite handling belongs to
+    ``prepare_output_paths``.
     """
     if overwrite:
         return
@@ -81,6 +85,15 @@ def prepare_output_paths(
 
 
 class CSVLogger:
+    """Own one flushed CSV file with a caller-supplied column schema.
+
+    ``fieldnames`` defines the header and accepted row shape. Construction
+    creates parent directories, opens a new file exclusively by default and
+    writes the header immediately, including for an otherwise empty output.
+    Existing output is replaced only when ``overwrite=True``. Callers must
+    close the logger to release its file handle.
+    """
+
     def __init__(
         self,
         output_path: str,
@@ -123,9 +136,11 @@ class CSVLogger:
             raise
 
     def write_row(self, row: Mapping[str, object]) -> None:
+        """Write and flush one mapping compatible with the configured schema."""
         self.writer.writerow(row)
         self.file.flush()
 
     def close(self) -> None:
+        """Close the owned file handle if it is still open."""
         if self.file is not None and not self.file.closed:
             self.file.close()

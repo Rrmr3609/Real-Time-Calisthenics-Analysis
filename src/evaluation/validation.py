@@ -1,3 +1,5 @@
+"""Provide shared structural validation for evaluation data tables."""
+
 from typing import Iterable
 
 import pandas as pd
@@ -11,6 +13,7 @@ def require_columns(
     columns: Iterable[str],
     source_name: str,
 ) -> None:
+    """Require named columns before any row-level validation is attempted."""
     missing_columns = [
         column
         for column in columns
@@ -29,9 +32,7 @@ def reject_duplicate_repetitions(
     data: pd.DataFrame,
     source_name: str = "Repetition data",
 ) -> None:
-    """
-    Reject repeated repetition identifiers before calculating summaries.
-    """
+    """Reject duplicate ``(clip_id, rep_id)`` rows before summarisation."""
     require_columns(
         data,
         REPETITION_KEY_COLUMNS,
