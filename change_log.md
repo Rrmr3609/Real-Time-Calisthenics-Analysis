@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 9 August 2026 - Development evidence separated
+
+- Relocated historical development evidence and setup metadata into explicit
+  development paths, reserved `results/formal/` for future formal evidence and
+  preserved every historical evidence file byte-for-byte.
+
 ## 9 August 2026 - Fictional evaluation examples isolated
 
 - Moved the fictional manifest and repetition-annotation examples under

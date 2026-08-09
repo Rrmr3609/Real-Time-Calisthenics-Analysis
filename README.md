@@ -112,7 +112,7 @@ Create an alignment-availability diagnostic from one enhanced run:
   --repetition-input `
     "experiments\outputs\<run-id>_enhanced_repetitions.csv" `
   --output `
-    "results\testing\2026-07-28_alignment_visibility_diagnostic_summary.txt" `
+    "results\development\summaries\2026-07-28_alignment_visibility_diagnostic_summary.txt" `
   --summary-date "2026-07-28" `
   --minimum-alignment-valid-ratio 0.50
 ```
