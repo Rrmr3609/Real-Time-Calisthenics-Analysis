@@ -1,3 +1,11 @@
+"""Load strict YAML configuration into immutable runtime value objects.
+
+This module owns schema validation, the development/test split vocabulary and
+explicit CLI overrides. It requires every configured field and does not tune,
+centralise or silently supply scientific defaults; the selected YAML file owns
+the values used by recorded runners.
+"""
+
 from __future__ import annotations
 
 import math
@@ -14,12 +22,16 @@ ALLOWED_SPLITS = ("development", "test")
 
 @dataclass(frozen=True)
 class PoseConfig:
+    """Operational MediaPipe detection and tracking confidence settings."""
+
     minimum_detection_confidence: float
     minimum_tracking_confidence: float
 
 
 @dataclass(frozen=True)
 class BaselineConfig:
+    """Raw baseline counting thresholds and frame-warning limits in degrees."""
+
     top_elbow_angle: float
     bottom_elbow_angle: float
     top_extension_warning_threshold: float
@@ -29,6 +41,8 @@ class BaselineConfig:
 
 @dataclass(frozen=True)
 class FeatureConfig:
+    """Enhanced visibility, stable-side and EMA preprocessing settings."""
+
     minimum_landmark_visibility: float
     side_acquisition_frames: int
     side_switch_frames: int
@@ -39,6 +53,12 @@ class FeatureConfig:
 
 @dataclass(frozen=True)
 class SegmentationConfig:
+    """Enhanced temporal phase and repetition-window settings.
+
+    Angle values are degrees; confirmation, grace and minimum-duration values
+    are frame counts.
+    """
+
     top_region_threshold: float
     bottom_region_threshold: float
     hysteresis: float
@@ -49,6 +69,12 @@ class SegmentationConfig:
 
 @dataclass(frozen=True)
 class ClassificationConfig:
+    """Enhanced repetition-rule thresholds and evidence requirements.
+
+    Angle fields are degrees, frame fields are counts and ratio fields are
+    fractions from zero to one.
+    """
+
     depth_threshold: float
     extension_threshold: float
     alignment_minimum: float
@@ -59,6 +85,8 @@ class ClassificationConfig:
 
 @dataclass(frozen=True)
 class RuntimeConfig:
+    """One fully validated immutable configuration used by a runner."""
+
     config_schema_version: int
     pose: PoseConfig
     baseline: BaselineConfig
@@ -67,6 +95,7 @@ class RuntimeConfig:
     classification: ClassificationConfig
 
     def to_dict(self) -> dict[str, Any]:
+        """Return all resolved sections for provenance serialization."""
         return asdict(self)
 
 
@@ -263,6 +292,12 @@ def _build_runtime_config(
     document: object,
     source_name: str,
 ) -> RuntimeConfig:
+    """Validate one loaded document in stable schema/section/field order.
+
+    Root shape and schema version are checked before section shapes, individual
+    field ranges and cross-field threshold relationships. This ordering keeps
+    invalid configuration failures deterministic and context-rich.
+    """
     root = _require_mapping(document, source_name)
     _validate_fields(root, ROOT_FIELDS, source_name)
 
@@ -504,6 +539,12 @@ def _build_runtime_config(
 def load_runtime_config(
     config_path: str | Path,
 ) -> RuntimeConfig:
+    """Load UTF-8 YAML and return its strictly validated runtime configuration.
+
+    Missing files raise ``FileNotFoundError`` and malformed YAML or schema/value
+    failures raise ``ValueError``. Unknown and missing fields are rejected rather
+    than ignored or filled with implicit defaults.
+    """
     path = Path(config_path)
 
     try:
@@ -530,6 +571,11 @@ def apply_cli_overrides(
     *,
     ema_alpha: float | None = None,
 ) -> tuple[RuntimeConfig, dict[str, float]]:
+    """Return a copied configuration plus explicit provenance overrides.
+
+    Currently only the enhanced EMA alpha may be overridden. ``None`` returns
+    the original immutable configuration and an empty override mapping.
+    """
     if ema_alpha is None:
         return config, {}
 

@@ -1,3 +1,11 @@
+"""Process one recorded video with the intentionally simple baseline.
+
+This runner loads validated runtime configuration, performs raw baseline
+analysis and writes a frame-level CSV plus completed/failed run metadata. It
+processes the video itself; event matching and formal evaluation consume its
+outputs later and are deliberately separate.
+"""
+
 import argparse
 import time
 from contextlib import ExitStack
@@ -44,6 +52,12 @@ PROCESSING_TIME_DEFINITION = (
 
 
 def parse_arguments(argv=None):
+    """Parse recorded-baseline input, identity, config and output options.
+
+    The split is restricted to the shared development/test vocabulary. Run ID
+    defaults to clip ID, and replacing the complete output set requires the
+    explicit overwrite flag.
+    """
     parser = argparse.ArgumentParser(
         description="Run the baseline analyser on a recorded video."
     )
@@ -100,6 +114,7 @@ def parse_arguments(argv=None):
 
 
 def _capture_metadata(base_metadata, capture):
+    """Combine immutable input identity with OpenCV source metadata."""
     source_video = dict(base_metadata["input_video"])
     source_video.update(
         {
@@ -123,6 +138,33 @@ def _capture_metadata(base_metadata, capture):
 
 
 def main():
+    """Run baseline video processing with complete output provenance.
+
+    The configured video is decoded here and analysed frame by frame. Output
+    paths are checked as one set before capture or pose estimation begins;
+    existing files fail unless overwrite was explicitly requested. The runner
+    writes ``<run_id>_baseline.csv`` and ``<run_id>_baseline_metadata.json``
+    under ``experiments/logs``. The frame CSV records source identity,
+    measurements, instantaneous selected side, sticky baseline state/count,
+    processing time and diagnostic warnings. Warnings are not formal
+    repetition classes.
+
+    ``processing_time_ms`` covers image inspection, pose estimation, landmark
+    and feature extraction, and baseline analysis. It excludes video decoding,
+    CSV serialization, optional display rendering and setup. After that timer
+    is finalised for a frame, its baseline CSV row is written and flushed in the
+    same loop iteration. The summed per-frame values become measured processing
+    seconds; loop wall time is the broader interval and may include decoding,
+    incremental row logging, display and other loop/cleanup overhead. Source FPS
+    is input-video metadata, not measured throughput; UTC lifecycle timestamps
+    are recorded separately from performance timing.
+
+    An ``ExitStack`` owns the video capture, pose estimator, logger and OpenCV
+    windows. A broad catch records failed-run metadata after cleanup and then
+    re-raises; successful completion records source FPS, frame count, resolution,
+    termination reason and whether the complete clip was processed. Formal
+    evaluation is a separate workflow over these recorded artefacts.
+    """
     args = parse_arguments()
     create_project_directories()
 

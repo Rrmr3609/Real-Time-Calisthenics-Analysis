@@ -1,10 +1,14 @@
+"""Centralise repository-relative locations used by operational runners.
+
+``FIGURE_DIR`` and ``TABLE_DIR`` are legacy result roots with no tracked
+consumer beyond directory creation. They remain unchanged here pending the
+dedicated path-policy migration to the development/formal results hierarchy.
+"""
+
 from pathlib import Path
 
 
-# paths.py is inside: repository/src/utils/paths.py
-# parents[0] = utils
-# parents[1] = src
-# parents[2] = repository root
+# Resolve the root from this tracked module, independently of the shell CWD.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DATA_DIR = PROJECT_ROOT / "data"
@@ -21,7 +25,11 @@ TABLE_DIR = RESULTS_DIR / "tables"
 
 
 def create_project_directories() -> None:
-    """Create generated-output directories when they do not exist."""
+    """Create every currently declared data, experiment and result directory.
+
+    This includes the two legacy result roots documented at module level; their
+    removal is deferred because all operational entry points call this function.
+    """
     for directory in [
         RAW_DATA_DIR,
         ANNOTATION_DIR,

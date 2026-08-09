@@ -1,3 +1,11 @@
+"""Process one recorded video with the enhanced push-up pipeline.
+
+The runner combines visibility-aware feature extraction, stable side selection,
+smoothing, temporal segmentation, repetition aggregation and deterministic
+classification. It writes frame/temporal diagnostics, repetition-level results
+and completed/failed run metadata for later formal evaluation.
+"""
+
 import argparse
 import time
 from contextlib import ExitStack
@@ -50,6 +58,12 @@ PROCESSING_TIME_DEFINITION = (
 
 
 def parse_arguments(argv=None):
+    """Parse enhanced-run input, identity, config and output options.
+
+    The optional ``--alpha`` value is an explicit EMA configuration override
+    recorded in provenance. Split, run-ID defaulting, display and overwrite
+    behaviour otherwise follow the recorded baseline runner.
+    """
     parser = argparse.ArgumentParser(
         description=(
             "Run enhanced push-up analysis on a recorded video."
@@ -118,6 +132,7 @@ def parse_arguments(argv=None):
 
 
 def format_angle(value):
+    """Format an optional angle in degrees for the development display."""
     if value is None:
         return "N/A"
 
@@ -125,6 +140,7 @@ def format_angle(value):
 
 
 def draw_text(frame, text, position, scale=0.7):
+    """Draw one green status line onto the optional OpenCV display."""
     cv2.putText(
         frame,
         text,
@@ -138,6 +154,7 @@ def draw_text(frame, text, position, scale=0.7):
 
 
 def _capture_metadata(base_metadata, capture):
+    """Combine immutable input identity with OpenCV source metadata."""
     source_video = dict(base_metadata["input_video"])
     source_video.update(
         {
@@ -161,6 +178,12 @@ def _capture_metadata(base_metadata, capture):
 
 
 def _build_analysis_components(config):
+    """Construct enhanced stateful processors from validated configuration.
+
+    The feature processor, phase machine and classifier receive their existing
+    visibility, smoothing, temporal and classification values without adding
+    runner-owned scientific defaults.
+    """
     feature_processor = EnhancedFeatureProcessor(
         smoothing_alpha=config.features.ema_alpha,
         minimum_visibility=(
@@ -227,6 +250,33 @@ def _build_analysis_components(config):
 
 
 def main():
+    """Run enhanced video processing with complete output provenance.
+
+    All three output paths are preflighted together before capture or pose
+    estimation: the frame/temporal CSV records per-frame feature and phase
+    diagnostics, the repetition CSV records completed repetition measurements
+    and classifications, and metadata binds the run, resolved configuration and
+    lifecycle. The temporal CSV is written under ``experiments/logs``; the
+    repetition CSV and metadata are written under ``experiments/outputs`` using
+    the shared run ID. Existing outputs fail unless overwrite was requested.
+
+    ``processing_time_ms`` covers image inspection, pose estimation,
+    visibility-aware features, smoothing, phase segmentation, repetition
+    aggregation, classification and feedback-state calculation. Timing is
+    finalised for each frame before output writing in that loop iteration. A
+    completed repetition is then written and flushed immediately, followed by
+    the incremental frame/temporal row; there is no post-loop repetition export.
+    Both writes are outside the timed analysis section and therefore cannot
+    inflate measured processing seconds. Loop wall time is broader and may
+    include decoding, both forms of row logging, display and other loop/cleanup
+    overhead. Source FPS remains input metadata rather than measured throughput,
+    and UTC lifecycle timestamps are separate from both processing measures.
+
+    ``ExitStack`` owns capture, pose estimation, both CSV loggers and OpenCV
+    windows. A broad catch records failed-run metadata after cleanup and then
+    re-raises; success records source metadata, termination reason and full-clip
+    status. The runner processes video but does not perform formal evaluation.
+    """
     args = parse_arguments()
     create_project_directories()
 
@@ -760,7 +810,9 @@ def main():
                         frame,
                         (
                             "Smoothed alignment: "
-                            f"{format_angle(feature_result['smoothed_alignment_angle'])}"
+                            f"{format_angle(feature_result[
+                                'smoothed_alignment_angle'
+                            ])}"
                         ),
                         (20, 200),
                     )

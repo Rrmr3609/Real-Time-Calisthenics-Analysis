@@ -1,3 +1,5 @@
+"""Expose the intentional public API for validated runtime configuration."""
+
 from config.runtime import (
     ALLOWED_SPLITS,
     RuntimeConfig,

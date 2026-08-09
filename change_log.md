@@ -1,5 +1,10 @@
 # Project Change Log
 
+## 9 August 2026 - Operational runner documentation polish
+
+- Documented runner, CLI, runtime-configuration and operational-path semantics
+  without changing executable, lifecycle or scientific behaviour.
+
 ## 9 August 2026 - Evaluation and provenance documentation polish
 
 - Documented evaluation, validation, reporting and provenance responsibilities,
