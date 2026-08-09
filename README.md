@@ -165,8 +165,8 @@ column definitions are in `docs/manual_annotation_protocol.md`.
 
 Fictional schema examples are provided at:
 
-- `data/manifests/example_dataset_manifest.csv`;
-- `data/annotations/example_repetition_annotations.csv`.
+- `data/examples/manifests/example_dataset_manifest.csv`;
+- `data/examples/annotations/example_repetition_annotations.csv`.
 
 They do not describe real recordings or participants. Validate a manifest and
 annotation file from PowerShell with:
@@ -176,8 +176,8 @@ $env:PYTHONPATH = "$PWD\src"
 
 & ".\.venv\Scripts\python.exe" `
   src\evaluation\dataset_validation.py `
-  --manifest "data\manifests\example_dataset_manifest.csv" `
-  --annotations "data\annotations\example_repetition_annotations.csv"
+  --manifest "data\examples\manifests\example_dataset_manifest.csv" `
+  --annotations "data\examples\annotations\example_repetition_annotations.csv"
 ```
 
 Detection-event extraction, deterministic one-to-one matching and per-clip

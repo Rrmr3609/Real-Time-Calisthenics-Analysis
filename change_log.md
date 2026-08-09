@@ -1,5 +1,10 @@
 # Project Change Log
 
+## 9 August 2026 - Fictional evaluation examples isolated
+
+- Moved the fictional manifest and repetition-annotation examples under
+  `data/examples/` to prevent confusion with real experimental inputs.
+
 ## 9 August 2026 - High-confidence dead-file cleanup
 
 - Removed empty obsolete Python/test placeholders, redundant `.gitkeep` files

@@ -9,8 +9,8 @@ must be used for both methods.
 
 The example files are fictional:
 
-- `data/manifests/example_dataset_manifest.csv`
-- `data/annotations/example_repetition_annotations.csv`
+- `data/examples/manifests/example_dataset_manifest.csv`
+- `data/examples/annotations/example_repetition_annotations.csv`
 
 They demonstrate the schema only and do not describe existing recordings or
 participants.
@@ -188,8 +188,8 @@ $env:PYTHONPATH = "$PWD\src"
 
 & ".\.venv\Scripts\python.exe" `
   src\evaluation\dataset_validation.py `
-  --manifest "data\manifests\example_dataset_manifest.csv" `
-  --annotations "data\annotations\example_repetition_annotations.csv"
+  --manifest "data\examples\manifests\example_dataset_manifest.csv" `
+  --annotations "data\examples\annotations\example_repetition_annotations.csv"
 ```
 
 The validator checks required columns, allowed labels and splits, numeric

@@ -51,8 +51,8 @@ $env:PYTHONPATH = "$PWD\src"
 
 & ".\.venv\Scripts\python.exe" `
   src\evaluation\dataset_validation.py `
-  --manifest "data\manifests\example_dataset_manifest.csv" `
-  --annotations "data\annotations\example_repetition_annotations.csv"
+  --manifest "data\examples\manifests\example_dataset_manifest.csv" `
+  --annotations "data\examples\annotations\example_repetition_annotations.csv"
 ```
 
 The supplied example CSVs are fictional schema examples only. They do not

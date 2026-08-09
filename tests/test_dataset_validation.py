@@ -64,12 +64,14 @@ def test_fictional_example_files_pass_validation():
         manifest_path=(
             PROJECT_ROOT
             / "data"
+            / "examples"
             / "manifests"
             / "example_dataset_manifest.csv"
         ),
         annotations_path=(
             PROJECT_ROOT
             / "data"
+            / "examples"
             / "annotations"
             / "example_repetition_annotations.csv"
         ),
