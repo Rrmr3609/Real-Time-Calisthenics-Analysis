@@ -1,5 +1,15 @@
 # Project Change Log
 
+## 9 August 2026 - High-confidence dead-file cleanup
+
+- Removed empty obsolete Python/test placeholders, redundant `.gitkeep` files
+  from directories with tracked content and the exact duplicate
+  `features/smoothing.py` implementation.
+- Retained `analysis/smoothing.py` as the canonical EMA implementation and
+  confirmed all tracked callers already use it.
+
+No functionality or scientific behaviour was changed.
+
 ## 9 August 2026 - Formal source-run provenance linkage
 
 - Bound evaluation metadata to every consumed baseline and enhanced source run

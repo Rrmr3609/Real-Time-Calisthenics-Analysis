@@ -140,9 +140,7 @@ investigate them early:
 5. Enhanced side selection is driven by elbow visibility while body alignment
    requires shoulder, hip, and ankle visibility on the selected side. This may
    explain very low alignment coverage and `unscorable` repetitions.
-6. `analysis/smoothing.py` and `features/smoothing.py` may duplicate the same
-   implementation.
-7. The README contains statements that may now be stale because enhanced
+6. The README contains statements that may now be stale because enhanced
    temporal segmentation and repetition classification have been implemented.
 
 ## Preferred solution for alignment visibility
