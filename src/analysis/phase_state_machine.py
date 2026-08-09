@@ -1,3 +1,5 @@
+"""Segment enhanced push-up attempts into confirmed temporal phases."""
+
 from enum import Enum
 from typing import Optional
 
@@ -5,6 +7,8 @@ from analysis.repetition_result import CompletedRepetition
 
 
 class PushUpPhase(str, Enum):
+    """Stable phases exposed by the enhanced temporal state machine."""
+
     WAITING = "waiting"
     TOP = "top"
     DESCENDING = "descending"
@@ -16,13 +20,21 @@ class PushUpPhaseStateMachine:
     """
     Temporal push-up phase and repetition detector.
 
-    This enhanced counter uses smoothed elbow angles, hysteresis and
-    consecutive-frame confirmation.
+    This stateful enhanced counter consumes smoothed elbow angles in degrees.
+    Its nominal progression is waiting, top, descending, bottom, ascending and
+    back to top. Hysteresis reduces boundary chatter, while transitions require
+    a contiguous sequence of valid confirming observations. Missing angles
+    break any candidate sequence but preserve the stable phase for a configured
+    grace period.
 
     Segmentation thresholds are deliberately more permissive than
     final form-quality thresholds. This allows attempted repetitions
     with insufficient depth or incomplete extension to be segmented
     before they are classified.
+
+    A completed repetition must enter the bottom phase and confirm a return to
+    the top. Its inclusive measurement interval begins at a genuine top anchor,
+    which is frozen while the confirming descent candidate is in progress.
     """
 
     def __init__(
@@ -110,8 +122,10 @@ class PushUpPhaseStateMachine:
         condition: bool,
     ) -> bool:
         """
-        Confirm a transition only when its condition remains true for
-        the configured number of consecutive valid frames.
+        Confirm a transition after enough consecutive valid observations.
+
+        A false condition clears the candidate, so separated observations
+        cannot combine to satisfy a confirmation window.
         """
         if not condition:
             self._clear_candidate()
@@ -205,6 +219,7 @@ class PushUpPhaseStateMachine:
         frame_index: int,
         angle: float,
     ) -> Optional[CompletedRepetition]:
+        """Complete a valid inclusive window or restore a ready top state."""
         if (
             self._rep_start_frame is None
             or self._bottom_frame is None
@@ -254,10 +269,11 @@ class PushUpPhaseStateMachine:
         frame_index: int,
     ) -> dict:
         """
-        Update the phase machine with one smoothed elbow angle.
+        Update the phase machine for one integer video-frame identity.
 
-        Returns current phase, count and an optional completed
-        repetition object.
+        ``elbow_angle`` is a smoothed measurement in degrees or ``None`` when
+        unavailable. The result contains the stable phase, cumulative count,
+        an optional completed repetition and the active inclusive window start.
         """
         previous_phase = self.phase
         completed_repetition = None
@@ -504,5 +520,6 @@ class PushUpPhaseStateMachine:
         }
 
     def reset(self) -> None:
+        """Return the counter and all tentative temporal state to waiting."""
         self.rep_count = 0
         self._reset_to_waiting()

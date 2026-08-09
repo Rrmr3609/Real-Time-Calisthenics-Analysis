@@ -1,3 +1,5 @@
+"""Extract visibility-aware, smoothed features for enhanced processing."""
+
 from typing import Dict
 
 from analysis.side_selector import StableSideSelector
@@ -12,10 +14,15 @@ from pose.landmarks import (
 
 class EnhancedFeatureProcessor:
     """
-    Confidence-aware feature extraction and temporal smoothing.
+    Extract confidence-aware angles while retaining temporal feature state.
 
-    This component does not detect push-up phases and does not count
-    repetitions. Those features will be added separately.
+    A sticky selector uses elbow-landmark visibility to choose one body side.
+    Elbow and alignment angles are smoothed independently, and both smoothers
+    reset when the selected side changes so observations from different sides
+    are never combined. Missing or insufficiently visible landmarks produce
+    absent output measurements rather than stale smoothed values.
+
+    Push-up phase detection and repetition counting are handled separately.
     """
 
     def __init__(
@@ -47,6 +54,12 @@ class EnhancedFeatureProcessor:
         self.previous_selected_side = "none"
 
     def update(self, landmarks: Dict[str, dict]) -> dict:
+        """Process one frame of extracted pose landmarks.
+
+        Visibility scores retain MediaPipe-style visibility units. Returned
+        raw and smoothed angles are in degrees, or ``None`` when the selected
+        side lacks the landmarks required for that feature.
+        """
         left_elbow_score = feature_visibility_score(
             landmarks,
             side="left",
@@ -204,6 +217,7 @@ class EnhancedFeatureProcessor:
         }
 
     def reset(self) -> None:
+        """Discard the selected side and all retained smoothing state."""
         self.side_selector.reset()
         self.elbow_smoother.reset()
         self.alignment_smoother.reset()

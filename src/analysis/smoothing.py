@@ -1,3 +1,5 @@
+"""Provide stateful exponential smoothing for enhanced measurements."""
+
 from typing import Optional
 
 
@@ -7,7 +9,9 @@ class ExponentialMovingAverage:
 
     The first valid observation initialises the smoothed value.
 
-    Missing observations do not modify the stored state.
+    Missing observations do not modify the stored state or extrapolate a new
+    value. Callers that must expose absence explicitly can skip ``update`` for
+    such frames, as the enhanced feature processor does.
     """
 
     def __init__(self, alpha: float = 0.3):
@@ -19,13 +23,15 @@ class ExponentialMovingAverage:
 
     @property
     def value(self) -> Optional[float]:
+        """Return the current smoothed value without modifying state."""
         return self._value
 
     def update(self, observation: Optional[float]) -> Optional[float]:
         """
         Add one observation and return the current smoothed value.
 
-        If observation is None, the stored value is left unchanged.
+        If ``observation`` is ``None``, the stored value is returned unchanged;
+        no new value is inferred.
         """
         if observation is None:
             return self._value

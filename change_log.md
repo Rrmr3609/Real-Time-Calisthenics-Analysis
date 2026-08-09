@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 9 August 2026 - Core scientific documentation polish
+
+- Documented the responsibilities, units, state, missing-data behaviour and
+  scientific invariants of the core analysis, feature, pose and capture
+  modules, with no runtime or scientific behaviour changes.
+
 ## 9 August 2026 - Internal code consolidation
 
 - Consolidated duplicate split and repository-root constants, removed a

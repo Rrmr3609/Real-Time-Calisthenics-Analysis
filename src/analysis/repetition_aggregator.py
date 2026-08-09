@@ -1,3 +1,5 @@
+"""Collect repetition-level features over state-machine windows."""
+
 from dataclasses import replace
 from typing import List, Optional
 
@@ -9,10 +11,10 @@ class RepetitionFeatureAggregator:
     Collect body-alignment measurements over the state machine's
     inclusive repetition window.
 
-    The window starts at the maximum genuine top observation that
-    supplies start_top_angle and ends at the frame that confirms the
-    return to top. Missing values remain absent from alignment_angles,
-    while duration_frames retains every frame in the inclusive interval.
+    The window starts at the genuine top observation that supplies
+    ``start_top_angle`` and ends at the frame that confirms the return to top.
+    Missing values remain absent from ``alignment_angles``, while
+    ``duration_frames`` retains every frame in the inclusive interval.
     """
 
     def __init__(self):
@@ -27,10 +29,12 @@ class RepetitionFeatureAggregator:
         completed_repetition: Optional[CompletedRepetition],
     ) -> Optional[CompletedRepetition]:
         """
-        Update repetition-level feature aggregation.
+        Collect one frame for the current inclusive repetition window.
 
-        Returns an enriched CompletedRepetition only when a repetition
-        has completed. Otherwise returns None.
+        Valid alignment angles are measured in degrees. A completed repetition
+        is returned with those observations attached only when the state
+        machine completes the same window; otherwise the method returns
+        ``None``.
         """
 
         if repetition_window_start_frame is None:
@@ -86,5 +90,6 @@ class RepetitionFeatureAggregator:
         return None
 
     def reset(self) -> None:
+        """Discard the active window and its collected observations."""
         self._window_start_frame = None
         self._alignment_angles = []

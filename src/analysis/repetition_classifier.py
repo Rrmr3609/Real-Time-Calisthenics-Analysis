@@ -1,3 +1,5 @@
+"""Apply deterministic form rules to enhanced completed repetitions."""
+
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Dict, Optional, Tuple
@@ -6,6 +8,8 @@ from analysis.repetition_result import CompletedRepetition
 
 
 class RepetitionClass(str, Enum):
+    """Single-label outcomes supported by enhanced evaluation."""
+
     CORRECT = "correct"
     INSUFFICIENT_DEPTH = "insufficient_depth"
     INCOMPLETE_EXTENSION = "incomplete_extension"
@@ -15,6 +19,13 @@ class RepetitionClass(str, Enum):
 
 @dataclass(frozen=True)
 class RepetitionClassification:
+    """Immutable classification result with rule and evidence diagnostics.
+
+    Angle fields are in degrees. Alignment validity describes evidence
+    availability over the repetition window; it is distinct from whether the
+    available evidence indicates an alignment deviation.
+    """
+
     rep_id: int
     predicted_class: str
 
@@ -37,6 +48,7 @@ class RepetitionClassification:
     classification_reason: str
 
     def to_dict(self) -> Dict[str, object]:
+        """Return a dictionary suitable for repetition-level logging."""
         return asdict(self)
 
 
@@ -47,6 +59,13 @@ class RepetitionClassifier:
 
     These are project-defined categories for the controlled evaluation.
     They are not universal or clinical definitions of push-up form.
+
+    Formal repetition classes apply to enhanced completed repetitions; the
+    baseline exposes only diagnostic frame warnings. When several rules apply,
+    the single label follows the fixed priority: insufficient depth, incomplete
+    extension, inadequate alignment evidence (unscorable), alignment deviation
+    and then correct. Every triggered deviation rule remains available in the
+    result even when a higher-priority label is selected.
     """
 
     def __init__(
@@ -95,6 +114,13 @@ class RepetitionClassifier:
         self,
         repetition: CompletedRepetition,
     ) -> RepetitionClassification:
+        """Classify one completed inclusive repetition deterministically.
+
+        Alignment coverage uses all frames in ``duration_frames`` as its
+        denominator and only valid alignment observations as its numerator.
+        Insufficient coverage makes alignment evidence unscorable, although a
+        higher-priority elbow rule may still determine the final label.
+        """
         # Both ends of the repetition represent a top position.
         # Use the weaker of the two extension measurements.
         top_extension_angle = min(
