@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, Sequence
+from typing import Dict, Optional, Tuple
 
 
 Point2D = Tuple[float, float]
@@ -54,10 +54,6 @@ def get_visibility(landmarks: Dict[str, dict], name: str) -> Optional[float]:
         return None
 
     return landmarks[name]["visibility"]
-
-
-Point2D = Tuple[float, float]
-
 
 FEATURE_LANDMARKS = {
     "elbow": ("shoulder", "elbow", "wrist"),

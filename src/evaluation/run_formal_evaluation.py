@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from config.runtime import ALLOWED_SPLITS
 from evaluation.dataset_validation import (
-    ALLOWED_SPLITS,
     load_and_validate_evaluation_data,
 )
 from evaluation.detection_evaluation import (
@@ -37,13 +37,12 @@ from evaluation.repetition_events import (
     load_baseline_events,
     load_enhanced_events,
 )
+from utils.paths import PROJECT_ROOT
 from utils.run_provenance import (
     sha256_canonical_json,
     sha256_file,
 )
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_FPS_RELATIVE_TOLERANCE = 1e-6
 SOURCE_FPS_ABSOLUTE_TOLERANCE = 1e-6
 

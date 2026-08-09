@@ -6,6 +6,7 @@ from typing import Iterable
 
 import pandas as pd
 
+from config.runtime import ALLOWED_SPLITS as _RUNTIME_ALLOWED_SPLITS
 from evaluation.validation import require_columns
 
 
@@ -39,7 +40,7 @@ ANNOTATION_COLUMNS = (
     "annotator_notes",
 )
 
-ALLOWED_SPLITS = frozenset({"development", "test"})
+ALLOWED_SPLITS = frozenset(_RUNTIME_ALLOWED_SPLITS)
 ALLOWED_CAMERA_VIEWS = frozenset({"side", "side_diagonal"})
 ALLOWED_GROUND_TRUTH_CLASSES = frozenset(
     {

@@ -13,8 +13,6 @@ from pose.landmarks import (
     extract_landmarks,
     get_point,
     get_visibility,
-    feature_landmarks_available,
-    feature_visibility_score,
     select_best_elbow_side,
 )
 from utils.csv_logger import CSVLogger, ensure_output_paths_available

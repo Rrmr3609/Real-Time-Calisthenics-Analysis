@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 9 August 2026 - Internal code consolidation
+
+- Consolidated duplicate split and repository-root constants, removed a
+  duplicate type alias and cleaned demonstrably unused imports without
+  changing runtime or scientific behaviour.
+
 ## 9 August 2026 - Historical evidence encoding normalised
 
 - Converted legacy tracked development text evidence to UTF-8 without a BOM
