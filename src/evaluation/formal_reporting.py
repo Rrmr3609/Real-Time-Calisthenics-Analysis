@@ -39,7 +39,6 @@ from utils.run_provenance import (
     write_json_atomically,
 )
 
-
 FORMAL_EVALUATION_REPORT_SCHEMA_VERSION = 1
 
 PER_CLIP_COLUMNS = (

@@ -45,7 +45,6 @@ from utils.run_provenance import (
     create_run_metadata,
 )
 
-
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "configs" / "default.yaml"
 
 PROCESSING_TIME_DEFINITION = (

@@ -25,7 +25,6 @@ from evaluation.formal_reporting import (
     write_formal_evaluation_report,
 )
 
-
 FPS = 10.0
 TOLERANCE = 0.5
 

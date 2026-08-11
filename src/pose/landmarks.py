@@ -2,7 +2,6 @@
 
 from typing import Dict, Optional, Tuple
 
-
 Point2D = Tuple[float, float]
 
 

@@ -16,7 +16,6 @@ from evaluation.validation import (
     require_columns,
 )
 
-
 FRAME_COLUMNS = (
     "clip_id",
     "phase",

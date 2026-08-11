@@ -4,7 +4,6 @@ from typing import Iterable
 
 import pandas as pd
 
-
 REPETITION_KEY_COLUMNS = ("clip_id", "rep_id")
 
 

@@ -19,7 +19,6 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-
 PACKAGE_DISTRIBUTIONS = {
     "opencv": "opencv-python",
     "mediapipe": "mediapipe",

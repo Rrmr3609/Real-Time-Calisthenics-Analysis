@@ -11,7 +11,6 @@ from evaluation.repetition_events import (
     GroundTruthRepetitionEvent,
 )
 
-
 CLIP_ID = "fictional-clip"
 METHOD = "baseline"
 

@@ -14,7 +14,6 @@ from evaluation.repetition_events import (
     GroundTruthRepetitionEvent,
 )
 
-
 CLIP_ID = "fictional-clip"
 SOURCE_FPS = 10.0
 

@@ -1,7 +1,7 @@
 """Provide the intentionally simple frame-level push-up baseline."""
 
-from analysis.repetition_counter import BasicRepetitionCounter
 from analysis.form_rules import baseline_form_warnings
+from analysis.repetition_counter import BasicRepetitionCounter
 
 
 class BaselinePushUpAnalyser:

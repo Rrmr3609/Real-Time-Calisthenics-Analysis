@@ -6,7 +6,6 @@ from dataclasses import asdict, dataclass
 from statistics import fmean
 from typing import Sequence
 
-
 SUPPORTED_FORM_CLASSES: tuple[str, ...] = (
     "correct",
     "insufficient_depth",

@@ -15,7 +15,6 @@ import cv2
 
 from analysis.baseline import BaselinePushUpAnalyser
 from capture.webcam import WebcamCapture
-from utils.paths import LOG_DIR, create_project_directories
 from features.angles import calculate_angle
 from pose.estimator import PoseEstimator
 from pose.landmarks import (
@@ -25,6 +24,7 @@ from pose.landmarks import (
     select_best_elbow_side,
 )
 from utils.csv_logger import CSVLogger, ensure_output_paths_available
+from utils.paths import LOG_DIR, create_project_directories
 
 
 def parse_arguments():

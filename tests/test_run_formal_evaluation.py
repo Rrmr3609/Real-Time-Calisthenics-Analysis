@@ -15,7 +15,6 @@ from evaluation.run_formal_evaluation import (
     run_formal_evaluation,
 )
 
-
 MANIFEST_COLUMNS = (
     "clip_id",
     "split",

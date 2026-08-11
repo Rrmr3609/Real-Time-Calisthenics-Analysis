@@ -4,7 +4,6 @@ import pytest
 
 from utils.csv_logger import CSVLogger, ensure_output_paths_available
 
-
 FIELDNAMES = ["clip_id", "value"]
 
 

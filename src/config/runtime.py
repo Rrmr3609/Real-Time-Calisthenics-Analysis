@@ -15,7 +15,6 @@ from typing import Any, Mapping
 
 import yaml
 
-
 CONFIG_SCHEMA_VERSION = 1
 ALLOWED_SPLITS = ("development", "test")
 

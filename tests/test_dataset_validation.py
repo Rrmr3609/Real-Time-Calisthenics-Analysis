@@ -9,7 +9,6 @@ from evaluation.dataset_validation import (
     validate_repetition_annotations,
 )
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 

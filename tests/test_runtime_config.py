@@ -11,7 +11,6 @@ from config.runtime import (
 )
 from utils.paths import PROJECT_ROOT
 
-
 DEFAULT_CONFIG_PATH = (
     PROJECT_ROOT / "configs" / "default.yaml"
 )

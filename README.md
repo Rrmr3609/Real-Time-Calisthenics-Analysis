@@ -272,7 +272,17 @@ Raw identifiable recordings are not committed to this repository.
 
 ## Installation
 
+Install runtime dependencies with:
+
 ```powershell
 & ".\.venv\Scripts\python.exe" -m pip install `
   -r requirements.txt
+```
+
+For development and testing, install the runtime and pinned development tools
+with:
+
+```powershell
+& ".\.venv\Scripts\python.exe" -m pip install `
+  -r requirements-dev.txt
 ```

@@ -12,7 +12,6 @@ from evaluation.repetition_events import (
     PredictedRepetitionEvent,
 )
 
-
 DEFAULT_EVENT_TOLERANCE_SECONDS = 0.5
 
 

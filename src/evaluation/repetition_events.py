@@ -13,7 +13,6 @@ from evaluation.dataset_validation import (
 )
 from evaluation.validation import require_columns
 
-
 BASELINE_REQUIRED_COLUMNS = (
     "run_id",
     "clip_id",

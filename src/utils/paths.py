@@ -7,7 +7,6 @@ than created globally by operational runners.
 
 from pathlib import Path
 
-
 # Resolve the root from this tracked module, independently of the shell CWD.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 

@@ -16,7 +16,6 @@ import pandas as pd
 from config.runtime import ALLOWED_SPLITS as _RUNTIME_ALLOWED_SPLITS
 from evaluation.validation import require_columns
 
-
 MANIFEST_COLUMNS = (
     "clip_id",
     "split",

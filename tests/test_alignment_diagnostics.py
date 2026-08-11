@@ -6,14 +6,13 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from evaluation.summarise_alignment_visibility import build_summary
 from evaluation import (
     summarise_alignment_visibility,
     summarise_phase_detection,
     summarise_preprocessing,
     summarise_repetition_classification,
 )
-
+from evaluation.summarise_alignment_visibility import build_summary
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SUMMARY_MODULES = (

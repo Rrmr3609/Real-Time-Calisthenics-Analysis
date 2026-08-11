@@ -1,5 +1,12 @@
 # Project Change Log
 
+## 11 August 2026 - Repository tooling and hygiene policy
+
+- Established minimal Ruff and pytest configuration, separated development
+  dependencies, removed an unused runtime dependency, completed generated-file
+  ignore coverage and defined an LF repository line-ending policy without
+  renormalising historical files.
+
 ## 11 August 2026 - Reusable development analysis utilities
 
 - Removed historical date and setup-run assumptions from development summary
