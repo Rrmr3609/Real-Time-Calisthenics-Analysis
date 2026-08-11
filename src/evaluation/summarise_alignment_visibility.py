@@ -1,3 +1,10 @@
+"""Summarise enhanced alignment availability for development diagnostics.
+
+Inputs are enhanced frame and repetition CSVs containing boolean availability,
+phase, side-selection and alignment-coverage fields. The utility writes a
+caller-dated UTF-8 diagnostic summary and does not change analysis behaviour.
+"""
+
 import argparse
 from datetime import date
 from pathlib import Path
@@ -36,7 +43,24 @@ PHASE_ORDER = (
 )
 
 
-def parse_arguments():
+def iso_summary_date(value: str) -> str:
+    """Validate a reproducible ISO calendar date for summary rendering."""
+    try:
+        parsed = date.fromisoformat(value)
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError(
+            "summary date must use ISO YYYY-MM-DD"
+        ) from error
+
+    if parsed.isoformat() != value:
+        raise argparse.ArgumentTypeError(
+            "summary date must use ISO YYYY-MM-DD"
+        )
+
+    return value
+
+
+def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
         description=(
             "Summarise alignment availability for an enhanced run."
@@ -60,7 +84,8 @@ def parse_arguments():
     )
     parser.add_argument(
         "--summary-date",
-        default=date.today().isoformat(),
+        required=True,
+        type=iso_summary_date,
         help="Date written into the summary (YYYY-MM-DD).",
     )
 
@@ -74,7 +99,7 @@ def parse_arguments():
         ),
     )
 
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def boolean_series(
@@ -273,7 +298,7 @@ def build_summary(
         )
     )
 
-    summary = f"""Alignment visibility diagnostic — {summary_date}
+    summary = f"""Alignment visibility development diagnostic — {summary_date}
 
 Clip IDs: {clip_ids}
 Frame input: {frame_source}
@@ -320,6 +345,17 @@ def main():
     frame_path = Path(args.frame_input)
     repetition_path = Path(args.repetition_input)
     output_path = Path(args.output)
+
+    if not frame_path.is_file():
+        raise FileNotFoundError(
+            f"Enhanced frame CSV does not exist: {frame_path}"
+        )
+
+    if not repetition_path.is_file():
+        raise FileNotFoundError(
+            "Enhanced repetition CSV does not exist: "
+            f"{repetition_path}"
+        )
 
     frame_data = pd.read_csv(frame_path)
     repetition_data = pd.read_csv(repetition_path)

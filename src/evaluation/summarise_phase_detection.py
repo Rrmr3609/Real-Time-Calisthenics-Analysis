@@ -1,10 +1,47 @@
+"""Summarise enhanced temporal outputs for development diagnostics.
+
+The input is an enhanced temporal CSV containing frame identities, phases,
+angles in degrees and processing times in milliseconds. The utility writes a
+caller-dated UTF-8 text summary, not human ground truth or formal evidence.
+"""
+
 import argparse
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
 
 
-def parse_arguments():
+def iso_summary_date(value: str) -> str:
+    """Validate a reproducible ISO calendar date for summary rendering."""
+    try:
+        parsed = date.fromisoformat(value)
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError(
+            "summary date must use ISO YYYY-MM-DD"
+        ) from error
+
+    if parsed.isoformat() != value:
+        raise argparse.ArgumentTypeError(
+            "summary date must use ISO YYYY-MM-DD"
+        )
+
+    return value
+
+
+def development_id(value: str) -> str:
+    """Require a non-blank caller-supplied development identity."""
+    normalised = value.strip()
+
+    if not normalised:
+        raise argparse.ArgumentTypeError(
+            "development ID cannot be blank"
+        )
+
+    return normalised
+
+
+def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
         description=(
             "Summarise enhanced phase-detection behaviour."
@@ -22,8 +59,20 @@ def parse_arguments():
         required=True,
         help="Output text file.",
     )
+    parser.add_argument(
+        "--summary-date",
+        required=True,
+        type=iso_summary_date,
+        help="Date rendered in the summary (YYYY-MM-DD).",
+    )
+    parser.add_argument(
+        "--development-id",
+        required=True,
+        type=development_id,
+        help="Caller-supplied development clip or run identity.",
+    )
 
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main():
@@ -32,12 +81,17 @@ def main():
     input_path = Path(args.input)
     output_path = Path(args.output)
 
+    if not input_path.is_file():
+        raise FileNotFoundError(
+            f"Enhanced temporal CSV does not exist: {input_path}"
+        )
+
+    data = pd.read_csv(input_path)
+
     output_path.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
-
-    data = pd.read_csv(input_path)
 
     total_frames = len(data)
 
@@ -97,7 +151,10 @@ def main():
             "No completed repetitions were detected."
         )
 
-    summary = f"""Enhanced phase-detection smoke test — 22 July 2026
+    summary = f"""Enhanced phase-detection development diagnostic — {args.summary_date}
+
+Development ID: {args.development_id}
+Input: {input_path}
 
 Total frames: {total_frames}
 Final enhanced repetition count: {final_rep_count}
@@ -114,9 +171,8 @@ Completed repetition details:
 {chr(10).join(completed_lines)}
 
 Important:
-This is an engineering smoke test on one setup recording.
-It is not a formal accuracy evaluation and the temporal
-parameters have not yet been calibrated on a development set.
+This is a development diagnostic, not a formal accuracy result.
+Completed-repetition boundaries are algorithm outputs, not human ground truth.
 """
 
     print(summary)

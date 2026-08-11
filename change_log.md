@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 11 August 2026 - Reusable development analysis utilities
+
+- Removed historical date and setup-run assumptions from development summary
+  utilities by requiring reproducible caller-supplied dates and identities,
+  and clarified development-only diagnostic labelling.
+
 ## 9 August 2026 - Runtime result-path policy cleanup
 
 - Removed obsolete result-directory creation so operational runner setup

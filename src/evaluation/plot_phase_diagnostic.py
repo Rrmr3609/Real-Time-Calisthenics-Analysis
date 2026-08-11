@@ -1,3 +1,10 @@
+"""Plot enhanced elbow angles and phases as a development diagnostic.
+
+The input is an enhanced temporal CSV with frame indices and elbow angles in
+degrees. The caller chooses the image path and segmentation guide values; the
+plot is diagnostic development output rather than formal evaluation evidence.
+"""
+
 import argparse
 from pathlib import Path
 
@@ -5,10 +12,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def parse_arguments():
+def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
         description=(
-            "Plot elbow angles and detected phase transitions."
+            "Plot a development diagnostic of elbow angles and phases."
         )
     )
 
@@ -36,7 +43,7 @@ def parse_arguments():
         default=120.0,
     )
 
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main():
@@ -44,12 +51,18 @@ def main():
 
     input_path = Path(args.input)
     output_path = Path(args.output)
+
+    if not input_path.is_file():
+        raise FileNotFoundError(
+            f"Enhanced temporal CSV does not exist: {input_path}"
+        )
+
+    data = pd.read_csv(input_path)
+
     output_path.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
-
-    data = pd.read_csv(input_path)
 
     frame_index = data["frame_index"]
 
@@ -138,14 +151,16 @@ def main():
     plt.xlabel("Frame index")
     plt.ylabel("Elbow angle (degrees)")
     plt.title(
-        "Enhanced temporal push-up phase detection"
+        "Development diagnostic: enhanced temporal push-up phase detection"
     )
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_path, dpi=200)
     plt.close()
 
-    print(f"Saved phase plot to: {output_path}")
+    print(
+        f"Saved development phase diagnostic to: {output_path}"
+    )
 
 
 if __name__ == "__main__":
