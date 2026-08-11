@@ -77,30 +77,21 @@ class EnhancedClipEvaluation:
     unmatched_prediction_ids: tuple[int, ...]
     unmatched_ground_truth_attempt_ids: tuple[str, ...]
     classification: ClassificationEvaluation
-    detection_recall_by_ground_truth_class: tuple[
-        GroundTruthClassDetectionRecall, ...
-    ]
+    detection_recall_by_ground_truth_class: tuple[GroundTruthClassDetectionRecall, ...]
 
     def to_dict(self) -> dict[str, object]:
         """Return the complete clip result as JSON-compatible structures."""
         return {
             "detection": self.detection.to_dict(),
-            "matched_pairs": [
-                pair.to_dict()
-                for pair in self.matched_pairs
-            ],
-            "unmatched_prediction_ids": list(
-                self.unmatched_prediction_ids
-            ),
+            "matched_pairs": [pair.to_dict() for pair in self.matched_pairs],
+            "unmatched_prediction_ids": list(self.unmatched_prediction_ids),
             "unmatched_ground_truth_attempt_ids": list(
                 self.unmatched_ground_truth_attempt_ids
             ),
             "classification": self.classification.to_dict(),
             "detection_recall_by_ground_truth_class": [
                 class_recall.to_dict()
-                for class_recall in (
-                    self.detection_recall_by_ground_truth_class
-                )
+                for class_recall in (self.detection_recall_by_ground_truth_class)
             ],
         }
 
@@ -113,8 +104,7 @@ def _validate_label(
 ) -> None:
     if not isinstance(label, str) or not label.strip():
         raise ValueError(
-            f"{source_name} {identifier!r} must have a "
-            "non-blank form class"
+            f"{source_name} {identifier!r} must have a non-blank form class"
         )
 
     if label not in SUPPORTED_FORM_CLASSES:
@@ -137,8 +127,7 @@ def _validate_events(
     for event in annotations:
         if not isinstance(event, GroundTruthRepetitionEvent):
             raise ValueError(
-                "Ground-truth inputs must be "
-                "GroundTruthRepetitionEvent instances"
+                "Ground-truth inputs must be GroundTruthRepetitionEvent instances"
             )
 
         _validate_label(
@@ -150,8 +139,7 @@ def _validate_events(
     for event in predictions:
         if not isinstance(event, EnhancedRepetitionEvent):
             raise ValueError(
-                "Enhanced predictions must be "
-                "EnhancedRepetitionEvent instances"
+                "Enhanced predictions must be EnhancedRepetitionEvent instances"
             )
 
         _validate_label(
@@ -166,57 +154,33 @@ def _validate_matched_references(
     predictions: tuple[EnhancedRepetitionEvent, ...],
     annotations: tuple[GroundTruthRepetitionEvent, ...],
 ) -> None:
-    predictions_by_id = {
-        event.predicted_rep_id: event
-        for event in predictions
-    }
-    annotations_by_id = {
-        event.ground_truth_attempt_id: event
-        for event in annotations
-    }
+    predictions_by_id = {event.predicted_rep_id: event for event in predictions}
+    annotations_by_id = {event.ground_truth_attempt_id: event for event in annotations}
     matched_prediction_ids = []
     matched_annotation_ids = []
 
     for pair in match_result.matched_pairs:
         prediction_id = pair.prediction.predicted_rep_id
-        annotation_id = (
-            pair.annotation.ground_truth_attempt_id
-        )
+        annotation_id = pair.annotation.ground_truth_attempt_id
 
-        if (
-            predictions_by_id.get(prediction_id)
-            is not pair.prediction
-        ):
+        if predictions_by_id.get(prediction_id) is not pair.prediction:
             raise ValueError(
-                "A matched prediction does not resolve to "
-                "exactly one integration input"
+                "A matched prediction does not resolve to exactly one integration input"
             )
 
-        if (
-            annotations_by_id.get(annotation_id)
-            is not pair.annotation
-        ):
+        if annotations_by_id.get(annotation_id) is not pair.annotation:
             raise ValueError(
-                "A matched annotation does not resolve to "
-                "exactly one integration input"
+                "A matched annotation does not resolve to exactly one integration input"
             )
 
         matched_prediction_ids.append(prediction_id)
         matched_annotation_ids.append(annotation_id)
 
-    if len(matched_prediction_ids) != len(
-        set(matched_prediction_ids)
-    ):
-        raise ValueError(
-            "A prediction appears in more than one matched pair"
-        )
+    if len(matched_prediction_ids) != len(set(matched_prediction_ids)):
+        raise ValueError("A prediction appears in more than one matched pair")
 
-    if len(matched_annotation_ids) != len(
-        set(matched_annotation_ids)
-    ):
-        raise ValueError(
-            "An annotation appears in more than one matched pair"
-        )
+    if len(matched_annotation_ids) != len(set(matched_annotation_ids)):
+        raise ValueError("An annotation appears in more than one matched pair")
 
 
 def _summarise_detection_recall_by_class(
@@ -225,28 +189,19 @@ def _summarise_detection_recall_by_class(
     detection: DetectionSummary,
 ) -> tuple[GroundTruthClassDetectionRecall, ...]:
     """Stratify GT support, matches and misses in fixed class order."""
-    support_counts = Counter(
-        event.ground_truth_class
-        for event in annotations
-    )
+    support_counts = Counter(event.ground_truth_class for event in annotations)
     matched_counts = Counter(
-        pair.annotation.ground_truth_class
-        for pair in match_result.matched_pairs
+        pair.annotation.ground_truth_class for pair in match_result.matched_pairs
     )
     missed_counts = Counter(
-        event.ground_truth_class
-        for event in match_result.unmatched_annotations
+        event.ground_truth_class for event in match_result.unmatched_annotations
     )
     rows = tuple(
         GroundTruthClassDetectionRecall(
             label=label,
             ground_truth_support=support_counts[label],
-            matched_ground_truth_repetitions=(
-                matched_counts[label]
-            ),
-            missed_ground_truth_repetitions=(
-                missed_counts[label]
-            ),
+            matched_ground_truth_repetitions=(matched_counts[label]),
+            missed_ground_truth_repetitions=(missed_counts[label]),
             recall=(
                 matched_counts[label] / support_counts[label]
                 if support_counts[label] > 0
@@ -258,10 +213,7 @@ def _summarise_detection_recall_by_class(
 
     if any(
         row.ground_truth_support
-        != (
-            row.matched_ground_truth_repetitions
-            + row.missed_ground_truth_repetitions
-        )
+        != (row.matched_ground_truth_repetitions + row.missed_ground_truth_repetitions)
         for row in rows
     ):
         raise ValueError(
@@ -269,30 +221,28 @@ def _summarise_detection_recall_by_class(
             "matched plus missed repetitions"
         )
 
-    if sum(
-        row.ground_truth_support for row in rows
-    ) != detection.ground_truth_event_count:
+    if (
+        sum(row.ground_truth_support for row in rows)
+        != detection.ground_truth_event_count
+    ):
         raise ValueError(
-            "Per-class support does not equal the overall "
-            "ground-truth event count"
+            "Per-class support does not equal the overall ground-truth event count"
         )
 
-    if sum(
-        row.matched_ground_truth_repetitions
-        for row in rows
-    ) != detection.matched_events:
+    if (
+        sum(row.matched_ground_truth_repetitions for row in rows)
+        != detection.matched_events
+    ):
         raise ValueError(
-            "Per-class matched counts do not equal the overall "
-            "matched event count"
+            "Per-class matched counts do not equal the overall matched event count"
         )
 
-    if sum(
-        row.missed_ground_truth_repetitions
-        for row in rows
-    ) != detection.missed_annotations:
+    if (
+        sum(row.missed_ground_truth_repetitions for row in rows)
+        != detection.missed_annotations
+    ):
         raise ValueError(
-            "Per-class missed counts do not equal the overall "
-            "detection miss count"
+            "Per-class missed counts do not equal the overall detection miss count"
         )
 
     return rows
@@ -304,9 +254,7 @@ def evaluate_enhanced_clip(
     *,
     clip_id: str,
     source_fps: float,
-    tolerance_seconds: float = (
-        DEFAULT_EVENT_TOLERANCE_SECONDS
-    ),
+    tolerance_seconds: float = (DEFAULT_EVENT_TOLERANCE_SECONDS),
 ) -> EnhancedClipEvaluation:
     """Evaluate enhanced detection and matched classification for one clip.
 
@@ -337,70 +285,46 @@ def evaluate_enhanced_clip(
         ground_truth_annotations,
     )
     matched_ground_truth_labels = tuple(
-        pair.annotation.ground_truth_class
-        for pair in match_result.matched_pairs
+        pair.annotation.ground_truth_class for pair in match_result.matched_pairs
     )
     matched_predicted_labels = tuple(
-        pair.prediction.predicted_class
-        for pair in match_result.matched_pairs
+        pair.prediction.predicted_class for pair in match_result.matched_pairs
     )
     classification = evaluate_classification(
         matched_ground_truth_labels,
         matched_predicted_labels,
         labels=SUPPORTED_FORM_CLASSES,
     )
-    class_detection_recall = (
-        _summarise_detection_recall_by_class(
-            ground_truth_annotations,
-            match_result,
-            detection,
-        )
+    class_detection_recall = _summarise_detection_recall_by_class(
+        ground_truth_annotations,
+        match_result,
+        detection,
     )
 
     return EnhancedClipEvaluation(
         detection=detection,
         matched_pairs=tuple(
             MatchedClassificationPair(
-                ground_truth_attempt_id=(
-                    pair.annotation
-                    .ground_truth_attempt_id
-                ),
-                predicted_rep_id=(
-                    pair.prediction.predicted_rep_id
-                ),
-                ground_truth_completion_frame=(
-                    pair.annotation.completion_frame
-                ),
-                predicted_completion_frame=(
-                    pair.prediction.completion_frame
-                ),
-                ground_truth_class=(
-                    pair.annotation.ground_truth_class
-                ),
-                predicted_class=(
-                    pair.prediction.predicted_class
-                ),
+                ground_truth_attempt_id=(pair.annotation.ground_truth_attempt_id),
+                predicted_rep_id=(pair.prediction.predicted_rep_id),
+                ground_truth_completion_frame=(pair.annotation.completion_frame),
+                predicted_completion_frame=(pair.prediction.completion_frame),
+                ground_truth_class=(pair.annotation.ground_truth_class),
+                predicted_class=(pair.prediction.predicted_class),
                 signed_frame_error=pair.signed_frame_error,
-                signed_timing_error_seconds=(
-                    pair.signed_timing_error_seconds
-                ),
-                absolute_timing_error_seconds=(
-                    pair.absolute_timing_error_seconds
-                ),
+                signed_timing_error_seconds=(pair.signed_timing_error_seconds),
+                absolute_timing_error_seconds=(pair.absolute_timing_error_seconds),
                 matching_basis=pair.matching_basis,
             )
             for pair in match_result.matched_pairs
         ),
         unmatched_prediction_ids=tuple(
-            event.predicted_rep_id
-            for event in match_result.unmatched_predictions
+            event.predicted_rep_id for event in match_result.unmatched_predictions
         ),
         unmatched_ground_truth_attempt_ids=tuple(
             event.ground_truth_attempt_id
             for event in match_result.unmatched_annotations
         ),
         classification=classification,
-        detection_recall_by_ground_truth_class=(
-            class_detection_recall
-        ),
+        detection_recall_by_ground_truth_class=(class_detection_recall),
     )

@@ -78,37 +78,21 @@ class RepetitionClassifier:
         minimum_alignment_valid_ratio: float = 0.50,
     ):
         if alignment_deviation_min_frames < 1:
-            raise ValueError(
-                "alignment_deviation_min_frames must be at least 1"
-            )
+            raise ValueError("alignment_deviation_min_frames must be at least 1")
 
         if not 0.0 <= alignment_deviation_min_ratio <= 1.0:
-            raise ValueError(
-                "alignment_deviation_min_ratio must be between 0 and 1"
-            )
+            raise ValueError("alignment_deviation_min_ratio must be between 0 and 1")
 
         if not 0.0 <= minimum_alignment_valid_ratio <= 1.0:
-            raise ValueError(
-                "minimum_alignment_valid_ratio must be between 0 and 1"
-            )
+            raise ValueError("minimum_alignment_valid_ratio must be between 0 and 1")
 
         self.depth_threshold = float(depth_threshold)
-        self.extension_threshold = float(
-            extension_threshold
-        )
-        self.alignment_minimum = float(
-            alignment_minimum
-        )
+        self.extension_threshold = float(extension_threshold)
+        self.alignment_minimum = float(alignment_minimum)
 
-        self.alignment_deviation_min_frames = (
-            alignment_deviation_min_frames
-        )
-        self.alignment_deviation_min_ratio = (
-            alignment_deviation_min_ratio
-        )
-        self.minimum_alignment_valid_ratio = (
-            minimum_alignment_valid_ratio
-        )
+        self.alignment_deviation_min_frames = alignment_deviation_min_frames
+        self.alignment_deviation_min_ratio = alignment_deviation_min_ratio
+        self.minimum_alignment_valid_ratio = minimum_alignment_valid_ratio
 
     def classify(
         self,
@@ -128,130 +112,81 @@ class RepetitionClassifier:
             repetition.end_top_angle,
         )
 
-        insufficient_depth = (
-            repetition.minimum_elbow_angle
-            > self.depth_threshold
-        )
+        insufficient_depth = repetition.minimum_elbow_angle > self.depth_threshold
 
-        incomplete_extension = (
-            top_extension_angle
-            < self.extension_threshold
-        )
+        incomplete_extension = top_extension_angle < self.extension_threshold
 
-        alignment_values = list(
-            repetition.alignment_angles
-        )
+        alignment_values = list(repetition.alignment_angles)
 
-        alignment_valid_frames = len(
-            alignment_values
-        )
+        alignment_valid_frames = len(alignment_values)
 
         alignment_valid_ratio = (
-            alignment_valid_frames
-            / repetition.duration_frames
+            alignment_valid_frames / repetition.duration_frames
             if repetition.duration_frames > 0
             else 0.0
         )
 
-        minimum_alignment_angle = (
-            min(alignment_values)
-            if alignment_values
-            else None
-        )
+        minimum_alignment_angle = min(alignment_values) if alignment_values else None
 
         alignment_deviation_frames = sum(
-            value < self.alignment_minimum
-            for value in alignment_values
+            value < self.alignment_minimum for value in alignment_values
         )
 
         alignment_deviation_ratio = (
-            alignment_deviation_frames
-            / alignment_valid_frames
+            alignment_deviation_frames / alignment_valid_frames
             if alignment_valid_frames > 0
             else 0.0
         )
 
-        alignment_scorable = (
-            alignment_valid_ratio
-            >= self.minimum_alignment_valid_ratio
-        )
+        alignment_scorable = alignment_valid_ratio >= self.minimum_alignment_valid_ratio
 
         alignment_deviation = (
             alignment_scorable
-            and alignment_deviation_frames
-            >= self.alignment_deviation_min_frames
-            and alignment_deviation_ratio
-            >= self.alignment_deviation_min_ratio
+            and alignment_deviation_frames >= self.alignment_deviation_min_frames
+            and alignment_deviation_ratio >= self.alignment_deviation_min_ratio
         )
 
         triggered_rules = []
 
         if insufficient_depth:
-            triggered_rules.append(
-                RepetitionClass.INSUFFICIENT_DEPTH.value
-            )
+            triggered_rules.append(RepetitionClass.INSUFFICIENT_DEPTH.value)
 
         if incomplete_extension:
-            triggered_rules.append(
-                RepetitionClass.INCOMPLETE_EXTENSION.value
-            )
+            triggered_rules.append(RepetitionClass.INCOMPLETE_EXTENSION.value)
 
         if alignment_deviation:
-            triggered_rules.append(
-                RepetitionClass.ALIGNMENT_DEVIATION.value
-            )
+            triggered_rules.append(RepetitionClass.ALIGNMENT_DEVIATION.value)
 
-        multiple_rules_triggered = (
-            len(triggered_rules) > 1
-        )
+        multiple_rules_triggered = len(triggered_rules) > 1
 
         # The evaluation uses one intended class per repetition.
         # This deterministic priority is used only when several rules
         # trigger simultaneously. All triggers remain in the log.
         if insufficient_depth:
-            predicted_class = (
-                RepetitionClass.INSUFFICIENT_DEPTH.value
-            )
-            reason = (
-                "Minimum elbow angle remained above "
-                "the depth threshold."
-            )
+            predicted_class = RepetitionClass.INSUFFICIENT_DEPTH.value
+            reason = "Minimum elbow angle remained above the depth threshold."
 
         elif incomplete_extension:
-            predicted_class = (
-                RepetitionClass.INCOMPLETE_EXTENSION.value
-            )
-            reason = (
-                "At least one top position remained below "
-                "the extension threshold."
-            )
+            predicted_class = RepetitionClass.INCOMPLETE_EXTENSION.value
+            reason = "At least one top position remained below the extension threshold."
 
         elif not alignment_scorable:
-            predicted_class = (
-                RepetitionClass.UNSCORABLE.value
-            )
+            predicted_class = RepetitionClass.UNSCORABLE.value
             reason = (
                 "Insufficient valid body-alignment observations "
                 "for a correct or alignment-deviation decision."
             )
 
         elif alignment_deviation:
-            predicted_class = (
-                RepetitionClass.ALIGNMENT_DEVIATION.value
-            )
+            predicted_class = RepetitionClass.ALIGNMENT_DEVIATION.value
             reason = (
                 "Body alignment remained below the operational "
                 "threshold for enough valid frames."
             )
 
         else:
-            predicted_class = (
-                RepetitionClass.CORRECT.value
-            )
-            reason = (
-                "None of the three predefined deviation rules "
-                "was triggered."
-            )
+            predicted_class = RepetitionClass.CORRECT.value
+            reason = "None of the three predefined deviation rules was triggered."
 
         if multiple_rules_triggered:
             reason += (
@@ -262,42 +197,17 @@ class RepetitionClassifier:
         return RepetitionClassification(
             rep_id=repetition.rep_id,
             predicted_class=predicted_class,
-
-            insufficient_depth_triggered=(
-                insufficient_depth
-            ),
-            incomplete_extension_triggered=(
-                incomplete_extension
-            ),
-            alignment_deviation_triggered=(
-                alignment_deviation
-            ),
-
+            insufficient_depth_triggered=(insufficient_depth),
+            incomplete_extension_triggered=(incomplete_extension),
+            alignment_deviation_triggered=(alignment_deviation),
             triggered_rules=tuple(triggered_rules),
-            multiple_rules_triggered=(
-                multiple_rules_triggered
-            ),
-
+            multiple_rules_triggered=(multiple_rules_triggered),
             top_extension_angle=top_extension_angle,
-            minimum_elbow_angle=(
-                repetition.minimum_elbow_angle
-            ),
-
-            minimum_alignment_angle=(
-                minimum_alignment_angle
-            ),
-            alignment_valid_frames=(
-                alignment_valid_frames
-            ),
-            alignment_valid_ratio=(
-                alignment_valid_ratio
-            ),
-            alignment_deviation_frames=(
-                alignment_deviation_frames
-            ),
-            alignment_deviation_ratio=(
-                alignment_deviation_ratio
-            ),
-
+            minimum_elbow_angle=(repetition.minimum_elbow_angle),
+            minimum_alignment_angle=(minimum_alignment_angle),
+            alignment_valid_frames=(alignment_valid_frames),
+            alignment_valid_ratio=(alignment_valid_ratio),
+            alignment_deviation_frames=(alignment_deviation_frames),
+            alignment_deviation_ratio=(alignment_deviation_ratio),
             classification_reason=reason,
         )

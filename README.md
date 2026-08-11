@@ -1,237 +1,84 @@
 # Real-Time Calisthenics Analysis Using Computer Vision
 
-MSc Artificial Intelligence project at Queen Mary University of London.
+An MSc Artificial Intelligence project from Queen Mary University of London
+that analyses push-ups with OpenCV and MediaPipe Pose. It compares an
+intentionally simple raw-threshold baseline with an enhanced temporal method
+and provides observable, non-medical exercise-form feedback.
 
-## Current Scope
+## What the System Does
 
-The project focuses on real-time analysis of one calisthenic exercise: the push-up.
+- processes a live webcam feed or a recorded video;
+- supports one visible person in a controlled side or side-diagonal view;
+- extracts elbow and shoulder-hip-ankle angles from pose landmarks;
+- counts push-up repetitions using baseline and enhanced approaches;
+- classifies enhanced repetitions as `correct`, `insufficient_depth`,
+  `incomplete_extension`, `alignment_deviation` or `unscorable`;
+- records frame, repetition, configuration and provenance data for evaluation.
 
-The controlled implementation conditions are:
+The thresholds are provisional project settings for controlled recordings.
+They are not universal form definitions or medical guidance.
 
-- one person visible;
-- controlled side-view camera orientation;
-- standard webcam input in the current prototype;
-- recorded-video runners for the formal evaluation workflow;
-- repetition counting and movement-state analysis;
-- three predefined observable form-deviation categories;
-- immediate non-medical feedback.
+## Baseline vs Enhanced
 
-## Form Categories
+| Area | Baseline | Enhanced |
+| --- | --- | --- |
+| Features | Raw visible-side angles | Visibility checks, stable elbow-side selection and EMA smoothing |
+| Counting | Sticky top/bottom thresholds | Explicit temporal phases, hysteresis and confirmation frames |
+| Missing observations | State retained until a valid angle returns | Bounded missing-frame tolerance |
+| Form output | Diagnostic frame warnings only | Deterministic completed-repetition classification |
+| Evaluation role | Repetition-detection comparator | Repetition detection and matched classification |
 
-The planned repetition-level evaluation categories are:
+The baseline remains deliberately limited so that it provides a fair reference
+rather than a second version of the enhanced method. See the
+[comparison design](docs/baseline_evaluation_design.md) for exact semantics.
 
-1. Correct repetition under the project-defined conditions
-2. Insufficient depth
-3. Incomplete elbow extension
-4. Shoulder-hip-ankle alignment deviation
+## Current Status
 
-The current live baseline displays provisional warnings. A live "No warning" message is not treated as proof that a repetition is correct. Correct and incorrect repetition labels will be defined through manual annotation during evaluation.
+- The live baseline and both recorded-video runners are implemented.
+- Enhanced temporal segmentation and repetition classification are implemented.
+- Annotation validation, deterministic event matching, per-clip evaluation and
+  cross-clip formal reporting are implemented and tested with fictional data.
+- Development diagnostics are retained under `results/development/`.
+- A real labelled evaluation dataset and formal experimental results are not yet
+  complete.
+- The `0.5`-second event-matching tolerance is provisional. Development
+  ground truth must justify and freeze the final value before test evaluation.
 
-## Implemented Baseline Prototype
+## Quick Start
 
-The current prototype:
+The project targets Python 3.12 and PowerShell on Windows.
 
-- opens a live webcam feed using OpenCV;
-- runs MediaPipe Pose on each frame;
-- draws detected pose landmarks;
-- extracts selected landmarks for the visible body side;
-- calculates elbow angle from shoulder-elbow-wrist landmarks;
-- calculates shoulder-hip-ankle body-alignment angle;
-- displays FPS, selected side, angles, position, repetition count and warning text;
-- logs per-frame features and baseline outputs to CSV;
-- applies a provisional raw-threshold baseline for push-up analysis.
-
-Run the live baseline from PowerShell:
+Create a virtual environment and install runtime dependencies:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
+py -3.12 -m venv .venv
+& ".\.venv\Scripts\python.exe" -m pip install -r requirements.txt
+```
+
+For testing and repository development, install the pinned development tools:
+
+```powershell
+& ".\.venv\Scripts\python.exe" -m pip install -r requirements-dev.txt
+```
+
+Run the live baseline:
+
+```powershell
 & ".\.venv\Scripts\python.exe" src\main.py
 ```
 
-## Current Baseline Rules
-
-The current baseline uses provisional operational thresholds:
-
-- top position: elbow angle >= 150 degrees;
-- bottom position: elbow angle <= 100 degrees;
-- repetition count: top -> bottom -> top;
-- body-alignment warning: shoulder-hip-ankle angle < 160 degrees.
-
-These thresholds are project-specific development thresholds. They are not universal definitions of correct push-up form and are not medical or injury-risk claims.
-
-
-## Recorded-run configuration
-
-Both recorded-video runners load validated typed settings from
-`configs/default.yaml`. The complete field reference, precedence rules,
-metadata schema and reproduction commands are documented in
-`docs/runtime_configuration.md`.
-
-Every recorded command requires `--split development|test`. `--run-id`
-defaults to `--clip-id`; use an explicit unique run ID for repeated
-experiments. The enhanced `--alpha` option is an explicit override of
-`features.ema_alpha` and is recorded in metadata.
-
-## Enhanced Preprocessing — In Development
-
-An enhanced preprocessing layer has been added separately from the frozen baseline.
-
-The current enhanced preprocessing includes:
-
-- visibility-based body-side scoring;
-- confirmation across multiple frames before acquiring or switching sides;
-- a margin requirement before switching to the opposite side;
-- a short grace period for missing side visibility;
-- exponential moving-average smoothing of elbow and body-alignment angles;
-- raw and smoothed feature logging for recorded videos;
-- left/right elbow and alignment visibility scores;
-- the elbow-selected side and whether the opposite side could provide valid
-  alignment landmarks.
-
-Example:
+Run the baseline on a recorded development clip:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
-& ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
-  --video "data\raw\development\example.mp4" `
-  --clip-id "example" `
-  --split development `
-  --run-id "example_enhanced_001" `
-  --config "configs\default.yaml" `
-  --display
-```
-
-Create an alignment-availability diagnostic from one enhanced run:
-
-```powershell
-& ".\.venv\Scripts\python.exe" `
-  src\evaluation\summarise_alignment_visibility.py `
-  --frame-input `
-    "experiments\logs\<run-id>_enhanced_temporal.csv" `
-  --repetition-input `
-    "experiments\outputs\<run-id>_enhanced_repetitions.csv" `
-  --output `
-    "results\development\summaries\2026-07-28_alignment_visibility_diagnostic_summary.txt" `
-  --summary-date "2026-07-28" `
-  --minimum-alignment-valid-ratio 0.50
-```
-
-The diagnostic reports overall and phase-grouped feature availability,
-opposite-side rescue opportunities, elbow-side changes, mean repetition
-alignment coverage, the final predicted-class `unscorable` count and the
-independent count of repetitions whose alignment evidence is unscorable below
-the configured minimum-valid-ratio threshold. Repetition summaries reject
-duplicate `(clip_id, rep_id)` rows. These diagnostics do not change the
-elbow-driven selector or any classifier threshold.
-
-### Enhanced repetition measurement window
-
-Enhanced repetition measurements use one closed, inclusive frame interval.
-The interval starts at the frame containing the maximum genuine top
-observation (`elbow_angle >= top_region_threshold`) available before the
-contiguous descent-confirmation sequence. That anchor is frozen when the
-candidate sequence begins. The interval ends at the final
-consecutive-confirmation frame that completes the return to top. Therefore:
-
-- `duration_frames` is `end_frame - start_frame + 1`;
-- only the contiguous descent-candidate frames that confirm the transition are
-  retained; an interruption discards the earlier candidate sequence and moves
-  the tentative start forward;
-- tolerated missing-elbow frames after descent confirmation remain inside the
-  interval;
-- the minimum elbow angle and bottom frame use every valid elbow observation
-  in the interval, including the retained confirmation candidates;
-- `start_top_angle` comes from the genuine top anchor, while `end_top_angle`
-  uses only the valid frames in the confirmed return-to-top sequence;
-- body-alignment observations are collected from the same start and end
-  frames; missing alignment values are not fabricated;
-- alignment coverage is the number of valid alignment observations divided by
-  `duration_frames`, so valid alignment on every interval frame gives `1.0`.
-
-Hysteresis, consecutive-frame confirmation and missing-frame tolerance still
-control phase transitions. If an attempt returns to top without reaching the
-provisional bottom region, its tentative repetition measurements are discarded
-and a new top frame begins the next tentative window. An interrupted,
-unconfirmed descent candidate is likewise discarded. A new genuine top
-observation is then required before a later candidate sequence can contribute
-to a completed repetition.
-
-## Evaluation Data Foundation
-
-The approved baseline-versus-enhanced comparison design is documented in
-`docs/baseline_evaluation_design.md`. The manual procedure and complete CSV
-column definitions are in `docs/manual_annotation_protocol.md`.
-
-Fictional schema examples are provided at:
-
-- `data/examples/manifests/example_dataset_manifest.csv`;
-- `data/examples/annotations/example_repetition_annotations.csv`.
-
-They do not describe real recordings or participants. Validate a manifest and
-annotation file from PowerShell with:
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-
-& ".\.venv\Scripts\python.exe" `
-  src\evaluation\dataset_validation.py `
-  --manifest "data\examples\manifests\example_dataset_manifest.csv" `
-  --annotations "data\examples\annotations\example_repetition_annotations.csv"
-```
-
-Detection-event extraction, deterministic one-to-one matching and per-clip
-detection metrics are implemented in
-`src/evaluation/detection_evaluation.py`. The matching rule, validation
-behavior and fictional command example are documented in
-`docs/event_detection_evaluation.md`.
-
-Enhanced matched-repetition classification and cross-clip formal reporting are
-also implemented. The development-first command that composes these existing
-layers over explicit completed-run metadata is documented in
-`docs/formal_evaluation_execution.md`. Baseline reporting remains
-detection-only, the `0.5`-second event tolerance remains provisional, and test
-execution requires an explicit safeguard after development decisions have been
-frozen. Runtime comparisons, plots and real formal results have not yet been
-produced.
-
-  
-## Recorded-Video Processing
-
-The baseline analyser can process a saved video so that the same recording can later be evaluated using both the baseline and enhanced methods.
-
-Example:
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" src\run_video.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
   --split development `
   --run-id "example_baseline_001" `
-  --config "configs\default.yaml" `
-  --display
+  --config "configs\default.yaml"
 ```
 
-## Output File Safety
-
-CSV outputs never append a second complete run. By default, each runner fails
-clearly if its target output already exists:
-
-- live baseline: `experiments/logs/live_feature.csv`;
-- recorded baseline: `experiments/logs/<run-id>_baseline.csv`;
-- baseline metadata: `experiments/logs/<run-id>_baseline_metadata.json`;
-- enhanced frame log: `experiments/logs/<run-id>_enhanced_temporal.csv`;
-- enhanced repetitions: `experiments/outputs/<run-id>_enhanced_repetitions.csv`;
-- enhanced metadata: `experiments/outputs/<run-id>_enhanced_metadata.json`.
-
-Each recorded runner checks its complete CSV and metadata output set before
-video processing begins. Every CSV row carries the same `run_id`; metadata
-records the clip/method/split, input and configuration hashes, resolved
-settings and overrides, source properties, software/Git provenance, timing
-definition and output paths. To intentionally replace the complete set, add
-the explicit `--overwrite` option:
+Run the enhanced method on the same clip:
 
 ```powershell
 & ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
@@ -239,50 +86,87 @@ the explicit `--overwrite` option:
   --clip-id "example" `
   --split development `
   --run-id "example_enhanced_001" `
-  --config "configs\default.yaml" `
-  --overwrite
+  --config "configs\default.yaml"
 ```
 
-## Current Limitations
+Recorded runs write ignored outputs under `experiments/logs/` and
+`experiments/outputs/`. Each run records its resolved configuration, source
+identity, software versions, Git state and timing definition. Existing output
+sets fail clearly unless replacement is explicitly requested with `--overwrite`.
+Detailed options are in the
+[runtime and provenance guide](docs/runtime_configuration.md).
 
-The current baseline does not yet include:
+## Evaluation Workflow
 
-- temporal smoothing;
-- hysteresis;
-- consecutive-frame validation;
-- explicit descending and ascending phases;
-- feedback cooldown;
-- full repetition-level form classification;
-- formal manually labelled evaluation results.
+1. Record or select development and final-test clips under controlled capture
+   conditions.
+2. Create the dataset manifest and annotate attempts independently of method
+   predictions.
+3. Run both methods on the same clips with traceable run IDs.
+4. Validate the manifest and annotations.
+5. Choose and freeze development decisions, then execute formal evaluation.
 
-The enhanced temporal method is implemented. The labelled evaluation dataset,
-quantitative baseline-versus-enhanced evaluation and final result analysis
-have not yet been completed.
+Use only fictional example CSVs when learning the schemas:
+
+- `data/examples/manifests/example_dataset_manifest.csv`;
+- `data/examples/annotations/example_repetition_annotations.csv`.
+
+The [manual annotation protocol](docs/manual_annotation_protocol.md) defines
+ground truth. The [formal execution guide](docs/formal_evaluation_execution.md)
+defines the development-first safeguards and commands.
 
 ## Repository Structure
 
-- `src/` — application source code
-- `tests/` — software unit tests
-- `configs/` — runtime and experimental configuration
-- `data/` — local recordings, annotations and processed data
-- `experiments/` — experiment configurations, logs and generated outputs
-- `results/` — final tables, figures and documented failure cases
+- `src/` — runners, analysis, pose processing, evaluation and shared utilities;
+- `tests/` — unit and integration tests using fictional or temporary data;
+- `configs/` — validated runtime configuration;
+- `data/examples/` — fictional manifest and annotation examples;
+- `data/raw/` — ignored local recordings;
+- `experiments/` — ignored generated run logs and outputs, created as needed;
+- `results/development/` — retained historical development diagnostics;
+- `results/formal/` — formal outputs created by the evaluation command;
+- `docs/` — scientific design, annotation and evaluation documentation.
 
-Raw identifiable recordings are not committed to this repository.
+## Documentation
 
-## Installation
+The [documentation index](docs/README.md) gives a one-sentence purpose for
+every technical document. Start with:
 
-Install runtime dependencies with:
+- [runtime configuration and provenance](docs/runtime_configuration.md);
+- [baseline-versus-enhanced design](docs/baseline_evaluation_design.md);
+- [manual annotation protocol](docs/manual_annotation_protocol.md);
+- [formal evaluation execution](docs/formal_evaluation_execution.md).
+
+## Testing and Quality
+
+The repository configures pytest and Ruff in `pyproject.toml`; manual
+`PYTHONPATH` setup is not required for tests.
 
 ```powershell
-& ".\.venv\Scripts\python.exe" -m pip install `
-  -r requirements.txt
+& ".\.venv\Scripts\python.exe" -m pytest -q
+& ".\.venv\Scripts\python.exe" -m ruff check src tests
+& ".\.venv\Scripts\python.exe" -m ruff format --check src tests
 ```
 
-For development and testing, install the runtime and pinned development tools
-with:
+## Limitations
 
-```powershell
-& ".\.venv\Scripts\python.exe" -m pip install `
-  -r requirements-dev.txt
-```
+- one push-up participant only;
+- controlled side or side-diagonal camera placement;
+- 2D pose evidence depends on visibility and recording quality;
+- no model training, multi-person tracking or 3D reconstruction;
+- alignment may be unscorable when the required landmarks are unavailable;
+- no clinical, rehabilitation or injury-prevention interpretation;
+- formal conclusions require the unfinished labelled evaluation dataset.
+
+## Data and Privacy
+
+Raw identifiable recordings and generated experiment runs are ignored by Git.
+Only fictional schema examples and selected non-identifying development
+evidence are tracked. Dataset splits must keep development decisions separate
+from final-test evaluation.
+
+## Academic Context
+
+This repository supports an MSc project investigating whether transparent
+temporal processing improves push-up analysis over a simple threshold baseline
+under controlled computer-vision conditions.

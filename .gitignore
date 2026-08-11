@@ -39,14 +39,11 @@ data/raw/*
 !data/raw/.gitkeep
 
 data/processed/*
-!data/processed/.gitkeep
 
 # Generated experiment files
 experiments/logs/*
-!experiments/logs/.gitkeep
 
 experiments/outputs/*
-!experiments/outputs/.gitkeep
 
 # Large video files
 *.mp4

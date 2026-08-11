@@ -64,9 +64,7 @@ def parse_arguments(argv=None):
     behaviour otherwise follow the recorded baseline runner.
     """
     parser = argparse.ArgumentParser(
-        description=(
-            "Run enhanced push-up analysis on a recorded video."
-        )
+        description=("Run enhanced push-up analysis on a recorded video.")
     )
 
     parser.add_argument(
@@ -90,29 +88,21 @@ def parse_arguments(argv=None):
 
     parser.add_argument(
         "--run-id",
-        help=(
-            "Unique output-run identifier. Defaults to --clip-id."
-        ),
+        help=("Unique output-run identifier. Defaults to --clip-id."),
     )
 
     parser.add_argument(
         "--config",
         type=Path,
         default=DEFAULT_CONFIG_PATH,
-        help=(
-            "Runtime YAML configuration "
-            "(default: configs/default.yaml)."
-        ),
+        help=("Runtime YAML configuration (default: configs/default.yaml)."),
     )
 
     parser.add_argument(
         "--alpha",
         type=float,
         default=None,
-        help=(
-            "Explicitly override features.ema_alpha from the "
-            "runtime configuration."
-        ),
+        help=("Explicitly override features.ema_alpha from the runtime configuration."),
     )
 
     parser.add_argument(
@@ -185,59 +175,34 @@ def _build_analysis_components(config):
     """
     feature_processor = EnhancedFeatureProcessor(
         smoothing_alpha=config.features.ema_alpha,
-        minimum_visibility=(
-            config.features.minimum_landmark_visibility
-        ),
-        acquisition_frames=(
-            config.features.side_acquisition_frames
-        ),
+        minimum_visibility=(config.features.minimum_landmark_visibility),
+        acquisition_frames=(config.features.side_acquisition_frames),
         switch_frames=config.features.side_switch_frames,
         switch_margin=config.features.side_switch_margin,
-        missing_grace_frames=(
-            config.features.missing_side_grace_frames
-        ),
+        missing_grace_frames=(config.features.missing_side_grace_frames),
     )
 
     phase_machine = PushUpPhaseStateMachine(
-        top_region_threshold=(
-            config.segmentation.top_region_threshold
-        ),
-        bottom_region_threshold=(
-            config.segmentation.bottom_region_threshold
-        ),
+        top_region_threshold=(config.segmentation.top_region_threshold),
+        bottom_region_threshold=(config.segmentation.bottom_region_threshold),
         hysteresis=config.segmentation.hysteresis,
-        confirmation_frames=(
-            config.segmentation.phase_confirmation_frames
-        ),
-        missing_grace_frames=(
-            config.segmentation.missing_angle_grace_frames
-        ),
-        minimum_rep_frames=(
-            config.segmentation.minimum_repetition_frames
-        ),
+        confirmation_frames=(config.segmentation.phase_confirmation_frames),
+        missing_grace_frames=(config.segmentation.missing_angle_grace_frames),
+        minimum_rep_frames=(config.segmentation.minimum_repetition_frames),
     )
 
     repetition_classifier = RepetitionClassifier(
-        depth_threshold=(
-            config.classification.depth_threshold
-        ),
-        extension_threshold=(
-            config.classification.extension_threshold
-        ),
-        alignment_minimum=(
-            config.classification.alignment_minimum
-        ),
+        depth_threshold=(config.classification.depth_threshold),
+        extension_threshold=(config.classification.extension_threshold),
+        alignment_minimum=(config.classification.alignment_minimum),
         alignment_deviation_min_frames=(
-            config.classification
-            .alignment_deviation_min_frames
+            config.classification.alignment_deviation_min_frames
         ),
         alignment_deviation_min_ratio=(
-            config.classification
-            .alignment_deviation_min_ratio
+            config.classification.alignment_deviation_min_ratio
         ),
         minimum_alignment_valid_ratio=(
-            config.classification
-            .minimum_alignment_valid_ratio
+            config.classification.minimum_alignment_valid_ratio
         ),
     )
 
@@ -286,15 +251,9 @@ def main():
     )
     run_id = args.run_id or args.clip_id
 
-    output_path = (
-        LOG_DIR / f"{run_id}_enhanced_temporal.csv"
-    )
-    repetition_output_path = (
-        OUTPUT_DIR / f"{run_id}_enhanced_repetitions.csv"
-    )
-    metadata_path = (
-        OUTPUT_DIR / f"{run_id}_enhanced_metadata.json"
-    )
+    output_path = LOG_DIR / f"{run_id}_enhanced_temporal.csv"
+    repetition_output_path = OUTPUT_DIR / f"{run_id}_enhanced_repetitions.csv"
+    metadata_path = OUTPUT_DIR / f"{run_id}_enhanced_metadata.json"
     output_paths = {
         "frame_csv": output_path,
         "repetition_csv": repetition_output_path,
@@ -316,9 +275,7 @@ def main():
         explicit_config_overrides=explicit_overrides,
         repository_root=PROJECT_ROOT,
         output_paths=output_paths,
-        processing_time_definition=(
-            PROCESSING_TIME_DEFINITION
-        ),
+        processing_time_definition=(PROCESSING_TIME_DEFINITION),
         display_enabled=args.display,
         overwrite_requested=args.overwrite,
     )
@@ -349,21 +306,15 @@ def main():
                 phase_machine,
                 repetition_classifier,
             ) = _build_analysis_components(config)
-            repetition_aggregator = (
-                RepetitionFeatureAggregator()
-            )
+            repetition_aggregator = RepetitionFeatureAggregator()
 
             capture = VideoFileCapture(args.video)
             cleanup.callback(capture.release)
             capture.open()
 
             pose_estimator = PoseEstimator(
-                min_detection_confidence=(
-                    config.pose.minimum_detection_confidence
-                ),
-                min_tracking_confidence=(
-                    config.pose.minimum_tracking_confidence
-                ),
+                min_detection_confidence=(config.pose.minimum_detection_confidence),
+                min_tracking_confidence=(config.pose.minimum_tracking_confidence),
             )
             cleanup.callback(pose_estimator.close)
 
@@ -446,18 +397,10 @@ def main():
             print(f"Split: {args.split}")
             print(f"Config: {args.config}")
             print(f"Frames: {capture.frame_count}")
-            print(
-                f"Source FPS: {capture.source_fps:.2f}"
-            )
-            print(
-                "Smoothing alpha: "
-                f"{config.features.ema_alpha}"
-            )
+            print(f"Source FPS: {capture.source_fps:.2f}")
+            print(f"Smoothing alpha: {config.features.ema_alpha}")
             print(f"Output: {output_path}")
-            print(
-                f"Repetition output: "
-                f"{repetition_output_path}"
-            )
+            print(f"Repetition output: {repetition_output_path}")
             print(f"Metadata: {metadata_path}")
 
             loop_started = time.perf_counter()
@@ -483,74 +426,40 @@ def main():
                         image_height,
                     )
 
-                feature_result = feature_processor.update(
-                    landmarks
-                )
+                feature_result = feature_processor.update(landmarks)
 
                 phase_result = phase_machine.update(
-                    elbow_angle=feature_result[
-                        "smoothed_elbow_angle"
-                    ],
+                    elbow_angle=feature_result["smoothed_elbow_angle"],
                     frame_index=capture.frame_index,
                 )
 
-                completed_repetition = (
-                    repetition_aggregator.update(
-                        frame_index=capture.frame_index,
-                        repetition_window_start_frame=(
-                            phase_result[
-                                "repetition_window_start_frame"
-                            ]
-                        ),
-                        body_alignment_angle=(
-                            feature_result[
-                                "smoothed_alignment_angle"
-                            ]
-                        ),
-                        completed_repetition=(
-                            phase_result[
-                                "completed_repetition"
-                            ]
-                        ),
-                    )
+                completed_repetition = repetition_aggregator.update(
+                    frame_index=capture.frame_index,
+                    repetition_window_start_frame=(
+                        phase_result["repetition_window_start_frame"]
+                    ),
+                    body_alignment_angle=(feature_result["smoothed_alignment_angle"]),
+                    completed_repetition=(phase_result["completed_repetition"]),
                 )
 
                 classification = None
 
                 if completed_repetition is not None:
-                    classification = (
-                        repetition_classifier.classify(
-                            completed_repetition
-                        )
+                    classification = repetition_classifier.classify(
+                        completed_repetition
                     )
                     feedback_messages = {
-                        "correct": (
-                            "Rep complete: no predefined "
-                            "deviation"
-                        ),
-                        "insufficient_depth": (
-                            "Rep complete: insufficient depth"
-                        ),
-                        "incomplete_extension": (
-                            "Rep complete: incomplete "
-                            "extension"
-                        ),
-                        "alignment_deviation": (
-                            "Rep complete: alignment deviation"
-                        ),
-                        "unscorable": (
-                            "Rep complete: unscorable"
-                        ),
+                        "correct": ("Rep complete: no predefined deviation"),
+                        "insufficient_depth": ("Rep complete: insufficient depth"),
+                        "incomplete_extension": ("Rep complete: incomplete extension"),
+                        "alignment_deviation": ("Rep complete: alignment deviation"),
+                        "unscorable": ("Rep complete: unscorable"),
                     }
 
-                    feedback_text = feedback_messages[
-                        classification.predicted_class
-                    ]
+                    feedback_text = feedback_messages[classification.predicted_class]
 
                     effective_fps = (
-                        capture.source_fps
-                        if capture.source_fps > 0
-                        else 30.0
+                        capture.source_fps if capture.source_fps > 0 else 30.0
                     )
 
                     feedback_frames_remaining = max(
@@ -564,105 +473,63 @@ def main():
                 else:
                     feedback_text = ""
 
-                processing_time_ms = (
-                    time.perf_counter() - start_time
-                ) * 1000.0
+                processing_time_ms = (time.perf_counter() - start_time) * 1000.0
                 processed_frames += 1
-                measured_processing_seconds += (
-                    processing_time_ms / 1000.0
-                )
+                measured_processing_seconds += processing_time_ms / 1000.0
 
                 if completed_repetition is not None:
                     repetition_logger.write_row(
                         {
                             "run_id": run_id,
                             "clip_id": args.clip_id,
-                            "rep_id": (
-                                completed_repetition.rep_id
-                            ),
-                            "start_frame": (
-                                completed_repetition.start_frame
-                            ),
-                            "bottom_frame": (
-                                completed_repetition.bottom_frame
-                            ),
-                            "end_frame": (
-                                completed_repetition.end_frame
-                            ),
-                            "duration_frames": (
-                                completed_repetition
-                                .duration_frames
-                            ),
-                            "start_top_angle": (
-                                completed_repetition
-                                .start_top_angle
-                            ),
+                            "rep_id": (completed_repetition.rep_id),
+                            "start_frame": (completed_repetition.start_frame),
+                            "bottom_frame": (completed_repetition.bottom_frame),
+                            "end_frame": (completed_repetition.end_frame),
+                            "duration_frames": (completed_repetition.duration_frames),
+                            "start_top_angle": (completed_repetition.start_top_angle),
                             "minimum_elbow_angle": (
-                                completed_repetition
-                                .minimum_elbow_angle
+                                completed_repetition.minimum_elbow_angle
                             ),
-                            "end_top_angle": (
-                                completed_repetition
-                                .end_top_angle
-                            ),
-                            "top_extension_angle": (
-                                classification
-                                .top_extension_angle
-                            ),
+                            "end_top_angle": (completed_repetition.end_top_angle),
+                            "top_extension_angle": (classification.top_extension_angle),
                             "minimum_alignment_angle": (
-                                classification
-                                .minimum_alignment_angle
+                                classification.minimum_alignment_angle
                             ),
                             "alignment_valid_frames": (
-                                classification
-                                .alignment_valid_frames
+                                classification.alignment_valid_frames
                             ),
                             "alignment_valid_ratio": (
-                                classification
-                                .alignment_valid_ratio
+                                classification.alignment_valid_ratio
                             ),
                             "alignment_deviation_frames": (
-                                classification
-                                .alignment_deviation_frames
+                                classification.alignment_deviation_frames
                             ),
                             "alignment_deviation_ratio": (
-                                classification
-                                .alignment_deviation_ratio
+                                classification.alignment_deviation_ratio
                             ),
                             "insufficient_depth_triggered": (
-                                classification
-                                .insufficient_depth_triggered
+                                classification.insufficient_depth_triggered
                             ),
                             "incomplete_extension_triggered": (
-                                classification
-                                .incomplete_extension_triggered
+                                classification.incomplete_extension_triggered
                             ),
                             "alignment_deviation_triggered": (
-                                classification
-                                .alignment_deviation_triggered
+                                classification.alignment_deviation_triggered
                             ),
                             "multiple_rules_triggered": (
-                                classification
-                                .multiple_rules_triggered
+                                classification.multiple_rules_triggered
                             ),
-                            "triggered_rules": "|".join(
-                                classification.triggered_rules
-                            ),
-                            "predicted_class": (
-                                classification
-                                .predicted_class
-                            ),
+                            "triggered_rules": "|".join(classification.triggered_rules),
+                            "predicted_class": (classification.predicted_class),
                             "classification_reason": (
-                                classification
-                                .classification_reason
+                                classification.classification_reason
                             ),
                         }
                     )
 
                 completed_fields = {
-                    "completed_rep": (
-                        completed_repetition is not None
-                    ),
+                    "completed_rep": (completed_repetition is not None),
                     "completed_rep_id": None,
                     "completed_start_frame": None,
                     "completed_bottom_frame": None,
@@ -676,33 +543,23 @@ def main():
                 if completed_repetition is not None:
                     completed_fields.update(
                         {
-                            "completed_rep_id": (
-                                completed_repetition.rep_id
-                            ),
-                            "completed_start_frame": (
-                                completed_repetition.start_frame
-                            ),
+                            "completed_rep_id": (completed_repetition.rep_id),
+                            "completed_start_frame": (completed_repetition.start_frame),
                             "completed_bottom_frame": (
                                 completed_repetition.bottom_frame
                             ),
-                            "completed_end_frame": (
-                                completed_repetition.end_frame
-                            ),
+                            "completed_end_frame": (completed_repetition.end_frame),
                             "completed_start_top_angle": (
-                                completed_repetition
-                                .start_top_angle
+                                completed_repetition.start_top_angle
                             ),
                             "completed_minimum_elbow_angle": (
-                                completed_repetition
-                                .minimum_elbow_angle
+                                completed_repetition.minimum_elbow_angle
                             ),
                             "completed_end_top_angle": (
-                                completed_repetition
-                                .end_top_angle
+                                completed_repetition.end_top_angle
                             ),
                             "completed_duration_frames": (
-                                completed_repetition
-                                .duration_frames
+                                completed_repetition.duration_frames
                             ),
                         }
                     )
@@ -720,14 +577,10 @@ def main():
                                 classification.predicted_class
                             ),
                             "repetition_multiple_rules": (
-                                classification
-                                .multiple_rules_triggered
+                                classification.multiple_rules_triggered
                             ),
                             "repetition_triggered_rules": (
-                                "|".join(
-                                    classification
-                                    .triggered_rules
-                                )
+                                "|".join(classification.triggered_rules)
                             ),
                         }
                     )
@@ -737,27 +590,15 @@ def main():
                         "run_id": run_id,
                         "clip_id": args.clip_id,
                         "frame_index": capture.frame_index,
-                        "video_timestamp_ms": (
-                            capture.timestamp_ms()
-                        ),
+                        "video_timestamp_ms": (capture.timestamp_ms()),
                         "source_fps": capture.source_fps,
-                        "processing_time_ms": (
-                            processing_time_ms
-                        ),
+                        "processing_time_ms": (processing_time_ms),
                         "pose_detected": pose_detected,
                         **feature_result,
                         "phase": phase_result["phase"],
-                        "phase_changed": (
-                            phase_result["phase_changed"]
-                        ),
-                        "enhanced_rep_count": (
-                            phase_result["rep_count"]
-                        ),
-                        "missing_angle_frames": (
-                            phase_result[
-                                "missing_angle_frames"
-                            ]
-                        ),
+                        "phase_changed": (phase_result["phase_changed"]),
+                        "enhanced_rep_count": (phase_result["rep_count"]),
+                        "missing_angle_frames": (phase_result["missing_angle_frames"]),
                         **completed_fields,
                         **classification_fields,
                     }
@@ -771,10 +612,7 @@ def main():
 
                     draw_text(
                         frame,
-                        (
-                            "Stable side: "
-                            f"{feature_result['selected_side']}"
-                        ),
+                        (f"Stable side: {feature_result['selected_side']}"),
                         (20, 40),
                     )
 
@@ -809,9 +647,9 @@ def main():
                         frame,
                         (
                             "Smoothed alignment: "
-                            f"{format_angle(feature_result[
-                                'smoothed_alignment_angle'
-                            ])}"
+                            f"{
+                                format_angle(feature_result['smoothed_alignment_angle'])
+                            }"
                         ),
                         (20, 200),
                     )
@@ -824,10 +662,7 @@ def main():
 
                     draw_text(
                         frame,
-                        (
-                            "Enhanced repetitions: "
-                            f"{phase_result['rep_count']}"
-                        ),
+                        (f"Enhanced repetitions: {phase_result['rep_count']}"),
                         (20, 280),
                     )
 
@@ -844,13 +679,8 @@ def main():
                         frame,
                     )
 
-                    if (
-                        cv2.waitKey(1) & 0xFF
-                        == ord("q")
-                    ):
-                        termination_reason = (
-                            "user_requested"
-                        )
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        termination_reason = "user_requested"
                         break
 
             print(
@@ -869,18 +699,14 @@ def main():
             else base_metadata["input_video"]
         )
         wall_seconds = (
-            time.perf_counter() - loop_started
-            if loop_started is not None
-            else 0.0
+            time.perf_counter() - loop_started if loop_started is not None else 0.0
         )
         metadata_recorder.mark_failed(
             error,
             source_video=source_video,
             processing_summary={
                 "processed_frames": processed_frames,
-                "measured_processing_seconds": (
-                    measured_processing_seconds
-                ),
+                "measured_processing_seconds": (measured_processing_seconds),
                 "loop_wall_seconds": wall_seconds,
                 "termination_reason": "error",
             },
@@ -892,24 +718,19 @@ def main():
         capture,
     )
     wall_seconds = (
-        time.perf_counter() - loop_started
-        if loop_started is not None
-        else 0.0
+        time.perf_counter() - loop_started if loop_started is not None else 0.0
     )
     metadata_recorder.mark_completed(
         source_video=source_video,
         processing_summary={
             "processed_frames": processed_frames,
-            "measured_processing_seconds": (
-                measured_processing_seconds
-            ),
+            "measured_processing_seconds": (measured_processing_seconds),
             "loop_wall_seconds": wall_seconds,
             "termination_reason": termination_reason,
             "processed_full_clip": (
                 termination_reason == "end_of_stream"
                 and (
-                    capture.frame_count <= 0
-                    or processed_frames == capture.frame_count
+                    capture.frame_count <= 0 or processed_frames == capture.frame_count
                 )
             ),
         },

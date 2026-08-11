@@ -44,12 +44,8 @@ class EnhancedFeatureProcessor:
             missing_grace_frames=missing_grace_frames,
         )
 
-        self.elbow_smoother = ExponentialMovingAverage(
-            alpha=smoothing_alpha
-        )
-        self.alignment_smoother = ExponentialMovingAverage(
-            alpha=smoothing_alpha
-        )
+        self.elbow_smoother = ExponentialMovingAverage(alpha=smoothing_alpha)
+        self.alignment_smoother = ExponentialMovingAverage(alpha=smoothing_alpha)
 
         self.previous_selected_side = "none"
 
@@ -89,9 +85,7 @@ class EnhancedFeatureProcessor:
             right_score=right_elbow_score,
         )
 
-        side_changed = (
-            selected_side != self.previous_selected_side
-        )
+        side_changed = selected_side != self.previous_selected_side
 
         # Do not mix historical angles from different body sides.
         if side_changed:
@@ -108,19 +102,13 @@ class EnhancedFeatureProcessor:
         opposite_alignment_feature_valid = False
 
         if selected_side != "none":
-            opposite_side = (
-                "right"
-                if selected_side == "left"
-                else "left"
-            )
+            opposite_side = "right" if selected_side == "left" else "left"
 
-            opposite_alignment_feature_valid = (
-                feature_landmarks_available(
-                    landmarks,
-                    side=opposite_side,
-                    feature="alignment",
-                    minimum_visibility=self.minimum_visibility,
-                )
+            opposite_alignment_feature_valid = feature_landmarks_available(
+                landmarks,
+                side=opposite_side,
+                feature="alignment",
+                minimum_visibility=self.minimum_visibility,
             )
 
             elbow_feature_valid = feature_landmarks_available(
@@ -182,15 +170,11 @@ class EnhancedFeatureProcessor:
         smoothed_alignment_angle = None
 
         if raw_elbow_angle is not None:
-            smoothed_elbow_angle = self.elbow_smoother.update(
-                raw_elbow_angle
-            )
+            smoothed_elbow_angle = self.elbow_smoother.update(raw_elbow_angle)
 
         if raw_alignment_angle is not None:
-            smoothed_alignment_angle = (
-                self.alignment_smoother.update(
-                    raw_alignment_angle
-                )
+            smoothed_alignment_angle = self.alignment_smoother.update(
+                raw_alignment_angle
             )
 
         return {
@@ -199,17 +183,11 @@ class EnhancedFeatureProcessor:
             "side_changed": side_changed,
             "left_elbow_visibility_score": left_elbow_score,
             "right_elbow_visibility_score": right_elbow_score,
-            "left_alignment_visibility_score": (
-                left_alignment_score
-            ),
-            "right_alignment_visibility_score": (
-                right_alignment_score
-            ),
+            "left_alignment_visibility_score": (left_alignment_score),
+            "right_alignment_visibility_score": (right_alignment_score),
             "elbow_feature_valid": elbow_feature_valid,
             "alignment_feature_valid": alignment_feature_valid,
-            "opposite_alignment_feature_valid": (
-                opposite_alignment_feature_valid
-            ),
+            "opposite_alignment_feature_valid": (opposite_alignment_feature_valid),
             "raw_elbow_angle": raw_elbow_angle,
             "smoothed_elbow_angle": smoothed_elbow_angle,
             "raw_alignment_angle": raw_alignment_angle,

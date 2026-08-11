@@ -67,12 +67,7 @@ def evaluate(
 
 
 def recall_by_label(result):
-    return {
-        row.label: row
-        for row in (
-            result.detection_recall_by_ground_truth_class
-        )
-    }
+    return {row.label: row for row in (result.detection_recall_by_ground_truth_class)}
 
 
 def test_perfect_matching_and_classification():
@@ -157,14 +152,9 @@ def test_ground_truth_miss_is_excluded_from_classification():
     )
 
     assert result.detection.missed_annotations == 1
-    assert result.unmatched_ground_truth_attempt_ids == (
-        "A002",
-    )
+    assert result.unmatched_ground_truth_attempt_ids == ("A002",)
     assert result.classification.evaluated_matched_repetitions == 1
-    assert sum(
-        sum(row)
-        for row in result.classification.confusion_matrix
-    ) == 1
+    assert sum(sum(row) for row in result.classification.confusion_matrix) == 1
 
 
 def test_extra_prediction_is_excluded_from_classification():
@@ -180,10 +170,7 @@ def test_extra_prediction_is_excluded_from_classification():
     assert result.unmatched_prediction_ids == (2,)
     assert result.classification.evaluated_matched_repetitions == 1
     assert result.classification.confusion_matrix[0][0] == 1
-    assert sum(
-        sum(row)
-        for row in result.classification.confusion_matrix
-    ) == 1
+    assert sum(sum(row) for row in result.classification.confusion_matrix) == 1
 
 
 def test_detection_recall_is_stratified_and_totals_agree():
@@ -210,17 +197,21 @@ def test_detection_recall_is_stratified_and_totals_agree():
     assert rows["incomplete_extension"].recall == 0.0
     assert rows["alignment_deviation"].recall is None
     assert rows["unscorable"].recall is None
-    assert sum(
-        row.ground_truth_support for row in rows.values()
-    ) == result.detection.ground_truth_event_count == 4
-    assert sum(
-        row.matched_ground_truth_repetitions
-        for row in rows.values()
-    ) == result.detection.matched_events == 2
-    assert sum(
-        row.missed_ground_truth_repetitions
-        for row in rows.values()
-    ) == result.detection.missed_annotations == 2
+    assert (
+        sum(row.ground_truth_support for row in rows.values())
+        == result.detection.ground_truth_event_count
+        == 4
+    )
+    assert (
+        sum(row.matched_ground_truth_repetitions for row in rows.values())
+        == result.detection.matched_events
+        == 2
+    )
+    assert (
+        sum(row.missed_ground_truth_repetitions for row in rows.values())
+        == result.detection.missed_annotations
+        == 2
+    )
     assert result.detection.extra_predictions == 1
 
 
@@ -239,9 +230,7 @@ def test_empty_ground_truth_and_predictions():
         and row.matched_ground_truth_repetitions == 0
         and row.missed_ground_truth_repetitions == 0
         and row.recall is None
-        for row in (
-            result.detection_recall_by_ground_truth_class
-        )
+        for row in (result.detection_recall_by_ground_truth_class)
     )
 
 
@@ -256,10 +245,7 @@ def test_empty_ground_truth_keeps_predictions_as_extras():
     assert result.classification.evaluated_matched_repetitions == 0
     assert result.classification.accuracy is None
     assert all(
-        row.recall is None
-        for row in (
-            result.detection_recall_by_ground_truth_class
-        )
+        row.recall is None for row in (result.detection_recall_by_ground_truth_class)
     )
 
 
@@ -344,18 +330,12 @@ def test_result_and_class_order_are_deterministic_and_json_safe():
     payload = result.to_dict()
 
     assert result == repeated
-    assert tuple(
-        row.label
-        for row in (
-            result.detection_recall_by_ground_truth_class
-        )
-    ) == SUPPORTED_FORM_CLASSES
-    assert payload["classification"]["labels"] == list(
-        SUPPORTED_FORM_CLASSES
+    assert (
+        tuple(row.label for row in (result.detection_recall_by_ground_truth_class))
+        == SUPPORTED_FORM_CLASSES
     )
-    assert json.loads(
-        json.dumps(payload, sort_keys=True)
-    ) == payload
+    assert payload["classification"]["labels"] == list(SUPPORTED_FORM_CLASSES)
+    assert json.loads(json.dumps(payload, sort_keys=True)) == payload
 
 
 def test_existing_matcher_tolerance_is_preserved():

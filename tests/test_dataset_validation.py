@@ -18,18 +18,14 @@ def make_manifest():
             {
                 "clip_id": "fictional_clip",
                 "split": "development",
-                "video_path": (
-                    "data/raw/fictional/fictional_clip.mp4"
-                ),
+                "video_path": ("data/raw/fictional/fictional_clip.mp4"),
                 "participant_id": "P_FICTIONAL",
                 "camera_view": "side",
                 "source_fps": 30.0,
                 "frame_count": 500,
                 "width_px": 1280,
                 "height_px": 720,
-                "recording_condition": (
-                    "controlled_indoor_even_lighting"
-                ),
+                "recording_condition": ("controlled_indoor_even_lighting"),
                 "notes": "Fictional test row.",
             }
         ]
@@ -178,12 +174,8 @@ def test_ambiguous_fragment_is_distinct_from_evaluable_attempt():
     annotations.loc[0, "ambiguity_flag"] = True
     annotations.loc[0, "bottom_turnaround_frame"] = None
     annotations.loc[0, "ground_truth_class"] = "unscorable"
-    annotations.loc[0, "source_video_visibility_status"] = (
-        "partially_obscured"
-    )
-    annotations.loc[0, "annotator_notes"] = (
-        "Fictional ambiguous movement fragment."
-    )
+    annotations.loc[0, "source_video_visibility_status"] = "partially_obscured"
+    annotations.loc[0, "annotator_notes"] = "Fictional ambiguous movement fragment."
 
     validate_repetition_annotations(
         annotations,
@@ -217,9 +209,7 @@ def test_single_label_must_follow_deviation_priority():
     annotations = make_annotations()
     annotations.loc[0, "insufficient_depth_flag"] = True
     annotations.loc[0, "incomplete_extension_flag"] = True
-    annotations.loc[0, "ground_truth_class"] = (
-        "incomplete_extension"
-    )
+    annotations.loc[0, "ground_truth_class"] = "incomplete_extension"
 
     with pytest.raises(
         ValueError,
@@ -235,9 +225,7 @@ def test_unscorable_attempt_cannot_assert_deviation_flag():
     annotations = make_annotations()
     annotations.loc[0, "ground_truth_class"] = "unscorable"
     annotations.loc[0, "insufficient_depth_flag"] = True
-    annotations.loc[0, "source_video_visibility_status"] = (
-        "insufficient"
-    )
+    annotations.loc[0, "source_video_visibility_status"] = "insufficient"
     annotations.loc[0, "annotator_notes"] = (
         "Fictional row with insufficient source evidence."
     )

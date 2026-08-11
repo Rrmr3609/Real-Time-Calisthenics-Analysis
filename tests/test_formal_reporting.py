@@ -35,23 +35,13 @@ def source_run_provenance(clip_id, method):
         method=method,
         source_run_id=f"{method}-{clip_id}-run",
         split="development",
-        source_metadata_path=(
-            f"runs/{method}-{clip_id}_metadata.json"
-        ),
-        source_metadata_sha256=(
-            "a" * 64 if method == "baseline" else "b" * 64
-        ),
+        source_metadata_path=(f"runs/{method}-{clip_id}_metadata.json"),
+        source_metadata_sha256=("a" * 64 if method == "baseline" else "b" * 64),
         consumed_output_name=(
-            "frame_csv"
-            if method == "baseline"
-            else "repetition_csv"
+            "frame_csv" if method == "baseline" else "repetition_csv"
         ),
-        consumed_output_path=(
-            f"runs/{method}-{clip_id}.csv"
-        ),
-        consumed_output_sha256=(
-            "c" * 64 if method == "baseline" else "d" * 64
-        ),
+        consumed_output_path=(f"runs/{method}-{clip_id}.csv"),
+        consumed_output_sha256=("c" * 64 if method == "baseline" else "d" * 64),
         source_input_video_sha256="e" * 64,
         source_git_commit="abc123",
         source_git_dirty=False,
@@ -101,12 +91,8 @@ def detection(
         event_precision=precision,
         event_recall=recall,
         event_f1=event_f1,
-        mean_signed_completion_timing_error_seconds=(
-            mean_signed_timing
-        ),
-        mean_absolute_completion_timing_error_seconds=(
-            mean_absolute_timing
-        ),
+        mean_signed_completion_timing_error_seconds=(mean_signed_timing),
+        mean_absolute_completion_timing_error_seconds=(mean_absolute_timing),
         tolerance_seconds=tolerance,
         tolerance_frames=math.ceil(tolerance * fps),
     )
@@ -142,26 +128,16 @@ def enhanced(
         tolerance=tolerance,
         fps=fps,
     )
-    support = Counter(
-        (*ground_truth_labels, *missed_labels)
-    )
+    support = Counter((*ground_truth_labels, *missed_labels))
     matched_counts = Counter(ground_truth_labels)
     missed_counts = Counter(missed_labels)
     recall_rows = tuple(
         GroundTruthClassDetectionRecall(
             label=label,
             ground_truth_support=support[label],
-            matched_ground_truth_repetitions=(
-                matched_counts[label]
-            ),
-            missed_ground_truth_repetitions=(
-                missed_counts[label]
-            ),
-            recall=(
-                matched_counts[label] / support[label]
-                if support[label]
-                else None
-            ),
+            matched_ground_truth_repetitions=(matched_counts[label]),
+            missed_ground_truth_repetitions=(missed_counts[label]),
+            recall=(matched_counts[label] / support[label] if support[label] else None),
         )
         for label in SUPPORTED_FORM_CLASSES
     )
@@ -181,20 +157,15 @@ def enhanced(
         for index, (
             ground_truth_label,
             predicted_label,
-        ) in enumerate(
-            zip(ground_truth_labels, predicted_labels)
-        )
+        ) in enumerate(zip(ground_truth_labels, predicted_labels))
     )
 
     return EnhancedClipEvaluation(
         detection=summary,
         matched_pairs=matched_pairs,
-        unmatched_prediction_ids=tuple(
-            range(matched + 1, predicted_count + 1)
-        ),
+        unmatched_prediction_ids=tuple(range(matched + 1, predicted_count + 1)),
         unmatched_ground_truth_attempt_ids=tuple(
-            f"M{index + 1:03d}"
-            for index in range(len(missed_labels))
+            f"M{index + 1:03d}" for index in range(len(missed_labels))
         ),
         classification=classification,
         detection_recall_by_ground_truth_class=recall_rows,
@@ -223,10 +194,7 @@ def aggregate(
     tolerance=TOLERANCE,
 ):
     if contexts is None:
-        contexts = [
-            context(result.clip_id)
-            for result in baseline_results
-        ]
+        contexts = [context(result.clip_id) for result in baseline_results]
 
     return aggregate_formal_evaluation(
         baseline_results=baseline_results,
@@ -298,11 +266,7 @@ def test_perfect_detection_over_multiple_clips():
 
     assert report.ordered_clip_ids == ("clip-a", "clip-b")
     assert report.baseline_detection.evaluated_clips == 2
-    assert (
-        report.baseline_detection
-        .total_ground_truth_repetitions
-        == 3
-    )
+    assert report.baseline_detection.total_ground_truth_repetitions == 3
     assert report.baseline_detection.total_matched_events == 3
     assert report.baseline_detection.pooled_event_f1 == 1.0
     assert report.enhanced_detection.pooled_event_f1 == 1.0
@@ -349,9 +313,7 @@ def test_pooled_detection_uses_summed_counts_not_mean_f1():
     assert pooled.pooled_event_precision == 0.5
     assert pooled.pooled_event_recall == 0.5
     assert pooled.pooled_event_f1 == 0.5
-    clip_f1_mean = sum(
-        result.event_f1 for result in baseline_results
-    ) / 2
+    clip_f1_mean = sum(result.event_f1 for result in baseline_results) / 2
     assert clip_f1_mean == pytest.approx(2.0 / 3.0)
     assert pooled.pooled_event_f1 != clip_f1_mean
 
@@ -405,14 +367,10 @@ def test_count_error_means_and_exact_count_accuracy():
     ).baseline_detection
 
     assert pooled.total_signed_count_error == -1
-    assert pooled.mean_signed_count_error == pytest.approx(
-        -1.0 / 3.0
-    )
+    assert pooled.mean_signed_count_error == pytest.approx(-1.0 / 3.0)
     assert pooled.mean_absolute_count_error == 1.0
     assert pooled.exact_count_clip_count == 1
-    assert pooled.exact_count_clip_accuracy == pytest.approx(
-        1.0 / 3.0
-    )
+    assert pooled.exact_count_clip_accuracy == pytest.approx(1.0 / 3.0)
 
 
 def test_timing_means_are_weighted_by_matched_observations():
@@ -454,14 +412,8 @@ def test_timing_means_are_weighted_by_matched_observations():
     ).baseline_detection
 
     assert pooled.total_matched_timing_observations == 4
-    assert (
-        pooled.mean_signed_completion_timing_error_seconds
-        == 0.25
-    )
-    assert (
-        pooled.mean_absolute_completion_timing_error_seconds
-        == pytest.approx(0.4)
-    )
+    assert pooled.mean_signed_completion_timing_error_seconds == 0.25
+    assert pooled.mean_absolute_completion_timing_error_seconds == pytest.approx(0.4)
 
 
 def test_no_timing_observations_returns_none():
@@ -478,20 +430,10 @@ def test_no_timing_observations_returns_none():
     )
     report = aggregate([baseline], [enhanced_result])
 
+    assert report.baseline_detection.total_matched_timing_observations == 0
+    assert report.baseline_detection.mean_signed_completion_timing_error_seconds is None
     assert (
-        report.baseline_detection
-        .total_matched_timing_observations
-        == 0
-    )
-    assert (
-        report.baseline_detection
-        .mean_signed_completion_timing_error_seconds
-        is None
-    )
-    assert (
-        report.enhanced_detection
-        .mean_absolute_completion_timing_error_seconds
-        is None
+        report.enhanced_detection.mean_absolute_completion_timing_error_seconds is None
     )
 
 
@@ -560,9 +502,7 @@ def test_enhanced_classification_pools_raw_confusion_counts():
     ) == (1, 1, 0)
     assert extension.false_negatives == 1
     assert classification.accuracy == 0.5
-    assert classification.macro_f1 == pytest.approx(
-        7.0 / 18.0
-    )
+    assert classification.macro_f1 == pytest.approx(7.0 / 18.0)
 
 
 def test_predicted_zero_support_class_does_not_reduce_macro_f1():
@@ -586,9 +526,7 @@ def test_predicted_zero_support_class_does_not_reduce_macro_f1():
 
     assert unscorable.support == 0
     assert unscorable.false_positives == 1
-    assert classification.macro_f1 == pytest.approx(
-        2.0 / 3.0
-    )
+    assert classification.macro_f1 == pytest.approx(2.0 / 3.0)
 
 
 def test_no_enhanced_matches_has_empty_classification():
@@ -611,11 +549,7 @@ def test_no_enhanced_matches_has_empty_classification():
     assert classification.evaluated_matched_repetitions == 0
     assert classification.accuracy is None
     assert classification.macro_f1 is None
-    assert all(
-        count == 0
-        for row in classification.confusion_matrix
-        for count in row
-    )
+    assert all(count == 0 for row in classification.confusion_matrix for count in row)
 
 
 def test_detection_recall_by_class_is_pooled_and_validated():
@@ -652,10 +586,7 @@ def test_detection_recall_by_class_is_pooled_and_validated():
     report = aggregate(baseline_results, enhanced_results)
     rows = {
         row.label: row
-        for row in (
-            report
-            .enhanced_detection_recall_by_ground_truth_class
-        )
+        for row in (report.enhanced_detection_recall_by_ground_truth_class)
     }
 
     assert rows["correct"].ground_truth_support == 2
@@ -666,17 +597,18 @@ def test_detection_recall_by_class_is_pooled_and_validated():
     assert rows["incomplete_extension"].recall == 0.0
     assert rows["alignment_deviation"].recall is None
     assert rows["unscorable"].recall is None
-    assert sum(
-        row.ground_truth_support for row in rows.values()
-    ) == report.enhanced_detection.total_ground_truth_repetitions
-    assert sum(
-        row.matched_ground_truth_repetitions
-        for row in rows.values()
-    ) == report.enhanced_detection.total_matched_events
-    assert sum(
-        row.missed_ground_truth_repetitions
-        for row in rows.values()
-    ) == report.enhanced_detection.total_misses
+    assert (
+        sum(row.ground_truth_support for row in rows.values())
+        == report.enhanced_detection.total_ground_truth_repetitions
+    )
+    assert (
+        sum(row.matched_ground_truth_repetitions for row in rows.values())
+        == report.enhanced_detection.total_matched_events
+    )
+    assert (
+        sum(row.missed_ground_truth_repetitions for row in rows.values())
+        == report.enhanced_detection.total_misses
+    )
 
 
 def test_per_clip_rows_and_serialisation_are_deterministic():
@@ -717,23 +649,19 @@ def test_per_clip_rows_and_serialisation_are_deterministic():
 
     assert report == repeated
     assert report.ordered_clip_ids == ("clip-a", "clip-b")
-    assert tuple(
-        row.clip_id for row in report.per_clip_metrics
-    ) == ("clip-a", "clip-b")
+    assert tuple(row.clip_id for row in report.per_clip_metrics) == ("clip-a", "clip-b")
     assert first_row.ground_truth_repetition_count == 1
     assert first_row.baseline_predicted_count == 1
     assert first_row.enhanced_matches == 1
     assert first_row.enhanced_classification_accuracy == 0.0
-    assert tuple(
-        row.label
-        for row in (
-            report
-            .enhanced_detection_recall_by_ground_truth_class
+    assert (
+        tuple(
+            row.label
+            for row in (report.enhanced_detection_recall_by_ground_truth_class)
         )
-    ) == SUPPORTED_FORM_CLASSES
-    assert json.loads(
-        json.dumps(payload, sort_keys=True)
-    ) == payload
+        == SUPPORTED_FORM_CLASSES
+    )
+    assert json.loads(json.dumps(payload, sort_keys=True)) == payload
 
 
 @pytest.mark.parametrize(
@@ -972,9 +900,7 @@ def write_report(report, output_directory, **kwargs):
 
 def test_writer_produces_exact_confusion_matrix_layout(tmp_path):
     paths = write_report(perfect_report(), tmp_path)
-    content = paths.confusion_matrix_csv.read_text(
-        encoding="utf-8"
-    )
+    content = paths.confusion_matrix_csv.read_text(encoding="utf-8")
 
     assert content == (
         "ground_truth_class,correct,insufficient_depth,"
@@ -989,9 +915,7 @@ def test_writer_produces_exact_confusion_matrix_layout(tmp_path):
 
 def test_writer_produces_exact_classification_layout(tmp_path):
     paths = write_report(perfect_report(), tmp_path)
-    content = paths.classification_per_class_csv.read_text(
-        encoding="utf-8"
-    )
+    content = paths.classification_per_class_csv.read_text(encoding="utf-8")
 
     assert content == (
         "class_label,true_positives,false_positives,"
@@ -1018,9 +942,7 @@ def test_writer_produces_exact_per_clip_layout(tmp_path):
 
 def test_writer_produces_detection_recall_layout(tmp_path):
     paths = write_report(perfect_report(), tmp_path)
-    content = paths.detection_recall_by_class_csv.read_text(
-        encoding="utf-8"
-    )
+    content = paths.detection_recall_by_class_csv.read_text(encoding="utf-8")
 
     assert content == (
         "class_label,support,matched,missed,recall\n"
@@ -1042,9 +964,7 @@ def test_writer_refuses_existing_partial_output_set(tmp_path):
     with pytest.raises(FileExistsError, match="per_clip"):
         write_report(perfect_report(), tmp_path)
 
-    assert paths.per_clip_csv.read_text(
-        encoding="utf-8"
-    ) == "stale"
+    assert paths.per_clip_csv.read_text(encoding="utf-8") == "stale"
     assert not paths.report_json.exists()
     assert not paths.metadata_json.exists()
 
@@ -1067,26 +987,19 @@ def test_writer_overwrites_the_complete_output_set(tmp_path):
     assert written == paths
     assert all(path.exists() for path in paths.all_paths())
     assert all(
-        path.read_text(encoding="utf-8") != "stale"
-        for path in paths.all_paths()
+        path.read_text(encoding="utf-8") != "stale" for path in paths.all_paths()
     )
 
 
 def test_writer_metadata_is_completed_atomically(tmp_path):
     report = perfect_report(tolerance=0.75)
     paths = write_report(report, tmp_path)
-    report_document = json.loads(
-        paths.report_json.read_text(encoding="utf-8")
-    )
-    metadata = json.loads(
-        paths.metadata_json.read_text(encoding="utf-8")
-    )
+    report_document = json.loads(paths.report_json.read_text(encoding="utf-8"))
+    metadata = json.loads(paths.metadata_json.read_text(encoding="utf-8"))
 
     assert report_document == report.to_dict()
     assert metadata["status"] == "completed"
-    assert metadata["evaluation_run_id"] == (
-        "fictional-evaluation"
-    )
+    assert metadata["evaluation_run_id"] == ("fictional-evaluation")
     assert metadata["report_schema_version"] == 1
     assert metadata["split"] == "development"
     assert metadata["ordered_clip_ids"] == ["clip-a"]
@@ -1098,12 +1011,13 @@ def test_writer_metadata_is_completed_atomically(tmp_path):
         "baseline",
         "enhanced",
     }
-    assert metadata["source_runs"]["baseline"][0][
-        "source_run_id"
-    ] == "baseline-clip-a-run"
-    assert metadata["source_runs"]["enhanced"][0][
-        "consumed_output_csv"
-    ]["output_name"] == "repetition_csv"
+    assert (
+        metadata["source_runs"]["baseline"][0]["source_run_id"] == "baseline-clip-a-run"
+    )
+    assert (
+        metadata["source_runs"]["enhanced"][0]["consumed_output_csv"]["output_name"]
+        == "repetition_csv"
+    )
     assert metadata["software"]["python"] == "3.12.4"
     assert metadata["git"]["commit"] == "abc123"
     assert metadata["timestamps"] == {
@@ -1111,9 +1025,7 @@ def test_writer_metadata_is_completed_atomically(tmp_path):
         "completed_utc": "2026-08-07T10:01:00+00:00",
     }
     assert "failed_utc" not in metadata["timestamps"]
-    assert set(metadata["outputs"]) == set(
-        paths.named_paths()
-    )
+    assert set(metadata["outputs"]) == set(paths.named_paths())
     assert not list(tmp_path.glob("*.tmp"))
     assert not list(tmp_path.glob(".*.tmp"))
 
@@ -1126,9 +1038,7 @@ def test_writer_requires_complete_source_provenance(tmp_path):
         write_report(
             perfect_report(),
             tmp_path,
-            source_run_provenance=(
-                source_run_provenance("clip-a", "baseline"),
-            ),
+            source_run_provenance=(source_run_provenance("clip-a", "baseline"),),
         )
 
     paths = formal_evaluation_output_paths(
@@ -1142,9 +1052,7 @@ def test_writer_rejects_absolute_source_provenance_path(tmp_path):
     baseline = source_run_provenance("clip-a", "baseline")
     unsafe_baseline = replace(
         baseline,
-        source_metadata_path=str(
-            (tmp_path / "source.json").resolve()
-        ),
+        source_metadata_path=str((tmp_path / "source.json").resolve()),
     )
 
     with pytest.raises(ValueError, match="privacy-safe"):
@@ -1178,9 +1086,7 @@ def test_failed_write_records_failed_metadata(
         tmp_path,
         "fictional-evaluation",
     )
-    metadata = json.loads(
-        paths.metadata_json.read_text(encoding="utf-8")
-    )
+    metadata = json.loads(paths.metadata_json.read_text(encoding="utf-8"))
     assert metadata["status"] == "failed"
     assert metadata["timestamps"] == {
         "started_utc": "2026-08-07T10:00:00+00:00",
@@ -1192,9 +1098,7 @@ def test_failed_write_records_failed_metadata(
         "message": "fictional report write failure",
     }
     assert all(
-        not path.exists()
-        for path in paths.all_paths()
-        if path != paths.metadata_json
+        not path.exists() for path in paths.all_paths() if path != paths.metadata_json
     )
 
 
@@ -1205,8 +1109,6 @@ def test_deterministic_metric_files_repeat_identically(tmp_path):
     first_metric_paths = first_paths.all_paths()[:-1]
     second_metric_paths = second_paths.all_paths()[:-1]
 
-    assert [
-        path.read_bytes() for path in first_metric_paths
-    ] == [
+    assert [path.read_bytes() for path in first_metric_paths] == [
         path.read_bytes() for path in second_metric_paths
     ]

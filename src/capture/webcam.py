@@ -28,8 +28,7 @@ class WebcamCapture:
 
         if not self.cap.isOpened():
             raise RuntimeError(
-                "Could not open camera with device index "
-                f"{self.device_index}"
+                f"Could not open camera with device index {self.device_index}"
             )
 
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)

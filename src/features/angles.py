@@ -29,9 +29,7 @@ def calculate_angle(
     if norm_ba == 0 or norm_bc == 0:
         return None
 
-    cosine_angle = (
-        ba[0] * bc[0] + ba[1] * bc[1]
-    ) / (norm_ba * norm_bc)
+    cosine_angle = (ba[0] * bc[0] + ba[1] * bc[1]) / (norm_ba * norm_bc)
     cosine_angle = max(-1.0, min(1.0, cosine_angle))
 
     return math.degrees(math.acos(cosine_angle))

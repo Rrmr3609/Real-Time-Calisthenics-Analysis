@@ -59,18 +59,14 @@ def make_manifest():
             {
                 "clip_id": "fictional-clip",
                 "split": "development",
-                "video_path": (
-                    "data/raw/fictional/clip.mp4"
-                ),
+                "video_path": ("data/raw/fictional/clip.mp4"),
                 "participant_id": "P_FICTIONAL",
                 "camera_view": "side",
                 "source_fps": 20.0,
                 "frame_count": 200,
                 "width_px": 1280,
                 "height_px": 720,
-                "recording_condition": (
-                    "controlled_fictional"
-                ),
+                "recording_condition": ("controlled_fictional"),
                 "notes": "",
             }
         ]
@@ -101,18 +97,14 @@ def annotation_row(
         "incomplete_extension_flag": False,
         "alignment_deviation_flag": False,
         "source_video_visibility_status": (
-            "sufficient"
-            if evaluable
-            else "partially_obscured"
+            "sufficient" if evaluable else "partially_obscured"
         ),
         "annotator_notes": notes,
     }
 
 
 def test_baseline_completion_events_follow_count_increases():
-    events = extract_baseline_events(
-        make_baseline_rows()
-    )
+    events = extract_baseline_events(make_baseline_rows())
 
     assert [
         (
@@ -128,8 +120,7 @@ def test_baseline_completion_events_follow_count_increases():
         (2, 4, 400.0, 2, "baseline"),
     ]
     assert all(
-        event.run_id == "run-1"
-        and event.clip_id == "fictional-clip"
+        event.run_id == "run-1" and event.clip_id == "fictional-clip"
         for event in events
     )
 
@@ -216,9 +207,7 @@ def test_baseline_csv_loader_is_reusable(tmp_path):
 
     events = load_baseline_events(input_path)
 
-    assert [
-        event.completion_frame for event in events
-    ] == [2, 4]
+    assert [event.completion_frame for event in events] == [2, 4]
 
 
 def test_enhanced_events_derive_completion_time_from_fps():
@@ -312,7 +301,10 @@ def test_ground_truth_loader_supports_no_annotations():
         ]
     )
 
-    assert extract_ground_truth_events(
-        annotations,
-        make_manifest(),
-    ) == []
+    assert (
+        extract_ground_truth_events(
+            annotations,
+            make_manifest(),
+        )
+        == []
+    )

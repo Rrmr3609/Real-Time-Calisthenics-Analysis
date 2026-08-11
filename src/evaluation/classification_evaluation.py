@@ -56,28 +56,17 @@ class ClassificationEvaluation:
     def to_dict(self) -> dict[str, object]:
         """Return lists and mappings suitable for JSON serialization."""
         return {
-            "evaluated_matched_repetitions": (
-                self.evaluated_matched_repetitions
-            ),
+            "evaluated_matched_repetitions": (self.evaluated_matched_repetitions),
             "labels": list(self.labels),
-            "confusion_matrix": [
-                list(row) for row in self.confusion_matrix
-            ],
-            "per_class": [
-                metrics.to_dict()
-                for metrics in self.per_class
-            ],
+            "confusion_matrix": [list(row) for row in self.confusion_matrix],
+            "per_class": [metrics.to_dict() for metrics in self.per_class],
             "accuracy": self.accuracy,
             "macro_f1": self.macro_f1,
         }
 
 
 def _safe_divide(numerator: int, denominator: int) -> float:
-    return (
-        numerator / denominator
-        if denominator > 0
-        else 0.0
-    )
+    return numerator / denominator if denominator > 0 else 0.0
 
 
 def _validate_reporting_labels(
@@ -85,34 +74,23 @@ def _validate_reporting_labels(
 ) -> tuple[str, ...]:
     if isinstance(labels, (str, bytes)):
         raise ValueError(
-            "Configured reporting labels must be a sequence "
-            "of non-empty strings"
+            "Configured reporting labels must be a sequence of non-empty strings"
         )
 
     configured_labels = tuple(labels)
 
     if not configured_labels:
-        raise ValueError(
-            "Configured reporting labels must not be empty"
-        )
+        raise ValueError("Configured reporting labels must not be empty")
 
     for label in configured_labels:
         if not isinstance(label, str) or not label.strip():
-            raise ValueError(
-                "Configured reporting labels must be "
-                "non-empty strings"
-            )
+            raise ValueError("Configured reporting labels must be non-empty strings")
 
         if label not in SUPPORTED_FORM_CLASSES:
-            raise ValueError(
-                f"Unsupported configured reporting label: "
-                f"{label!r}"
-            )
+            raise ValueError(f"Unsupported configured reporting label: {label!r}")
 
     if len(set(configured_labels)) != len(configured_labels):
-        raise ValueError(
-            "Configured reporting labels must be unique"
-        )
+        raise ValueError("Configured reporting labels must be unique")
 
     return configured_labels
 
@@ -127,9 +105,7 @@ def _validate_input_labels(
 
     for index, label in enumerate(values):
         if not isinstance(label, str) or not label.strip():
-            raise ValueError(
-                f"{name}[{index}] must be a non-empty string"
-            )
+            raise ValueError(f"{name}[{index}] must be a non-empty string")
 
         if label not in configured_set:
             raise ValueError(
@@ -145,34 +121,23 @@ def _validated_confusion_matrix(
     class_count: int,
 ) -> tuple[tuple[int, ...], ...]:
     if isinstance(confusion_matrix, (str, bytes)):
-        raise ValueError(
-            "Confusion matrix must be a square sequence of rows"
-        )
+        raise ValueError("Confusion matrix must be a square sequence of rows")
 
     try:
-        rows = tuple(
-            tuple(row) for row in confusion_matrix
-        )
+        rows = tuple(tuple(row) for row in confusion_matrix)
     except TypeError as error:
         raise ValueError(
             "Confusion matrix must be a square sequence of rows"
         ) from error
 
-    if len(rows) != class_count or any(
-        len(row) != class_count for row in rows
-    ):
+    if len(rows) != class_count or any(len(row) != class_count for row in rows):
         raise ValueError(
-            "Confusion matrix dimensions must match the "
-            "configured reporting labels"
+            "Confusion matrix dimensions must match the configured reporting labels"
         )
 
     for row_index, row in enumerate(rows):
         for column_index, value in enumerate(row):
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, int)
-                or value < 0
-            ):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(
                     "Confusion matrix counts must be "
                     "non-negative integers; invalid cell "
@@ -238,9 +203,7 @@ def evaluate_classification_from_confusion_matrix(
 
     evaluated_count = sum(sum(row) for row in matrix)
     supported_class_f1_values = [
-        metrics.f1
-        for metrics in per_class
-        if metrics.support > 0
+        metrics.f1 for metrics in per_class if metrics.support > 0
     ]
 
     return ClassificationEvaluation(
@@ -249,18 +212,13 @@ def evaluate_classification_from_confusion_matrix(
         confusion_matrix=matrix,
         per_class=tuple(per_class),
         accuracy=(
-            sum(
-                matrix[index][index]
-                for index in range(len(configured_labels))
-            )
+            sum(matrix[index][index] for index in range(len(configured_labels)))
             / evaluated_count
             if evaluated_count > 0
             else None
         ),
         macro_f1=(
-            fmean(supported_class_f1_values)
-            if supported_class_f1_values
-            else None
+            fmean(supported_class_f1_values) if supported_class_f1_values else None
         ),
     )
 
@@ -284,8 +242,7 @@ def evaluate_classification(
 
     if len(ground_truth) != len(predictions):
         raise ValueError(
-            "Ground-truth and predicted label sequences must "
-            "have equal lengths"
+            "Ground-truth and predicted label sequences must have equal lengths"
         )
 
     _validate_input_labels(
@@ -299,22 +256,14 @@ def evaluate_classification(
         configured_labels=configured_labels,
     )
 
-    label_indices = {
-        label: index
-        for index, label in enumerate(configured_labels)
-    }
-    matrix = [
-        [0 for _ in configured_labels]
-        for _ in configured_labels
-    ]
+    label_indices = {label: index for index, label in enumerate(configured_labels)}
+    matrix = [[0 for _ in configured_labels] for _ in configured_labels]
 
     for ground_truth_label, predicted_label in zip(
         ground_truth,
         predictions,
     ):
-        matrix[label_indices[ground_truth_label]][
-            label_indices[predicted_label]
-        ] += 1
+        matrix[label_indices[ground_truth_label]][label_indices[predicted_label]] += 1
 
     return evaluate_classification_from_confusion_matrix(
         matrix,

@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 11 August 2026 - Repository presentation and navigation
+
+- Reworked the landing page and documentation navigation, made the `src`
+  import model explicit for tests and editors, standardised Python formatting
+  and removed placeholder-only generated-output directories.
+
 ## 11 August 2026 - Repository tooling and hygiene policy
 
 - Established minimal Ruff and pytest configuration, separated development

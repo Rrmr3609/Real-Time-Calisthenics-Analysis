@@ -22,9 +22,7 @@ def iso_summary_date(value: str) -> str:
         ) from error
 
     if parsed.isoformat() != value:
-        raise argparse.ArgumentTypeError(
-            "summary date must use ISO YYYY-MM-DD"
-        )
+        raise argparse.ArgumentTypeError("summary date must use ISO YYYY-MM-DD")
 
     return value
 
@@ -34,18 +32,14 @@ def development_id(value: str) -> str:
     normalised = value.strip()
 
     if not normalised:
-        raise argparse.ArgumentTypeError(
-            "development ID cannot be blank"
-        )
+        raise argparse.ArgumentTypeError("development ID cannot be blank")
 
     return normalised
 
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
-        description=(
-            "Summarise enhanced preprocessing behaviour."
-        )
+        description=("Summarise enhanced preprocessing behaviour.")
     )
 
     parser.add_argument(
@@ -100,9 +94,7 @@ def main():
     output_path = Path(args.output)
 
     if not input_path.is_file():
-        raise FileNotFoundError(
-            f"Enhanced feature CSV does not exist: {input_path}"
-        )
+        raise FileNotFoundError(f"Enhanced feature CSV does not exist: {input_path}")
 
     data = pd.read_csv(input_path)
 
@@ -112,33 +104,19 @@ def main():
 
     pose_rate = data["pose_detected"].mean()
     elbow_valid_rate = data["elbow_feature_valid"].mean()
-    alignment_valid_rate = (
-        data["alignment_feature_valid"].mean()
-    )
+    alignment_valid_rate = data["alignment_feature_valid"].mean()
 
-    no_side_rate = (
-        data["selected_side"].fillna("none") == "none"
-    ).mean()
+    no_side_rate = (data["selected_side"].fillna("none") == "none").mean()
 
-    side_changes = count_state_changes(
-        data["selected_side"]
-    )
+    side_changes = count_state_changes(data["selected_side"])
 
-    raw_elbow_change = mean_absolute_frame_change(
-        data["raw_elbow_angle"]
-    )
+    raw_elbow_change = mean_absolute_frame_change(data["raw_elbow_angle"])
 
-    smoothed_elbow_change = mean_absolute_frame_change(
-        data["smoothed_elbow_angle"]
-    )
+    smoothed_elbow_change = mean_absolute_frame_change(data["smoothed_elbow_angle"])
 
-    mean_processing_time = (
-        data["processing_time_ms"].mean()
-    )
+    mean_processing_time = data["processing_time_ms"].mean()
 
-    median_processing_time = (
-        data["processing_time_ms"].median()
-    )
+    median_processing_time = data["processing_time_ms"].median()
 
     summary = f"""Enhanced preprocessing development diagnostic — {args.summary_date}
 

@@ -87,6 +87,35 @@ recordings. They are not universal or medical definitions. This configuration
 milestone did not change any value, temporal rule, side-selector behavior or
 classifier priority.
 
+## Enhanced repetition measurement window
+
+Enhanced repetition measurements use one closed, inclusive frame interval.
+The interval begins at the frame containing the maximum genuine top
+observation (`elbow_angle >= top_region_threshold`) available before the
+contiguous descent-confirmation sequence. That anchor is frozen when the
+candidate sequence begins. The interval ends on the final confirmation frame
+that completes the return to the top region.
+
+Within this interval:
+
+- `duration_frames` is `end_frame - start_frame + 1`;
+- only the contiguous descent-candidate frames that cause the transition are
+  retained, while an interrupted candidate sequence is discarded;
+- tolerated missing-elbow frames after descent confirmation remain inside the
+  interval;
+- minimum elbow angle and bottom frame use every valid elbow observation,
+  including the retained confirmation candidates;
+- `start_top_angle` comes from the genuine top anchor and `end_top_angle` uses
+  only valid frames in the confirmed return-to-top sequence;
+- body-alignment observations use the same start and end frames without
+  fabricating values for missing observations;
+- alignment coverage is valid alignment observations divided by
+  `duration_frames`, so complete availability produces coverage `1.0`.
+
+Hysteresis, consecutive-frame confirmation and missing-frame tolerance control
+the transitions. Attempts abandoned before completion do not contribute
+measurements to a later repetition.
+
 ## Output identity and metadata
 
 Each recorded run writes a shared `run_id` into every CSV row and uses it in

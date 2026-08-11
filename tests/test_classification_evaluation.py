@@ -10,10 +10,7 @@ from evaluation.classification_evaluation import (
 
 
 def metrics_by_label(result):
-    return {
-        metrics.label: metrics
-        for metrics in result.per_class
-    }
+    return {metrics.label: metrics for metrics in result.per_class}
 
 
 def test_perfect_predictions_across_supported_classes():
@@ -232,9 +229,7 @@ def test_custom_reporting_order_is_deterministic_and_sets_matrix_axes():
     )
 
     assert result.labels == labels
-    assert tuple(
-        metrics.label for metrics in result.per_class
-    ) == labels
+    assert tuple(metrics.label for metrics in result.per_class) == labels
     assert result.confusion_matrix == (
         (0, 0, 0),
         (1, 0, 0),
@@ -251,13 +246,11 @@ def test_json_compatible_dictionary_preserves_reporting_order():
     payload = result.to_dict()
     encoded = json.dumps(payload, sort_keys=True)
 
-    assert payload["labels"] == list(
+    assert payload["labels"] == list(SUPPORTED_FORM_CLASSES)
+    assert payload["confusion_matrix"][0][1] == 1
+    assert [row["label"] for row in payload["per_class"]] == list(
         SUPPORTED_FORM_CLASSES
     )
-    assert payload["confusion_matrix"][0][1] == 1
-    assert [
-        row["label"] for row in payload["per_class"]
-    ] == list(SUPPORTED_FORM_CLASSES)
     assert json.loads(encoded) == payload
 
 
@@ -266,10 +259,8 @@ def test_confusion_matrix_api_recomputes_the_same_metrics():
         ["correct", "correct", "insufficient_depth"],
         ["correct", "insufficient_depth", "correct"],
     )
-    from_matrix = (
-        evaluate_classification_from_confusion_matrix(
-            from_labels.confusion_matrix
-        )
+    from_matrix = evaluate_classification_from_confusion_matrix(
+        from_labels.confusion_matrix
     )
 
     assert from_matrix == from_labels
@@ -296,6 +287,4 @@ def test_confusion_matrix_api_rejects_invalid_counts(
     message,
 ):
     with pytest.raises(ValueError, match=message):
-        evaluate_classification_from_confusion_matrix(
-            matrix
-        )
+        evaluate_classification_from_confusion_matrix(matrix)

@@ -73,21 +73,15 @@ def collect_software_versions(
     """
     packages = {}
 
-    for output_name, distribution_name in (
-        PACKAGE_DISTRIBUTIONS.items()
-    ):
+    for output_name, distribution_name in PACKAGE_DISTRIBUTIONS.items():
         try:
-            packages[output_name] = version_reader(
-                distribution_name
-            )
+            packages[output_name] = version_reader(distribution_name)
         except metadata.PackageNotFoundError:
             packages[output_name] = None
 
     return {
         "python": platform.python_version(),
-        "python_implementation": (
-            platform.python_implementation()
-        ),
+        "python_implementation": (platform.python_implementation()),
         "packages": packages,
     }
 
@@ -106,9 +100,7 @@ def _metadata_path(
     resolved_path = Path(path).resolve()
 
     try:
-        return resolved_path.relative_to(
-            repository_root.resolve()
-        ).as_posix()
+        return resolved_path.relative_to(repository_root.resolve()).as_posix()
     except ValueError:
         return str(resolved_path)
 
@@ -145,9 +137,7 @@ def _run_git_command(
 
 def collect_git_state(
     repository_root: str | Path,
-    command_runner: Callable[
-        ..., subprocess.CompletedProcess[str]
-    ] = subprocess.run,
+    command_runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
 ) -> dict[str, Any]:
     """Return commit, branch and dirty state when Git is available.
 
@@ -233,30 +223,21 @@ def create_run_metadata(
             "source_path": _metadata_path(config, root),
             "source_sha256": sha256_file(config),
             "resolved": dict(resolved_config),
-            "explicit_cli_overrides": dict(
-                explicit_config_overrides
-            ),
+            "explicit_cli_overrides": dict(explicit_config_overrides),
         },
         "software": dict(
             software_versions
             if software_versions is not None
             else collect_software_versions()
         ),
-        "git": dict(
-            git_state
-            if git_state is not None
-            else collect_git_state(root)
-        ),
+        "git": dict(git_state if git_state is not None else collect_git_state(root)),
         "runtime_options": {
             "display_enabled": display_enabled,
             "overwrite_requested": overwrite_requested,
         },
-        "processing_time_definition": (
-            processing_time_definition
-        ),
+        "processing_time_definition": (processing_time_definition),
         "outputs": {
-            name: _metadata_path(path, root)
-            for name, path in output_paths.items()
+            name: _metadata_path(path, root) for name, path in output_paths.items()
         },
     }
 
@@ -330,9 +311,7 @@ class RunMetadataRecorder:
         updates: Mapping[str, Any],
     ) -> None:
         if self._finalised:
-            raise RuntimeError(
-                "Run metadata has already been finalised"
-            )
+            raise RuntimeError("Run metadata has already been finalised")
 
         document = deepcopy(self._base_metadata)
         document.update(deepcopy(dict(updates)))
@@ -340,13 +319,9 @@ class RunMetadataRecorder:
         timestamps = dict(document.get("timestamps", {}))
 
         if status == "completed":
-            timestamps["completed_utc"] = (
-                self._timestamp_factory()
-            )
+            timestamps["completed_utc"] = self._timestamp_factory()
         else:
-            timestamps["failed_utc"] = (
-                self._timestamp_factory()
-            )
+            timestamps["failed_utc"] = self._timestamp_factory()
 
         document["timestamps"] = timestamps
         _atomic_write_json(self.output_path, document)
@@ -363,9 +338,7 @@ class RunMetadataRecorder:
             "completed",
             {
                 "input_video": dict(source_video),
-                "processing_summary": dict(
-                    processing_summary
-                ),
+                "processing_summary": dict(processing_summary),
             },
         )
 
@@ -388,8 +361,6 @@ class RunMetadataRecorder:
             updates["input_video"] = dict(source_video)
 
         if processing_summary is not None:
-            updates["processing_summary"] = dict(
-                processing_summary
-            )
+            updates["processing_summary"] = dict(processing_summary)
 
         self._finalise("failed", updates)

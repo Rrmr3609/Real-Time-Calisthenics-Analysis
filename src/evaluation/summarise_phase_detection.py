@@ -22,9 +22,7 @@ def iso_summary_date(value: str) -> str:
         ) from error
 
     if parsed.isoformat() != value:
-        raise argparse.ArgumentTypeError(
-            "summary date must use ISO YYYY-MM-DD"
-        )
+        raise argparse.ArgumentTypeError("summary date must use ISO YYYY-MM-DD")
 
     return value
 
@@ -34,18 +32,14 @@ def development_id(value: str) -> str:
     normalised = value.strip()
 
     if not normalised:
-        raise argparse.ArgumentTypeError(
-            "development ID cannot be blank"
-        )
+        raise argparse.ArgumentTypeError("development ID cannot be blank")
 
     return normalised
 
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
-        description=(
-            "Summarise enhanced phase-detection behaviour."
-        )
+        description=("Summarise enhanced phase-detection behaviour.")
     )
 
     parser.add_argument(
@@ -82,9 +76,7 @@ def main():
     output_path = Path(args.output)
 
     if not input_path.is_file():
-        raise FileNotFoundError(
-            f"Enhanced temporal CSV does not exist: {input_path}"
-        )
+        raise FileNotFoundError(f"Enhanced temporal CSV does not exist: {input_path}")
 
     data = pd.read_csv(input_path)
 
@@ -95,39 +87,21 @@ def main():
 
     total_frames = len(data)
 
-    final_rep_count = int(
-        data["enhanced_rep_count"].iloc[-1]
-    )
+    final_rep_count = int(data["enhanced_rep_count"].iloc[-1])
 
-    completed_rows = data[
-        data["completed_rep"].astype(str).str.lower()
-        == "true"
-    ]
+    completed_rows = data[data["completed_rep"].astype(str).str.lower() == "true"]
 
     phase_change_count = int(
-        data["phase"].astype(str)
-        .ne(data["phase"].astype(str).shift())
-        .sum()
-        - 1
+        data["phase"].astype(str).ne(data["phase"].astype(str).shift()).sum() - 1
     )
 
-    phase_counts = (
-        data["phase"]
-        .value_counts(dropna=False)
-        .to_dict()
-    )
+    phase_counts = data["phase"].value_counts(dropna=False).to_dict()
 
-    elbow_valid_rate = (
-        data["elbow_feature_valid"].mean()
-    )
+    elbow_valid_rate = data["elbow_feature_valid"].mean()
 
-    mean_processing_time = (
-        data["processing_time_ms"].mean()
-    )
+    mean_processing_time = data["processing_time_ms"].mean()
 
-    median_processing_time = (
-        data["processing_time_ms"].median()
-    )
+    median_processing_time = data["processing_time_ms"].median()
 
     completed_lines = []
 
@@ -147,9 +121,7 @@ def main():
         )
 
     if not completed_lines:
-        completed_lines.append(
-            "No completed repetitions were detected."
-        )
+        completed_lines.append("No completed repetitions were detected.")
 
     summary = f"""Enhanced phase-detection development diagnostic — {args.summary_date}
 

@@ -15,8 +15,7 @@ import pandas as pd
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
         description=(
-            "Plot a development diagnostic of raw and smoothed "
-            "elbow-angle traces."
+            "Plot a development diagnostic of raw and smoothed elbow-angle traces."
         )
     )
 
@@ -42,9 +41,7 @@ def main():
     output_path = Path(args.output)
 
     if not input_path.is_file():
-        raise FileNotFoundError(
-            f"Enhanced feature CSV does not exist: {input_path}"
-        )
+        raise FileNotFoundError(f"Enhanced feature CSV does not exist: {input_path}")
 
     data = pd.read_csv(input_path)
 
@@ -76,17 +73,13 @@ def main():
 
     plt.xlabel("Frame index")
     plt.ylabel("Elbow angle (degrees)")
-    plt.title(
-        "Development diagnostic: raw and smoothed elbow angles"
-    )
+    plt.title("Development diagnostic: raw and smoothed elbow angles")
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_path, dpi=200)
     plt.close()
 
-    print(
-        f"Saved development smoothing diagnostic to: {output_path}"
-    )
+    print(f"Saved development smoothing diagnostic to: {output_path}")
 
 
 if __name__ == "__main__":

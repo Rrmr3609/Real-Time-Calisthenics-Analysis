@@ -52,18 +52,14 @@ def iso_summary_date(value: str) -> str:
         ) from error
 
     if parsed.isoformat() != value:
-        raise argparse.ArgumentTypeError(
-            "summary date must use ISO YYYY-MM-DD"
-        )
+        raise argparse.ArgumentTypeError("summary date must use ISO YYYY-MM-DD")
 
     return value
 
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
-        description=(
-            "Summarise alignment availability for an enhanced run."
-        )
+        description=("Summarise alignment availability for an enhanced run.")
     )
 
     parser.add_argument(
@@ -111,16 +107,8 @@ def boolean_series(
     if values.empty:
         return pd.Series(index=values.index, dtype=bool)
 
-    normalised = (
-        values
-        .fillna("")
-        .astype(str)
-        .str.strip()
-        .str.lower()
-    )
-    invalid_values = sorted(
-        set(normalised) - {"true", "false"}
-    )
+    normalised = values.fillna("").astype(str).str.strip().str.lower()
+    invalid_values = sorted(set(normalised) - {"true", "false"})
 
     if invalid_values:
         raise ValueError(
@@ -154,9 +142,7 @@ def build_summary(
     minimum_alignment_valid_ratio: float = 0.50,
 ) -> str:
     if not 0.0 <= minimum_alignment_valid_ratio <= 1.0:
-        raise ValueError(
-            "minimum_alignment_valid_ratio must be between 0 and 1"
-        )
+        raise ValueError("minimum_alignment_valid_ratio must be between 0 and 1")
 
     require_columns(
         frame_data,
@@ -194,19 +180,11 @@ def build_summary(
         frame_source,
     )
 
-    selected_elbow_side = (
-        frame_data["selected_elbow_side"]
-        .fillna("none")
-        .astype(str)
-    )
-    selected_side_available = selected_elbow_side.isin(
-        {"left", "right"}
-    )
+    selected_elbow_side = frame_data["selected_elbow_side"].fillna("none").astype(str)
+    selected_side_available = selected_elbow_side.isin({"left", "right"})
 
     rescue_opportunity = (
-        selected_side_available
-        & ~alignment_valid
-        & opposite_alignment_valid
+        selected_side_available & ~alignment_valid & opposite_alignment_valid
     )
 
     previous_side = selected_elbow_side.shift()
@@ -219,19 +197,13 @@ def build_summary(
     total_frames = len(frame_data)
     elbow_valid_count = int(elbow_valid.sum())
     alignment_valid_count = int(alignment_valid.sum())
-    alignment_invalid_count = int(
-        (selected_side_available & ~alignment_valid).sum()
-    )
+    alignment_invalid_count = int((selected_side_available & ~alignment_valid).sum())
     opposite_valid_count = int(opposite_alignment_valid.sum())
     rescue_count = int(rescue_opportunity.sum())
     side_change_count = int(side_changed.sum())
     direct_switch_count = int(direct_side_switch.sum())
 
-    phase_values = (
-        frame_data["phase"]
-        .fillna("missing")
-        .astype(str)
-    )
+    phase_values = frame_data["phase"].fillna("missing").astype(str)
     phase_lines = []
 
     for phase in sorted(
@@ -240,15 +212,9 @@ def build_summary(
     ):
         phase_mask = phase_values.eq(phase)
         phase_total = int(phase_mask.sum())
-        phase_elbow_count = int(
-            (elbow_valid & phase_mask).sum()
-        )
-        phase_alignment_count = int(
-            (alignment_valid & phase_mask).sum()
-        )
-        phase_rescue_count = int(
-            (rescue_opportunity & phase_mask).sum()
-        )
+        phase_elbow_count = int((elbow_valid & phase_mask).sum())
+        phase_alignment_count = int((alignment_valid & phase_mask).sum())
+        phase_rescue_count = int((rescue_opportunity & phase_mask).sum())
 
         phase_lines.append(
             (
@@ -268,33 +234,18 @@ def build_summary(
     )
     mean_alignment_coverage = alignment_coverage.mean()
     mean_coverage_text = (
-        f"{mean_alignment_coverage:.3f}"
-        if pd.notna(mean_alignment_coverage)
-        else "nan"
+        f"{mean_alignment_coverage:.3f}" if pd.notna(mean_alignment_coverage) else "nan"
     )
     final_class_unscorable_count = int(
-        repetition_data["predicted_class"]
-        .astype(str)
-        .eq("unscorable")
-        .sum()
+        repetition_data["predicted_class"].astype(str).eq("unscorable").sum()
     )
     alignment_evidence_unscorable_count = int(
-        alignment_coverage
-        .lt(minimum_alignment_valid_ratio)
-        .sum()
+        alignment_coverage.lt(minimum_alignment_valid_ratio).sum()
     )
 
     clip_ids = sorted(
-        set(
-            frame_data["clip_id"]
-            .dropna()
-            .astype(str)
-        )
-        | set(
-            repetition_data["clip_id"]
-            .dropna()
-            .astype(str)
-        )
+        set(frame_data["clip_id"].dropna().astype(str))
+        | set(repetition_data["clip_id"].dropna().astype(str))
     )
 
     summary = f"""Alignment visibility development diagnostic — {summary_date}
@@ -346,14 +297,11 @@ def main():
     output_path = Path(args.output)
 
     if not frame_path.is_file():
-        raise FileNotFoundError(
-            f"Enhanced frame CSV does not exist: {frame_path}"
-        )
+        raise FileNotFoundError(f"Enhanced frame CSV does not exist: {frame_path}")
 
     if not repetition_path.is_file():
         raise FileNotFoundError(
-            "Enhanced repetition CSV does not exist: "
-            f"{repetition_path}"
+            f"Enhanced repetition CSV does not exist: {repetition_path}"
         )
 
     frame_data = pd.read_csv(frame_path)
@@ -365,9 +313,7 @@ def main():
         summary_date=args.summary_date,
         frame_source=str(frame_path),
         repetition_source=str(repetition_path),
-        minimum_alignment_valid_ratio=(
-            args.minimum_alignment_valid_ratio
-        ),
+        minimum_alignment_valid_ratio=(args.minimum_alignment_valid_ratio),
     )
 
     output_path.parent.mkdir(

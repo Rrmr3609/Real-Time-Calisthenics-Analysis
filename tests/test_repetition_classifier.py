@@ -32,9 +32,7 @@ def make_repetition(
 def test_correct_repetition():
     classifier = RepetitionClassifier()
 
-    result = classifier.classify(
-        make_repetition()
-    )
+    result = classifier.classify(make_repetition())
 
     assert result.predicted_class == "correct"
     assert result.triggered_rules == ()
@@ -43,16 +41,9 @@ def test_correct_repetition():
 def test_insufficient_depth_repetition():
     classifier = RepetitionClassifier()
 
-    result = classifier.classify(
-        make_repetition(
-            minimum_elbow_angle=112.0
-        )
-    )
+    result = classifier.classify(make_repetition(minimum_elbow_angle=112.0))
 
-    assert (
-        result.predicted_class
-        == "insufficient_depth"
-    )
+    assert result.predicted_class == "insufficient_depth"
     assert result.insufficient_depth_triggered
 
 
@@ -66,10 +57,7 @@ def test_incomplete_extension_uses_weaker_top_angle():
         )
     )
 
-    assert (
-        result.predicted_class
-        == "incomplete_extension"
-    )
+    assert result.predicted_class == "incomplete_extension"
     assert result.top_extension_angle == 145.0
     assert result.incomplete_extension_triggered
 
@@ -97,10 +85,7 @@ def test_alignment_deviation_requires_multiple_frames():
         )
     )
 
-    assert (
-        result.predicted_class
-        == "alignment_deviation"
-    )
+    assert result.predicted_class == "alignment_deviation"
     assert result.alignment_deviation_frames == 3
     assert result.alignment_deviation_triggered
 
@@ -144,9 +129,7 @@ def test_low_alignment_coverage_is_unscorable():
     )
 
     assert result.predicted_class == "unscorable"
-    assert result.alignment_valid_ratio == pytest.approx(
-        0.20
-    )
+    assert result.alignment_valid_ratio == pytest.approx(0.20)
 
 
 def test_elbow_failure_can_be_classified_with_low_alignment_coverage():
@@ -160,10 +143,7 @@ def test_elbow_failure_can_be_classified_with_low_alignment_coverage():
         )
     )
 
-    assert (
-        result.predicted_class
-        == "insufficient_depth"
-    )
+    assert result.predicted_class == "insufficient_depth"
 
 
 def test_multiple_triggers_are_recorded():
@@ -178,9 +158,6 @@ def test_multiple_triggers_are_recorded():
         )
     )
 
-    assert (
-        result.predicted_class
-        == "insufficient_depth"
-    )
+    assert result.predicted_class == "insufficient_depth"
     assert result.multiple_rules_triggered
     assert len(result.triggered_rules) == 3

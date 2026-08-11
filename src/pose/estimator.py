@@ -50,8 +50,7 @@ class PoseEstimator:
             results.pose_landmarks,
             self.mp_pose.POSE_CONNECTIONS,
             landmark_drawing_spec=(
-                self.mp_drawing_styles
-                .get_default_pose_landmarks_style()
+                self.mp_drawing_styles.get_default_pose_landmarks_style()
             ),
         )
 

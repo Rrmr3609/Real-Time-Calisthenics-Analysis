@@ -53,19 +53,13 @@ def run_pipeline(angles, alignment_angles):
         )
         repetition = aggregator.update(
             frame_index=frame_index,
-            repetition_window_start_frame=phase_result[
-                "repetition_window_start_frame"
-            ],
+            repetition_window_start_frame=phase_result["repetition_window_start_frame"],
             body_alignment_angle=alignment,
-            completed_repetition=phase_result[
-                "completed_repetition"
-            ],
+            completed_repetition=phase_result["completed_repetition"],
         )
 
         if repetition is not None:
-            completed.append(
-                (repetition, classifier.classify(repetition))
-            )
+            completed.append((repetition, classifier.classify(repetition)))
 
     return completed
 
@@ -89,10 +83,7 @@ def test_complete_alignment_has_full_window_coverage():
     assert classification.alignment_valid_frames == 14
     assert classification.alignment_valid_ratio == 1.0
     assert classification.top_extension_angle == 155.0
-    assert (
-        classification.predicted_class
-        == RepetitionClass.CORRECT.value
-    )
+    assert classification.predicted_class == RepetitionClass.CORRECT.value
 
 
 def test_missing_alignment_uses_the_same_window_denominator():
@@ -106,9 +97,7 @@ def test_missing_alignment_uses_the_same_window_denominator():
     repetition, classification = completed[0]
     assert repetition.duration_frames == 14
     assert classification.alignment_valid_frames == 12
-    assert classification.alignment_valid_ratio == pytest.approx(
-        12 / 14
-    )
+    assert classification.alignment_valid_ratio == pytest.approx(12 / 14)
 
 
 def test_non_monotonic_candidate_descent_preserves_earlier_minimum():
@@ -165,10 +154,7 @@ def test_interrupted_noisy_descent_candidate_is_discarded():
         153.0,
         155.0,
     ]
-    alignment = [
-        140.0 if index == 3 else 170.0
-        for index in range(len(angles))
-    ]
+    alignment = [140.0 if index == 3 else 170.0 for index in range(len(angles))]
 
     completed = run_pipeline(angles, alignment)
 
@@ -183,10 +169,7 @@ def test_interrupted_noisy_descent_candidate_is_discarded():
     assert len(repetition.alignment_angles) == 13
     assert 140.0 not in repetition.alignment_angles
     assert classification.minimum_elbow_angle == 95.0
-    assert (
-        classification.predicted_class
-        == RepetitionClass.CORRECT.value
-    )
+    assert classification.predicted_class == RepetitionClass.CORRECT.value
 
 
 def test_end_top_uses_only_return_confirmation_frames():
@@ -220,10 +203,7 @@ def test_end_top_uses_only_return_confirmation_frames():
     assert repetition.end_top_angle == 153.0
     assert repetition.end_top_angle >= 130.0
     assert classification.top_extension_angle == 153.0
-    assert (
-        classification.predicted_class
-        == RepetitionClass.CORRECT.value
-    )
+    assert classification.predicted_class == RepetitionClass.CORRECT.value
 
 
 def test_brief_missing_elbow_observations_remain_in_window():
@@ -290,10 +270,7 @@ def test_abandoned_attempt_does_not_leak_into_next_repetition():
         153.0,
         155.0,
     ]
-    alignment = [
-        140.0 if index < 9 else 170.0
-        for index in range(len(angles))
-    ]
+    alignment = [140.0 if index < 9 else 170.0 for index in range(len(angles))]
 
     completed = run_pipeline(angles, alignment)
 

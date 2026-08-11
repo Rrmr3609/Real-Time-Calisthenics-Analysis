@@ -24,9 +24,7 @@ def iso_summary_date(value: str) -> str:
         ) from error
 
     if parsed.isoformat() != value:
-        raise argparse.ArgumentTypeError(
-            "summary date must use ISO YYYY-MM-DD"
-        )
+        raise argparse.ArgumentTypeError("summary date must use ISO YYYY-MM-DD")
 
     return value
 
@@ -36,18 +34,14 @@ def development_id(value: str) -> str:
     normalised = value.strip()
 
     if not normalised:
-        raise argparse.ArgumentTypeError(
-            "development ID cannot be blank"
-        )
+        raise argparse.ArgumentTypeError("development ID cannot be blank")
 
     return normalised
 
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
-        description=(
-            "Summarise repetition-level classification outputs."
-        )
+        description=("Summarise repetition-level classification outputs.")
     )
 
     parser.add_argument(
@@ -84,9 +78,7 @@ def main():
     output_path = Path(args.output)
 
     if not input_path.is_file():
-        raise FileNotFoundError(
-            f"Enhanced repetition CSV does not exist: {input_path}"
-        )
+        raise FileNotFoundError(f"Enhanced repetition CSV does not exist: {input_path}")
 
     data = pd.read_csv(input_path)
     reject_duplicate_repetitions(
@@ -106,25 +98,15 @@ def main():
         mean_alignment_coverage = float("nan")
         multiple_rule_count = 0
     else:
-        class_counts = (
-            data["predicted_class"]
-            .value_counts(dropna=False)
-            .to_dict()
-        )
+        class_counts = data["predicted_class"].value_counts(dropna=False).to_dict()
 
-        mean_alignment_coverage = (
-            pd.to_numeric(
-                data["alignment_valid_ratio"],
-                errors="coerce",
-            ).mean()
-        )
+        mean_alignment_coverage = pd.to_numeric(
+            data["alignment_valid_ratio"],
+            errors="coerce",
+        ).mean()
 
         multiple_rule_count = int(
-            data["multiple_rules_triggered"]
-            .astype(str)
-            .str.lower()
-            .eq("true")
-            .sum()
+            data["multiple_rules_triggered"].astype(str).str.lower().eq("true").sum()
         )
 
     repetition_lines = []
@@ -145,9 +127,7 @@ def main():
         )
 
     if not repetition_lines:
-        repetition_lines.append(
-            "No completed repetitions were classified."
-        )
+        repetition_lines.append("No completed repetitions were classified.")
 
     summary = f"""Enhanced repetition-classification development diagnostic — {args.summary_date}
 

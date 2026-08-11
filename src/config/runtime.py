@@ -163,19 +163,12 @@ def _require_mapping(
     location: str,
 ) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
-        raise ValueError(
-            f"{location} must be a YAML mapping"
-        )
+        raise ValueError(f"{location} must be a YAML mapping")
 
-    non_string_keys = [
-        key for key in value if not isinstance(key, str)
-    ]
+    non_string_keys = [key for key in value if not isinstance(key, str)]
 
     if non_string_keys:
-        raise ValueError(
-            f"{location} contains non-text field names: "
-            f"{non_string_keys}"
-        )
+        raise ValueError(f"{location} contains non-text field names: {non_string_keys}")
 
     return value
 
@@ -190,14 +183,10 @@ def _validate_fields(
     unknown = sorted(actual - expected)
 
     if missing:
-        raise ValueError(
-            f"{location} is missing required fields: {missing}"
-        )
+        raise ValueError(f"{location} is missing required fields: {missing}")
 
     if unknown:
-        raise ValueError(
-            f"{location} contains unknown fields: {unknown}"
-        )
+        raise ValueError(f"{location} contains unknown fields: {unknown}")
 
 
 def _require_integer(
@@ -206,14 +195,10 @@ def _require_integer(
     minimum: int,
 ) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(
-            f"{location} must be an integer"
-        )
+        raise ValueError(f"{location} must be an integer")
 
     if value < minimum:
-        raise ValueError(
-            f"{location} must be at least {minimum}"
-        )
+        raise ValueError(f"{location} must be at least {minimum}")
 
     return value
 
@@ -226,33 +211,19 @@ def _require_number(
     *,
     minimum_inclusive: bool = True,
 ) -> float:
-    if (
-        isinstance(value, bool)
-        or not isinstance(value, (int, float))
-    ):
-        raise ValueError(
-            f"{location} must be a finite number"
-        )
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{location} must be a finite number")
 
     number = float(value)
 
     if not math.isfinite(number):
-        raise ValueError(
-            f"{location} must be a finite number"
-        )
+        raise ValueError(f"{location} must be a finite number")
 
-    below_minimum = (
-        number < minimum
-        if minimum_inclusive
-        else number <= minimum
-    )
+    below_minimum = number < minimum if minimum_inclusive else number <= minimum
 
     if below_minimum or number > maximum:
         opening = "[" if minimum_inclusive else "("
-        raise ValueError(
-            f"{location} must be in {opening}{minimum}, "
-            f"{maximum}]"
-        )
+        raise ValueError(f"{location} must be in {opening}{minimum}, {maximum}]")
 
     return number
 
@@ -362,10 +333,7 @@ def _build_runtime_config(
         ),
         top_extension_warning_threshold=_require_angle(
             baseline["top_extension_warning_threshold"],
-            (
-                f"{source_name}:baseline."
-                "top_extension_warning_threshold"
-            ),
+            (f"{source_name}:baseline.top_extension_warning_threshold"),
         ),
         depth_warning_threshold=_require_angle(
             baseline["depth_warning_threshold"],
@@ -377,10 +345,7 @@ def _build_runtime_config(
         ),
     )
 
-    if (
-        baseline_config.bottom_elbow_angle
-        >= baseline_config.top_elbow_angle
-    ):
+    if baseline_config.bottom_elbow_angle >= baseline_config.top_elbow_angle:
         raise ValueError(
             f"{source_name}:baseline.bottom_elbow_angle must be "
             "lower than baseline.top_elbow_angle"
@@ -389,10 +354,7 @@ def _build_runtime_config(
     feature_config = FeatureConfig(
         minimum_landmark_visibility=_require_number(
             features["minimum_landmark_visibility"],
-            (
-                f"{source_name}:features."
-                "minimum_landmark_visibility"
-            ),
+            (f"{source_name}:features.minimum_landmark_visibility"),
             0.0,
             1.0,
         ),
@@ -414,10 +376,7 @@ def _build_runtime_config(
         ),
         missing_side_grace_frames=_require_integer(
             features["missing_side_grace_frames"],
-            (
-                f"{source_name}:features."
-                "missing_side_grace_frames"
-            ),
+            (f"{source_name}:features.missing_side_grace_frames"),
             minimum=0,
         ),
         ema_alpha=_require_number(
@@ -432,17 +391,11 @@ def _build_runtime_config(
     segmentation_config = SegmentationConfig(
         top_region_threshold=_require_angle(
             segmentation["top_region_threshold"],
-            (
-                f"{source_name}:segmentation."
-                "top_region_threshold"
-            ),
+            (f"{source_name}:segmentation.top_region_threshold"),
         ),
         bottom_region_threshold=_require_angle(
             segmentation["bottom_region_threshold"],
-            (
-                f"{source_name}:segmentation."
-                "bottom_region_threshold"
-            ),
+            (f"{source_name}:segmentation.bottom_region_threshold"),
         ),
         hysteresis=_require_angle(
             segmentation["hysteresis"],
@@ -450,26 +403,17 @@ def _build_runtime_config(
         ),
         phase_confirmation_frames=_require_integer(
             segmentation["phase_confirmation_frames"],
-            (
-                f"{source_name}:segmentation."
-                "phase_confirmation_frames"
-            ),
+            (f"{source_name}:segmentation.phase_confirmation_frames"),
             minimum=1,
         ),
         missing_angle_grace_frames=_require_integer(
             segmentation["missing_angle_grace_frames"],
-            (
-                f"{source_name}:segmentation."
-                "missing_angle_grace_frames"
-            ),
+            (f"{source_name}:segmentation.missing_angle_grace_frames"),
             minimum=0,
         ),
         minimum_repetition_frames=_require_integer(
             segmentation["minimum_repetition_frames"],
-            (
-                f"{source_name}:segmentation."
-                "minimum_repetition_frames"
-            ),
+            (f"{source_name}:segmentation.minimum_repetition_frames"),
             minimum=1,
         ),
     )
@@ -499,27 +443,18 @@ def _build_runtime_config(
         ),
         alignment_deviation_min_frames=_require_integer(
             classification["alignment_deviation_min_frames"],
-            (
-                f"{source_name}:classification."
-                "alignment_deviation_min_frames"
-            ),
+            (f"{source_name}:classification.alignment_deviation_min_frames"),
             minimum=1,
         ),
         alignment_deviation_min_ratio=_require_number(
             classification["alignment_deviation_min_ratio"],
-            (
-                f"{source_name}:classification."
-                "alignment_deviation_min_ratio"
-            ),
+            (f"{source_name}:classification.alignment_deviation_min_ratio"),
             0.0,
             1.0,
         ),
         minimum_alignment_valid_ratio=_require_number(
             classification["minimum_alignment_valid_ratio"],
-            (
-                f"{source_name}:classification."
-                "minimum_alignment_valid_ratio"
-            ),
+            (f"{source_name}:classification.minimum_alignment_valid_ratio"),
             0.0,
             1.0,
         ),
@@ -555,8 +490,7 @@ def load_runtime_config(
         ) from error
     except yaml.YAMLError as error:
         raise ValueError(
-            f"Malformed YAML in runtime configuration {path}: "
-            f"{error}"
+            f"Malformed YAML in runtime configuration {path}: {error}"
         ) from error
 
     return _build_runtime_config(

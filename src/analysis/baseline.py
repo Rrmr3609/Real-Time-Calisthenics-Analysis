@@ -27,15 +27,9 @@ class BaselinePushUpAnalyser:
             top_elbow_angle=top_elbow_angle,
             bottom_elbow_angle=bottom_elbow_angle,
         )
-        self.top_extension_warning_threshold = float(
-            top_extension_warning_threshold
-        )
-        self.depth_warning_threshold = float(
-            depth_warning_threshold
-        )
-        self.alignment_warning_minimum = float(
-            alignment_warning_minimum
-        )
+        self.top_extension_warning_threshold = float(top_extension_warning_threshold)
+        self.depth_warning_threshold = float(depth_warning_threshold)
+        self.alignment_warning_minimum = float(alignment_warning_minimum)
 
     def update(self, elbow_angle, body_alignment_angle):
         """Process one frame of raw angles, expressed in degrees.
@@ -50,13 +44,9 @@ class BaselinePushUpAnalyser:
             elbow_angle=elbow_angle,
             body_alignment_angle=body_alignment_angle,
             position=position,
-            top_extension_threshold=(
-                self.top_extension_warning_threshold
-            ),
+            top_extension_threshold=(self.top_extension_warning_threshold),
             depth_threshold=self.depth_warning_threshold,
-            body_alignment_minimum=(
-                self.alignment_warning_minimum
-            ),
+            body_alignment_minimum=(self.alignment_warning_minimum),
         )
 
         return {

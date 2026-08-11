@@ -13,18 +13,11 @@ def require_columns(
     source_name: str,
 ) -> None:
     """Require named columns before any row-level validation is attempted."""
-    missing_columns = [
-        column
-        for column in columns
-        if column not in data.columns
-    ]
+    missing_columns = [column for column in columns if column not in data.columns]
 
     if missing_columns:
         missing_text = ", ".join(missing_columns)
-        raise ValueError(
-            f"{source_name} is missing required columns: "
-            f"{missing_text}"
-        )
+        raise ValueError(f"{source_name} is missing required columns: {missing_text}")
 
 
 def reject_duplicate_repetitions(
@@ -53,14 +46,10 @@ def reject_duplicate_repetitions(
     )
 
     formatted_keys = ", ".join(
-        (
-            f"(clip_id={key['clip_id']!r}, "
-            f"rep_id={key['rep_id']!r})"
-        )
+        (f"(clip_id={key['clip_id']!r}, rep_id={key['rep_id']!r})")
         for key in duplicate_keys
     )
 
     raise ValueError(
-        f"{source_name} contains duplicate (clip_id, rep_id) rows: "
-        f"{formatted_keys}"
+        f"{source_name} contains duplicate (clip_id, rep_id) rows: {formatted_keys}"
     )

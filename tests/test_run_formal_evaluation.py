@@ -118,9 +118,7 @@ def expected_source_identity_path(path, repository_root):
     resolved_path = Path(path).resolve()
 
     try:
-        return resolved_path.relative_to(
-            Path(repository_root).resolve()
-        ).as_posix()
+        return resolved_path.relative_to(Path(repository_root).resolve()).as_posix()
     except ValueError:
         return resolved_path.name
 
@@ -156,15 +154,9 @@ def annotation_row(
         "bottom_turnaround_frame": 10,
         "completion_end_top_frame": completion_frame,
         "ground_truth_class": ground_truth_class,
-        "insufficient_depth_flag": (
-            ground_truth_class == "insufficient_depth"
-        ),
-        "incomplete_extension_flag": (
-            ground_truth_class == "incomplete_extension"
-        ),
-        "alignment_deviation_flag": (
-            ground_truth_class == "alignment_deviation"
-        ),
+        "insufficient_depth_flag": (ground_truth_class == "insufficient_depth"),
+        "incomplete_extension_flag": (ground_truth_class == "incomplete_extension"),
+        "alignment_deviation_flag": (ground_truth_class == "alignment_deviation"),
         "source_video_visibility_status": "sufficient",
         "annotator_notes": "",
     }
@@ -182,12 +174,8 @@ def ambiguous_annotation_row(clip_id):
             "is_evaluable_attempt": False,
             "ambiguity_flag": True,
             "bottom_turnaround_frame": "",
-            "source_video_visibility_status": (
-                "partially_obscured"
-            ),
-            "annotator_notes": (
-                "Fictional ambiguous fragment proving review."
-            ),
+            "source_video_visibility_status": ("partially_obscured"),
+            "annotator_notes": ("Fictional ambiguous fragment proving review."),
         }
     )
     return row
@@ -205,9 +193,7 @@ def baseline_frame_row(
         "run_id": run_id,
         "clip_id": clip_id,
         "frame_index": frame_index,
-        "video_timestamp_ms": (
-            frame_index / source_fps * 1000.0
-        ),
+        "video_timestamp_ms": (frame_index / source_fps * 1000.0),
         "source_fps": source_fps,
         "processing_time_ms": 1.0,
         "pose_detected": True,
@@ -264,9 +250,7 @@ def recorded_run_metadata(
                 "method": method,
                 "source_fps": source_fps,
                 "fictional_setting": (
-                    "baseline-value"
-                    if method == "baseline"
-                    else "enhanced-value"
+                    "baseline-value" if method == "baseline" else "enhanced-value"
                 ),
             },
         },
@@ -276,10 +260,7 @@ def recorded_run_metadata(
             "dirty": method == "enhanced",
         },
         "outputs": {
-            **{
-                name: str(Path(path).resolve())
-                for name, path in outputs.items()
-            },
+            **{name: str(Path(path).resolve()) for name, path in outputs.items()},
             "metadata_json": str(metadata_path.resolve()),
         },
     }
@@ -304,9 +285,7 @@ def create_run_files(root, clip_id, split, fps, predicted_class):
                 clip_id=clip_id,
                 frame_index=frame_index,
                 source_fps=fps,
-                repetition_count=(
-                    1 if frame_index >= 15 else 0
-                ),
+                repetition_count=(1 if frame_index >= 15 else 0),
             )
             for frame_index in range(100)
         ),
@@ -390,8 +369,7 @@ def create_fictional_inputs(tmp_path, *, split="development"):
         manifest_path,
         MANIFEST_COLUMNS,
         tuple(
-            manifest_row(clip_id, split, fps)
-            for clip_id, fps, _ in clip_definitions
+            manifest_row(clip_id, split, fps) for clip_id, fps, _ in clip_definitions
         ),
     )
     write_csv(
@@ -449,9 +427,7 @@ def rewrite_metadata(path, update):
 
 def clone_metadata(source, destination, update=None):
     document = read_json(source)
-    document["outputs"]["metadata_json"] = str(
-        destination.resolve()
-    )
+    document["outputs"]["metadata_json"] = str(destination.resolve())
 
     if update is not None:
         update(document)
@@ -533,12 +509,14 @@ def test_evaluation_metadata_binds_exact_source_runs(tmp_path):
     metadata = read_json(output_paths.metadata_json)
     source_runs = metadata["source_runs"]
 
-    assert [
-        record["clip_id"] for record in source_runs["baseline"]
-    ] == ["fictional-clip-a", "fictional-clip-b"]
-    assert [
-        record["clip_id"] for record in source_runs["enhanced"]
-    ] == ["fictional-clip-a", "fictional-clip-b"]
+    assert [record["clip_id"] for record in source_runs["baseline"]] == [
+        "fictional-clip-a",
+        "fictional-clip-b",
+    ]
+    assert [record["clip_id"] for record in source_runs["enhanced"]] == [
+        "fictional-clip-a",
+        "fictional-clip-b",
+    ]
 
     for method, metadata_paths in (
         ("baseline", inputs.baseline_metadata_paths),
@@ -550,17 +528,9 @@ def test_evaluation_metadata_binds_exact_source_runs(tmp_path):
         }
 
         for record in source_runs[method]:
-            metadata_path, document = documents_by_clip[
-                record["clip_id"]
-            ]
-            output_name = (
-                "frame_csv"
-                if method == "baseline"
-                else "repetition_csv"
-            )
-            consumed_path = Path(
-                document["outputs"][output_name]
-            )
+            metadata_path, document = documents_by_clip[record["clip_id"]]
+            output_name = "frame_csv" if method == "baseline" else "repetition_csv"
+            consumed_path = Path(document["outputs"][output_name])
 
             assert record["method"] == method
             assert record["source_run_id"] == document["run_id"]
@@ -580,24 +550,22 @@ def test_evaluation_metadata_binds_exact_source_runs(tmp_path):
                 ),
                 "sha256": sha256_bytes(consumed_path),
             }
-            assert record["source_input_video_sha256"] == (
-                document["input_video"]["sha256"]
+            assert (
+                record["source_input_video_sha256"]
+                == (document["input_video"]["sha256"])
             )
             assert record["source_git"] == {
                 "commit": document["git"]["commit"],
                 "dirty": document["git"]["dirty"],
             }
-            assert record[
-                "resolved_configuration_sha256"
-            ] == canonical_json_sha256(
+            assert record["resolved_configuration_sha256"] == canonical_json_sha256(
                 document["configuration"]["resolved"]
             )
 
-    assert source_runs["baseline"][0][
-        "resolved_configuration_sha256"
-    ] != source_runs["enhanced"][0][
-        "resolved_configuration_sha256"
-    ]
+    assert (
+        source_runs["baseline"][0]["resolved_configuration_sha256"]
+        != source_runs["enhanced"][0]["resolved_configuration_sha256"]
+    )
     assert str(tmp_path.resolve()) not in json.dumps(source_runs)
 
 
@@ -614,9 +582,7 @@ def test_repository_source_paths_are_relative_and_posix(
     )
 
     output_paths = run_inputs(inputs)
-    source_runs = read_json(output_paths.metadata_json)[
-        "source_runs"
-    ]
+    source_runs = read_json(output_paths.metadata_json)["source_runs"]
 
     for method_records in source_runs.values():
         for record in method_records:
@@ -683,8 +649,9 @@ def test_repeated_evaluation_preserves_source_provenance_and_metrics(
     first_paths = run_inputs(inputs, run_id="first-evaluation")
     second_paths = run_inputs(inputs, run_id="second-evaluation")
 
-    assert read_json(first_paths.metadata_json)["source_runs"] == (
-        read_json(second_paths.metadata_json)["source_runs"]
+    assert (
+        read_json(first_paths.metadata_json)["source_runs"]
+        == (read_json(second_paths.metadata_json)["source_runs"])
     )
     assert first_paths.report_json.read_bytes() == (
         second_paths.report_json.read_bytes()
@@ -742,12 +709,12 @@ def test_consumed_csv_mutation_changes_recorded_hash(tmp_path):
         encoding="utf-8",
     )
     second_paths = run_inputs(inputs, run_id="second-evaluation")
-    first_hash = read_json(first_paths.metadata_json)["source_runs"][
-        "baseline"
-    ][0]["consumed_output_csv"]["sha256"]
-    second_hash = read_json(second_paths.metadata_json)["source_runs"][
-        "baseline"
-    ][0]["consumed_output_csv"]["sha256"]
+    first_hash = read_json(first_paths.metadata_json)["source_runs"]["baseline"][0][
+        "consumed_output_csv"
+    ]["sha256"]
+    second_hash = read_json(second_paths.metadata_json)["source_runs"]["baseline"][0][
+        "consumed_output_csv"
+    ]["sha256"]
 
     assert first_hash != second_hash
     assert second_hash == sha256_bytes(baseline_csv)
@@ -796,9 +763,9 @@ def test_absent_optional_source_provenance_is_not_invented(tmp_path):
 
     rewrite_metadata(metadata_path, remove_optional_provenance)
     output_paths = run_inputs(inputs)
-    baseline_record = read_json(output_paths.metadata_json)[
-        "source_runs"
-    ]["baseline"][0]
+    baseline_record = read_json(output_paths.metadata_json)["source_runs"]["baseline"][
+        0
+    ]
 
     assert baseline_record["source_git"] == {
         "commit": None,
@@ -830,10 +797,7 @@ def test_valid_baseline_zero_detection_file_is_accepted(tmp_path):
     write_json(metadata_path, metadata)
     output_paths = run_inputs(inputs)
     report = read_json(output_paths.report_json)
-    per_clip = {
-        row["clip_id"]: row
-        for row in report["per_clip_metrics"]
-    }
+    per_clip = {row["clip_id"]: row for row in report["per_clip_metrics"]}
 
     assert per_clip["fictional-clip-a"]["baseline_predicted_count"] == 0
 
@@ -983,10 +947,7 @@ def test_missing_baseline_clip_is_rejected(tmp_path):
 
     with pytest.raises(
         ValueError,
-        match=(
-            "Baseline metadata must cover the complete.*"
-            "missing=.*fictional-clip-b"
-        ),
+        match=("Baseline metadata must cover the complete.*missing=.*fictional-clip-b"),
     ):
         run_inputs(
             inputs,
@@ -999,10 +960,7 @@ def test_missing_enhanced_clip_is_rejected(tmp_path):
 
     with pytest.raises(
         ValueError,
-        match=(
-            "Enhanced metadata must cover the complete.*"
-            "missing=.*fictional-clip-b"
-        ),
+        match=("Enhanced metadata must cover the complete.*missing=.*fictional-clip-b"),
     ):
         run_inputs(
             inputs,
@@ -1091,9 +1049,7 @@ def test_missing_enhanced_repetition_output_is_rejected(tmp_path):
     rewrite_metadata(
         inputs.enhanced_metadata_paths[0],
         lambda document: document["outputs"].update(
-            repetition_csv=str(
-                (tmp_path / "missing-enhanced.csv").resolve()
-            )
+            repetition_csv=str((tmp_path / "missing-enhanced.csv").resolve())
         ),
     )
 
@@ -1194,14 +1150,9 @@ def test_ambiguous_row_counts_as_annotation_review_evidence(tmp_path):
 
     output_paths = run_inputs(inputs)
     report = read_json(output_paths.report_json)
-    per_clip = {
-        row["clip_id"]: row
-        for row in report["per_clip_metrics"]
-    }
+    per_clip = {row["clip_id"]: row for row in report["per_clip_metrics"]}
 
-    assert per_clip["fictional-clip-b"][
-        "ground_truth_repetition_count"
-    ] == 0
+    assert per_clip["fictional-clip-b"]["ground_truth_repetition_count"] == 0
     assert per_clip["fictional-clip-b"]["baseline_extras"] == 1
     assert per_clip["fictional-clip-b"]["enhanced_extras"] == 1
 
@@ -1230,9 +1181,7 @@ def test_provisional_default_tolerance_is_available_for_convenience(
         evaluation_run_id="default-tolerance-evaluation",
     )
 
-    assert read_json(output_paths.report_json)[
-        "event_tolerance_seconds"
-    ] == 0.5
+    assert read_json(output_paths.report_json)["event_tolerance_seconds"] == 0.5
 
 
 @pytest.mark.parametrize(
@@ -1288,18 +1237,14 @@ def test_output_paths_and_metric_content_are_deterministic(tmp_path):
         inputs.output_directory,
         "first-evaluation",
     )
-    assert read_json(first_paths.report_json) == read_json(
-        second_paths.report_json
-    )
+    assert read_json(first_paths.report_json) == read_json(second_paths.report_json)
 
 
 def test_inconsistent_source_fps_is_rejected(tmp_path):
     inputs = create_fictional_inputs(tmp_path)
     rewrite_metadata(
         inputs.enhanced_metadata_paths[0],
-        lambda document: document["input_video"].update(
-            source_fps=11.0
-        ),
+        lambda document: document["input_video"].update(source_fps=11.0),
     )
 
     with pytest.raises(ValueError, match="inconsistent source FPS"):
@@ -1368,9 +1313,7 @@ def test_mismatched_input_hashes_are_rejected(tmp_path):
     inputs = create_fictional_inputs(tmp_path)
     rewrite_metadata(
         inputs.enhanced_metadata_paths[0],
-        lambda document: document["input_video"].update(
-            sha256="1" * 64
-        ),
+        lambda document: document["input_video"].update(sha256="1" * 64),
     )
 
     with pytest.raises(ValueError, match="SHA-256 hashes do not match"):

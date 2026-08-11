@@ -48,34 +48,23 @@ class PushUpPhaseStateMachine:
     ):
         if bottom_region_threshold >= top_region_threshold:
             raise ValueError(
-                "bottom_region_threshold must be lower than "
-                "top_region_threshold"
+                "bottom_region_threshold must be lower than top_region_threshold"
             )
 
         if hysteresis < 0.0:
             raise ValueError("hysteresis cannot be negative")
 
         if confirmation_frames < 1:
-            raise ValueError(
-                "confirmation_frames must be at least 1"
-            )
+            raise ValueError("confirmation_frames must be at least 1")
 
         if missing_grace_frames < 0:
-            raise ValueError(
-                "missing_grace_frames cannot be negative"
-            )
+            raise ValueError("missing_grace_frames cannot be negative")
 
         if minimum_rep_frames < 1:
-            raise ValueError(
-                "minimum_rep_frames must be at least 1"
-            )
+            raise ValueError("minimum_rep_frames must be at least 1")
 
-        self.top_region_threshold = float(
-            top_region_threshold
-        )
-        self.bottom_region_threshold = float(
-            bottom_region_threshold
-        )
+        self.top_region_threshold = float(top_region_threshold)
+        self.bottom_region_threshold = float(bottom_region_threshold)
         self.hysteresis = float(hysteresis)
         self.confirmation_frames = confirmation_frames
         self.missing_grace_frames = missing_grace_frames
@@ -86,12 +75,8 @@ class PushUpPhaseStateMachine:
 
         self._candidate_phase: Optional[PushUpPhase] = None
         self._candidate_count = 0
-        self._descent_candidate_measurements: list[
-            tuple[int, float]
-        ] = []
-        self._return_top_candidate_measurements: list[
-            tuple[int, float]
-        ] = []
+        self._descent_candidate_measurements: list[tuple[int, float]] = []
+        self._return_top_candidate_measurements: list[tuple[int, float]] = []
         self._missing_count = 0
 
         self._window_start_frame: Optional[int] = None
@@ -173,9 +158,7 @@ class PushUpPhaseStateMachine:
         is eligible for repetition-level feature aggregation.
         """
         if angle < self.top_region_threshold:
-            raise ValueError(
-                "A repetition window requires a genuine top anchor"
-            )
+            raise ValueError("A repetition window requires a genuine top anchor")
 
         self._window_start_frame = frame_index
         self._rep_start_frame = None
@@ -194,10 +177,7 @@ class PushUpPhaseStateMachine:
         frame_index: int,
         angle: float,
     ) -> None:
-        if (
-            self._minimum_elbow_angle is None
-            or angle < self._minimum_elbow_angle
-        ):
+        if self._minimum_elbow_angle is None or angle < self._minimum_elbow_angle:
             self._minimum_elbow_angle = angle
             self._bottom_frame = frame_index
 
@@ -233,9 +213,7 @@ class PushUpPhaseStateMachine:
             )
             return None
 
-        duration_frames = (
-            frame_index - self._rep_start_frame + 1
-        )
+        duration_frames = frame_index - self._rep_start_frame + 1
 
         if duration_frames < self.minimum_rep_frames:
             self._return_to_top_without_counting(
@@ -281,11 +259,8 @@ class PushUpPhaseStateMachine:
         if elbow_angle is None:
             self._missing_count += 1
 
-            interrupted_descent_candidate = (
-                self.phase == PushUpPhase.TOP
-                and bool(
-                    self._descent_candidate_measurements
-                )
+            interrupted_descent_candidate = self.phase == PushUpPhase.TOP and bool(
+                self._descent_candidate_measurements
             )
 
             self._clear_candidate()
@@ -318,13 +293,9 @@ class PushUpPhaseStateMachine:
         angle = float(elbow_angle)
         self._missing_count = 0
 
-        top_descent_boundary = (
-            self.top_region_threshold - self.hysteresis
-        )
+        top_descent_boundary = self.top_region_threshold - self.hysteresis
 
-        bottom_ascent_boundary = (
-            self.bottom_region_threshold + self.hysteresis
-        )
+        bottom_ascent_boundary = self.bottom_region_threshold + self.hysteresis
 
         if self.phase == PushUpPhase.WAITING:
             if self._confirm_transition(
@@ -335,9 +306,7 @@ class PushUpPhaseStateMachine:
                 self._set_top_anchor(frame_index, angle)
 
         elif self.phase == PushUpPhase.TOP:
-            descent_condition = (
-                angle <= top_descent_boundary
-            )
+            descent_condition = angle <= top_descent_boundary
 
             if descent_condition:
                 if self._window_start_frame is None:
@@ -348,15 +317,10 @@ class PushUpPhaseStateMachine:
                     self._clear_descent_candidate_measurements()
 
                 else:
-                    if (
-                        self._candidate_phase
-                        != PushUpPhase.DESCENDING
-                    ):
+                    if self._candidate_phase != PushUpPhase.DESCENDING:
                         self._clear_descent_candidate_measurements()
 
-                    self._descent_candidate_measurements.append(
-                        (frame_index, angle)
-                    )
+                    self._descent_candidate_measurements.append((frame_index, angle))
 
                     if self._confirm_transition(
                         PushUpPhase.DESCENDING,
@@ -364,9 +328,7 @@ class PushUpPhaseStateMachine:
                     ):
                         self.phase = PushUpPhase.DESCENDING
 
-                        self._rep_start_frame = (
-                            self._window_start_frame
-                        )
+                        self._rep_start_frame = self._window_start_frame
 
                         for (
                             candidate_frame,
@@ -396,10 +358,7 @@ class PushUpPhaseStateMachine:
                 self._clear_candidate()
 
                 if angle >= self.top_region_threshold:
-                    if (
-                        self._start_top_angle is None
-                        or angle >= self._start_top_angle
-                    ):
+                    if self._start_top_angle is None or angle >= self._start_top_angle:
                         # Keep the maximum genuine top observation and
                         # freeze it once a descent candidate begins.
                         self._set_top_anchor(
@@ -437,10 +396,7 @@ class PushUpPhaseStateMachine:
                     PushUpPhase.TOP,
                     True,
                 ):
-                    self._return_to_top_without_counting(
-                        frame_index,
-                        angle
-                    )
+                    self._return_to_top_without_counting(frame_index, angle)
 
             else:
                 self._clear_candidate()
@@ -460,15 +416,10 @@ class PushUpPhaseStateMachine:
             self._update_minimum_angle(frame_index, angle)
 
             if angle >= self.top_region_threshold:
-                if (
-                    self._candidate_phase
-                    != PushUpPhase.TOP
-                ):
+                if self._candidate_phase != PushUpPhase.TOP:
                     self._clear_return_top_candidate_measurements()
 
-                self._return_top_candidate_measurements.append(
-                    (frame_index, angle)
-                )
+                self._return_top_candidate_measurements.append((frame_index, angle))
 
                 if self._confirm_transition(
                     PushUpPhase.TOP,
@@ -476,15 +427,12 @@ class PushUpPhaseStateMachine:
                 ):
                     self._end_top_angle = max(
                         candidate_angle
-                        for _, candidate_angle
-                        in self._return_top_candidate_measurements
+                        for _, candidate_angle in self._return_top_candidate_measurements
                     )
 
-                    completed_repetition = (
-                        self._complete_repetition(
-                            frame_index=frame_index,
-                            angle=angle,
-                        )
+                    completed_repetition = self._complete_repetition(
+                        frame_index=frame_index,
+                        angle=angle,
                     )
 
             elif angle <= self.bottom_region_threshold:

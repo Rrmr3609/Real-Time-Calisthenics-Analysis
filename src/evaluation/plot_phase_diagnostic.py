@@ -14,9 +14,7 @@ import pandas as pd
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
-        description=(
-            "Plot a development diagnostic of elbow angles and phases."
-        )
+        description=("Plot a development diagnostic of elbow angles and phases.")
     )
 
     parser.add_argument(
@@ -53,9 +51,7 @@ def main():
     output_path = Path(args.output)
 
     if not input_path.is_file():
-        raise FileNotFoundError(
-            f"Enhanced temporal CSV does not exist: {input_path}"
-        )
+        raise FileNotFoundError(f"Enhanced temporal CSV does not exist: {input_path}")
 
     data = pd.read_csv(input_path)
 
@@ -104,10 +100,7 @@ def main():
         label="Segmentation bottom region",
     )
 
-    phase_changes = data[
-        data["phase"].astype(str)
-        != data["phase"].astype(str).shift()
-    ]
+    phase_changes = data[data["phase"].astype(str) != data["phase"].astype(str).shift()]
 
     for _, row in phase_changes.iterrows():
         frame = int(row["frame_index"])
@@ -129,10 +122,7 @@ def main():
             fontsize=7,
         )
 
-    completed_rows = data[
-        data["completed_rep"].astype(str).str.lower()
-        == "true"
-    ]
+    completed_rows = data[data["completed_rep"].astype(str).str.lower() == "true"]
 
     for _, row in completed_rows.iterrows():
         frame = int(row["frame_index"])
@@ -141,26 +131,18 @@ def main():
         plt.scatter(
             [frame],
             [row["smoothed_elbow_angle"]],
-            label=(
-                f"Completed rep {rep_id}"
-                if len(completed_rows) == 1
-                else None
-            ),
+            label=(f"Completed rep {rep_id}" if len(completed_rows) == 1 else None),
         )
 
     plt.xlabel("Frame index")
     plt.ylabel("Elbow angle (degrees)")
-    plt.title(
-        "Development diagnostic: enhanced temporal push-up phase detection"
-    )
+    plt.title("Development diagnostic: enhanced temporal push-up phase detection")
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_path, dpi=200)
     plt.close()
 
-    print(
-        f"Saved development phase diagnostic to: {output_path}"
-    )
+    print(f"Saved development phase diagnostic to: {output_path}")
 
 
 if __name__ == "__main__":

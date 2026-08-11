@@ -13,9 +13,7 @@ def run_sequence(machine, angles):
             frame_index=frame_index,
         )
 
-        repetition = final_result[
-            "completed_repetition"
-        ]
+        repetition = final_result["completed_repetition"]
 
         if repetition is not None:
             completed.append(repetition)
@@ -29,23 +27,19 @@ def correct_repetition_sequence():
         135.0,
         136.0,
         137.0,
-
         # Confirm descent below 125
         124.0,
         123.0,
         122.0,
-
         # Confirm bottom below 120
         119.0,
         115.0,
         110.0,
-
         # Confirm ascent above 125
         123.0,
         126.0,
         128.0,
         129.0,
-
         # Confirm return to top above 130
         131.0,
         133.0,
@@ -92,12 +86,10 @@ def test_shallow_attempt_does_not_count():
         135.0,
         136.0,
         137.0,
-
         # Descending begins
         124.0,
         123.0,
         122.0,
-
         # It never reaches the provisional bottom region
         123.0,
         125.0,
@@ -134,7 +126,6 @@ def test_incomplete_extension_can_still_be_segmented():
         126.0,
         128.0,
         129.0,
-
         # Above the segmentation threshold but below the future
         # 150-degree form-quality threshold.
         131.0,
@@ -159,7 +150,6 @@ def test_threshold_noise_does_not_start_descent():
         135.0,
         136.0,
         137.0,
-
         # No three consecutive frames below or equal to 125
         124.0,
         126.0,
@@ -192,11 +182,9 @@ def test_brief_missing_angles_do_not_reset_attempt():
         124.0,
         123.0,
         122.0,
-
         # Temporary tracking failure
         None,
         None,
-
         119.0,
         115.0,
         110.0,

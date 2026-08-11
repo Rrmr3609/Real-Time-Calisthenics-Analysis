@@ -86,9 +86,7 @@ def _required_mapping(
     value = document.get(key)
 
     if not isinstance(value, Mapping):
-        raise ValueError(
-            f"{source_name} requires an object at {key!r}"
-        )
+        raise ValueError(f"{source_name} requires an object at {key!r}")
 
     return value
 
@@ -101,9 +99,7 @@ def _required_text(
     value = document.get(key)
 
     if not isinstance(value, str) or not value.strip():
-        raise ValueError(
-            f"{source_name} requires non-blank {key!r}"
-        )
+        raise ValueError(f"{source_name} requires non-blank {key!r}")
 
     return value.strip()
 
@@ -116,14 +112,10 @@ def _positive_finite_number(
     try:
         number = float(value)
     except (TypeError, ValueError) as error:
-        raise ValueError(
-            f"{description} must be a positive finite number"
-        ) from error
+        raise ValueError(f"{description} must be a positive finite number") from error
 
     if not math.isfinite(number) or number <= 0.0:
-        raise ValueError(
-            f"{description} must be a positive finite number"
-        )
+        raise ValueError(f"{description} must be a positive finite number")
 
     return number
 
@@ -134,25 +126,15 @@ def _positive_integer(
     description: str,
 ) -> int:
     if isinstance(value, bool):
-        raise ValueError(
-            f"{description} must be a positive integer"
-        )
+        raise ValueError(f"{description} must be a positive integer")
 
     try:
         number = float(value)
     except (TypeError, ValueError) as error:
-        raise ValueError(
-            f"{description} must be a positive integer"
-        ) from error
+        raise ValueError(f"{description} must be a positive integer") from error
 
-    if (
-        not math.isfinite(number)
-        or number <= 0.0
-        or not number.is_integer()
-    ):
-        raise ValueError(
-            f"{description} must be a positive integer"
-        )
+    if not math.isfinite(number) or number <= 0.0 or not number.is_integer():
+        raise ValueError(f"{description} must be a positive integer")
 
     return int(number)
 
@@ -167,13 +149,10 @@ def _source_file_sha256(
         return sha256_file(file_path)
     except FileNotFoundError as error:
         raise FileNotFoundError(
-            f"{description} disappeared before formal report writing: "
-            f"{file_path}"
+            f"{description} disappeared before formal report writing: {file_path}"
         ) from error
     except OSError as error:
-        raise OSError(
-            f"Could not hash {description}: {file_path}"
-        ) from error
+        raise OSError(f"Could not hash {description}: {file_path}") from error
 
 
 def _optional_source_git(
@@ -237,9 +216,7 @@ def _load_recorded_run(
     source_name = str(path)
 
     if not path.is_file():
-        raise FileNotFoundError(
-            f"Run metadata file does not exist: {path}"
-        )
+        raise FileNotFoundError(f"Run metadata file does not exist: {path}")
 
     metadata_sha256 = _source_file_sha256(
         path,
@@ -250,34 +227,28 @@ def _load_recorded_run(
         with path.open(encoding="utf-8") as metadata_file:
             document = json.load(metadata_file)
     except json.JSONDecodeError as error:
-        raise ValueError(
-            f"Run metadata is not valid JSON: {path}"
-        ) from error
+        raise ValueError(f"Run metadata is not valid JSON: {path}") from error
 
     if not isinstance(document, Mapping):
-        raise ValueError(
-            f"Run metadata must contain one JSON object: {path}"
-        )
+        raise ValueError(f"Run metadata must contain one JSON object: {path}")
 
-    if _source_file_sha256(
-        path,
-        description="Source-run metadata file",
-    ) != metadata_sha256:
-        raise RuntimeError(
-            f"Source-run metadata changed while being read: {path}"
+    if (
+        _source_file_sha256(
+            path,
+            description="Source-run metadata file",
         )
+        != metadata_sha256
+    ):
+        raise RuntimeError(f"Source-run metadata changed while being read: {path}")
 
     if document.get("metadata_schema_version") != 1:
-        raise ValueError(
-            f"{source_name} has an unsupported metadata schema version"
-        )
+        raise ValueError(f"{source_name} has an unsupported metadata schema version")
 
     status = _required_text(document, "status", source_name)
 
     if status != "completed":
         raise ValueError(
-            f"{source_name} is not a completed recorded-video run; "
-            f"status is {status!r}"
+            f"{source_name} is not a completed recorded-video run; status is {status!r}"
         )
 
     timestamps = _required_mapping(
@@ -293,9 +264,7 @@ def _load_recorded_run(
     )
 
     if processing_summary.get("processed_full_clip") is not True:
-        raise ValueError(
-            f"{source_name} did not process the complete recorded clip"
-        )
+        raise ValueError(f"{source_name} did not process the complete recorded clip")
 
     processed_frames = _positive_integer(
         processing_summary.get("processed_frames"),
@@ -306,8 +275,7 @@ def _load_recorded_run(
 
     if method != expected_method:
         raise ValueError(
-            f"{source_name} describes method {method!r}; expected "
-            f"{expected_method!r}"
+            f"{source_name} describes method {method!r}; expected {expected_method!r}"
         )
 
     split = _required_text(document, "split", source_name)
@@ -370,15 +338,12 @@ def _load_recorded_run(
         else ("frame_csv", "repetition_csv", "metadata_json")
     )
     missing_output_names = [
-        name
-        for name in required_output_names
-        if name not in raw_outputs
+        name for name in required_output_names if name not in raw_outputs
     ]
 
     if missing_output_names:
         raise ValueError(
-            f"{source_name} is missing required output paths: "
-            f"{missing_output_names}"
+            f"{source_name} is missing required output paths: {missing_output_names}"
         )
 
     output_paths: dict[str, Path] = {}
@@ -389,13 +354,9 @@ def _load_recorded_run(
             or not isinstance(raw_output_path, str)
             or not raw_output_path.strip()
         ):
-            raise ValueError(
-                f"{source_name} contains an invalid output path entry"
-            )
+            raise ValueError(f"{source_name} contains an invalid output path entry")
 
-        resolved_path = _resolve_metadata_output_path(
-            raw_output_path.strip()
-        )
+        resolved_path = _resolve_metadata_output_path(raw_output_path.strip())
 
         if not resolved_path.is_file():
             raise FileNotFoundError(
@@ -407,27 +368,18 @@ def _load_recorded_run(
 
     if output_paths["metadata_json"] != path:
         raise ValueError(
-            f"{source_name} does not identify itself through "
-            "outputs['metadata_json']"
+            f"{source_name} does not identify itself through outputs['metadata_json']"
         )
 
     consumed_output_name = (
-        "frame_csv"
-        if expected_method == "baseline"
-        else "repetition_csv"
+        "frame_csv" if expected_method == "baseline" else "repetition_csv"
     )
     consumed_output_sha256 = _source_file_sha256(
         output_paths[consumed_output_name],
-        description=(
-            f"{expected_method.title()} consumed output CSV"
-        ),
+        description=(f"{expected_method.title()} consumed output CSV"),
     )
-    source_git_commit, source_git_dirty = (
-        _optional_source_git(document)
-    )
-    resolved_configuration_sha256 = (
-        _optional_resolved_configuration_sha256(document)
-    )
+    source_git_commit, source_git_dirty = _optional_source_git(document)
+    resolved_configuration_sha256 = _optional_resolved_configuration_sha256(document)
 
     return _RecordedRun(
         metadata_path=path,
@@ -447,9 +399,7 @@ def _load_recorded_run(
         consumed_output_sha256=consumed_output_sha256,
         source_git_commit=source_git_commit,
         source_git_dirty=source_git_dirty,
-        resolved_configuration_sha256=(
-            resolved_configuration_sha256
-        ),
+        resolved_configuration_sha256=(resolved_configuration_sha256),
     )
 
 
@@ -461,9 +411,7 @@ def _load_recorded_runs(
 ) -> dict[str, _RecordedRun]:
     """Load exactly one source run per unique clip for one method."""
     if not metadata_paths:
-        raise ValueError(
-            f"At least one {expected_method} metadata path is required"
-        )
+        raise ValueError(f"At least one {expected_method} metadata path is required")
 
     runs_by_clip: dict[str, _RecordedRun] = {}
 
@@ -494,18 +442,13 @@ def _verify_source_files_unchanged(run: _RecordedRun) -> None:
 
     if current_metadata_sha256 != run.metadata_sha256:
         raise RuntimeError(
-            "Source-run metadata changed after validation: "
-            f"{run.metadata_path}"
+            f"Source-run metadata changed after validation: {run.metadata_path}"
         )
 
-    consumed_output_path = run.output_paths[
-        run.consumed_output_name
-    ]
+    consumed_output_path = run.output_paths[run.consumed_output_name]
     current_output_sha256 = _source_file_sha256(
         consumed_output_path,
-        description=(
-            f"{run.method.title()} consumed output CSV"
-        ),
+        description=(f"{run.method.title()} consumed output CSV"),
     )
 
     if current_output_sha256 != run.consumed_output_sha256:
@@ -523,9 +466,7 @@ def _source_identity_path(
     resolved_path = file_path.resolve()
 
     try:
-        return resolved_path.relative_to(
-            repository_root.resolve()
-        ).as_posix()
+        return resolved_path.relative_to(repository_root.resolve()).as_posix()
     except ValueError:
         return resolved_path.name
 
@@ -537,9 +478,7 @@ def _build_source_run_provenance(
 ) -> SourceRunProvenance:
     """Create privacy-safe, hash-bound provenance for one consumed run."""
     _verify_source_files_unchanged(run)
-    consumed_output_path = run.output_paths[
-        run.consumed_output_name
-    ]
+    consumed_output_path = run.output_paths[run.consumed_output_name]
     return SourceRunProvenance(
         clip_id=run.clip_id,
         method=run.method,
@@ -559,9 +498,7 @@ def _build_source_run_provenance(
         source_input_video_sha256=run.input_sha256,
         source_git_commit=run.source_git_commit,
         source_git_dirty=run.source_git_dirty,
-        resolved_configuration_sha256=(
-            run.resolved_configuration_sha256
-        ),
+        resolved_configuration_sha256=(run.resolved_configuration_sha256),
     )
 
 
@@ -582,12 +519,8 @@ def _validate_complete_split_coverage(
     split: str,
 ) -> None:
     """Require a method's source runs to equal the selected manifest split."""
-    missing_clip_ids = sorted(
-        selected_manifest_clip_ids - supplied_clip_ids
-    )
-    extra_clip_ids = sorted(
-        supplied_clip_ids - selected_manifest_clip_ids
-    )
+    missing_clip_ids = sorted(selected_manifest_clip_ids - supplied_clip_ids)
+    extra_clip_ids = sorted(supplied_clip_ids - selected_manifest_clip_ids)
 
     if missing_clip_ids or extra_clip_ids:
         raise ValueError(
@@ -609,15 +542,8 @@ def _validate_annotation_presence(
     evaluable attempt or an ambiguous fragment; row semantics were validated
     earlier by ``dataset_validation``.
     """
-    annotated_clip_ids = set(
-        annotations["clip_id"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
-    missing_clip_ids = sorted(
-        selected_manifest_clip_ids - annotated_clip_ids
-    )
+    annotated_clip_ids = set(annotations["clip_id"].fillna("").astype(str).str.strip())
+    missing_clip_ids = sorted(selected_manifest_clip_ids - annotated_clip_ids)
 
     if missing_clip_ids:
         raise ValueError(
@@ -680,9 +606,7 @@ def _validate_manifest_run_metadata(
 
 
 def _validate_loaded_events(
-    events: Sequence[
-        BaselineRepetitionEvent | EnhancedRepetitionEvent
-    ],
+    events: Sequence[BaselineRepetitionEvent | EnhancedRepetitionEvent],
     run: _RecordedRun,
 ) -> None:
     """Require every loaded event to retain its source-run identity."""
@@ -710,9 +634,7 @@ def run_formal_evaluation(
     split: str,
     output_directory: str | Path,
     evaluation_run_id: str,
-    tolerance_seconds: float = (
-        DEFAULT_EVENT_TOLERANCE_SECONDS
-    ),
+    tolerance_seconds: float = (DEFAULT_EVENT_TOLERANCE_SECONDS),
     overwrite: bool = False,
     allow_final_test: bool = False,
 ) -> FormalEvaluationOutputPaths:
@@ -734,9 +656,7 @@ def run_formal_evaluation(
     selected_split = str(split).strip()
 
     if selected_split not in ALLOWED_SPLITS:
-        raise ValueError(
-            f"Evaluation split must be one of {sorted(ALLOWED_SPLITS)}"
-        )
+        raise ValueError(f"Evaluation split must be one of {sorted(ALLOWED_SPLITS)}")
 
     tolerance = _positive_finite_number(
         tolerance_seconds,
@@ -767,14 +687,10 @@ def run_formal_evaluation(
     baseline_clip_ids = set(baseline_runs)
     enhanced_clip_ids = set(enhanced_runs)
 
-    manifest_clip_ids = (
-        manifest["clip_id"].astype(str).str.strip()
-    )
+    manifest_clip_ids = manifest["clip_id"].astype(str).str.strip()
     manifest_splits = manifest["split"].astype(str).str.strip()
     selected_manifest_clip_ids = set(
-        manifest_clip_ids.loc[
-            manifest_splits.eq(selected_split)
-        ]
+        manifest_clip_ids.loc[manifest_splits.eq(selected_split)]
     )
     _validate_complete_split_coverage(
         baseline_clip_ids,
@@ -835,10 +751,7 @@ def run_formal_evaluation(
             enhanced_run=enhanced_runs[clip_id],
         )
 
-        if (
-            baseline_runs[clip_id].input_sha256
-            != enhanced_runs[clip_id].input_sha256
-        ):
+        if baseline_runs[clip_id].input_sha256 != enhanced_runs[clip_id].input_sha256:
             raise ValueError(
                 f"Clip {clip_id!r} baseline and enhanced input "
                 "SHA-256 hashes do not match"
@@ -852,9 +765,7 @@ def run_formal_evaluation(
     )
     ground_truth_by_clip = {
         clip_id: tuple(
-            event
-            for event in ground_truth_events
-            if event.clip_id == clip_id
+            event for event in ground_truth_events if event.clip_id == clip_id
         )
         for clip_id in baseline_clip_ids
     }
@@ -980,8 +891,7 @@ def parse_arguments(
         type=float,
         default=DEFAULT_EVENT_TOLERANCE_SECONDS,
         help=(
-            "Positive event-matching tolerance. The default 0.5 seconds "
-            "is provisional."
+            "Positive event-matching tolerance. The default 0.5 seconds is provisional."
         ),
     )
     parser.add_argument(

@@ -41,10 +41,7 @@ class ExponentialMovingAverage:
         if self._value is None:
             self._value = observation
         else:
-            self._value = (
-                self.alpha * observation
-                + (1.0 - self.alpha) * self._value
-            )
+            self._value = self.alpha * observation + (1.0 - self.alpha) * self._value
 
         return self._value
 

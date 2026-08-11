@@ -31,32 +31,20 @@ class VideoFileCapture:
         ``RuntimeError``.
         """
         if not self.video_path.exists():
-            raise FileNotFoundError(
-                f"Video file does not exist: {self.video_path}"
-            )
+            raise FileNotFoundError(f"Video file does not exist: {self.video_path}")
 
         self.cap = cv2.VideoCapture(str(self.video_path))
 
         if not self.cap.isOpened():
-            raise RuntimeError(
-                f"Could not open video: {self.video_path}"
-            )
+            raise RuntimeError(f"Could not open video: {self.video_path}")
 
-        self.source_fps = float(
-            self.cap.get(cv2.CAP_PROP_FPS)
-        )
+        self.source_fps = float(self.cap.get(cv2.CAP_PROP_FPS))
 
-        self.frame_count = int(
-            self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        )
+        self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        self.width_px = int(
-            self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        )
+        self.width_px = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 
-        self.height_px = int(
-            self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        )
+        self.height_px = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     def read(self):
         """Return the next frame, or ``None`` at end-of-stream/read failure."""
@@ -76,9 +64,7 @@ class VideoFileCapture:
         if self.cap is None:
             return None
 
-        return float(
-            self.cap.get(cv2.CAP_PROP_POS_MSEC)
-        )
+        return float(self.cap.get(cv2.CAP_PROP_POS_MSEC))
 
     def release(self) -> None:
         """Release the underlying OpenCV capture if it was created."""

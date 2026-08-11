@@ -51,9 +51,7 @@ def fake_run_metadata(**kwargs):
     return {
         "metadata_schema_version": 1,
         "status": "initialised",
-        "timestamps": {
-            "started_utc": "2026-07-30T10:00:00+00:00"
-        },
+        "timestamps": {"started_utc": "2026-07-30T10:00:00+00:00"},
         "input_video": {
             "path": str(kwargs["video_path"]),
             "sha256": "mocked",
@@ -236,25 +234,17 @@ def test_enhanced_overwrite_replaces_both_output_files(
     run_video_enhanced.main()
 
     frame_lines = frame_path.read_text(encoding="utf-8").splitlines()
-    repetition_lines = (
-        repetition_path.read_text(encoding="utf-8").splitlines()
-    )
+    repetition_lines = repetition_path.read_text(encoding="utf-8").splitlines()
 
-    metadata_path = (
-        output_dir / "clip_enhanced_metadata.json"
-    )
+    metadata_path = output_dir / "clip_enhanced_metadata.json"
 
-    assert frame_lines[0].startswith(
-        "run_id,clip_id,frame_index,"
-    )
-    assert repetition_lines[0].startswith(
-        "run_id,clip_id,rep_id,"
-    )
+    assert frame_lines[0].startswith("run_id,clip_id,frame_index,")
+    assert repetition_lines[0].startswith("run_id,clip_id,rep_id,")
     assert "stale" not in frame_path.read_text(encoding="utf-8")
     assert "stale" not in repetition_path.read_text(encoding="utf-8")
-    assert json.loads(
-        metadata_path.read_text(encoding="utf-8")
-    )["status"] == "completed"
+    assert (
+        json.loads(metadata_path.read_text(encoding="utf-8"))["status"] == "completed"
+    )
 
 
 def test_enhanced_timing_excludes_repetition_csv_write(
@@ -346,9 +336,7 @@ def test_enhanced_timing_excludes_repetition_csv_write(
     class CapturingLogger(FakeLogger):
         def __init__(self, output_path, **_kwargs):
             super().__init__()
-            self.is_repetition_logger = (
-                "enhanced_repetitions" in output_path
-            )
+            self.is_repetition_logger = "enhanced_repetitions" in output_path
 
         def write_row(self, row):
             if self.is_repetition_logger:
@@ -448,11 +436,9 @@ def test_enhanced_timing_excludes_repetition_csv_write(
     assert repetition_rows[0]["predicted_class"] == "correct"
 
     metadata = json.loads(
-        (
-            tmp_path
-            / "outputs"
-            / "clip_enhanced_metadata.json"
-        ).read_text(encoding="utf-8")
+        (tmp_path / "outputs" / "clip_enhanced_metadata.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert metadata["processing_summary"][
         "measured_processing_seconds"
@@ -540,11 +526,9 @@ def test_enhanced_runner_closes_both_loggers_after_processing_failure(
     assert all(logger.closed for logger in loggers)
     assert windows_destroyed == [True]
     failed_metadata = json.loads(
-        (
-            tmp_path
-            / "outputs"
-            / "clip_enhanced_metadata.json"
-        ).read_text(encoding="utf-8")
+        (tmp_path / "outputs" / "clip_enhanced_metadata.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert failed_metadata["status"] == "failed"
     assert "completed_utc" not in failed_metadata["timestamps"]
@@ -599,11 +583,7 @@ def test_baseline_runner_releases_capture_when_pose_setup_fails(
     assert captures[0].released
     assert windows_destroyed == [True]
     failed_metadata = json.loads(
-        (
-            tmp_path
-            / "logs"
-            / "clip_baseline_metadata.json"
-        ).read_text(encoding="utf-8")
+        (tmp_path / "logs" / "clip_baseline_metadata.json").read_text(encoding="utf-8")
     )
     assert failed_metadata["status"] == "failed"
     assert "completed_utc" not in failed_metadata["timestamps"]

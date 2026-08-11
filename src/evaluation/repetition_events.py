@@ -97,9 +97,7 @@ class GroundTruthRepetitionEvent:
     method: str = "ground_truth"
 
 
-PredictedRepetitionEvent: TypeAlias = (
-    BaselineRepetitionEvent | EnhancedRepetitionEvent
-)
+PredictedRepetitionEvent: TypeAlias = BaselineRepetitionEvent | EnhancedRepetitionEvent
 
 
 def _text_series(
@@ -107,19 +105,13 @@ def _text_series(
     column: str,
     source_name: str,
 ) -> pd.Series:
-    values = (
-        data[column]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
+    values = data[column].fillna("").astype(str).str.strip()
     empty_mask = values.eq("")
 
     if empty_mask.any():
         rows = list(data.index[empty_mask])
         raise ValueError(
-            f"{source_name} column {column!r} contains empty "
-            f"values at rows {rows}"
+            f"{source_name} column {column!r} contains empty values at rows {rows}"
         )
 
     return values
@@ -135,11 +127,7 @@ def _integer_series(
         data[column],
         errors="coerce",
     )
-    invalid_mask = (
-        numeric.isna()
-        | numeric.lt(minimum)
-        | numeric.mod(1).ne(0)
-    )
+    invalid_mask = numeric.isna() | numeric.lt(minimum) | numeric.mod(1).ne(0)
 
     if invalid_mask.any():
         rows = list(data.index[invalid_mask])
@@ -164,21 +152,13 @@ def _optional_nonnegative_number_series(
             dtype=float,
         )
 
-    text = (
-        data[column]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
+    text = data[column].fillna("").astype(str).str.strip()
     missing_mask = text.eq("")
     numeric = pd.to_numeric(
         data[column].where(~missing_mask),
         errors="coerce",
     )
-    invalid_mask = (
-        ~missing_mask
-        & (numeric.isna() | numeric.lt(0.0))
-    )
+    invalid_mask = ~missing_mask & (numeric.isna() | numeric.lt(0.0))
 
     if invalid_mask.any():
         rows = list(data.index[invalid_mask])
@@ -226,14 +206,12 @@ def _normalise_source_fps(
             fps = float(source_fps)
         except (TypeError, ValueError) as error:
             raise ValueError(
-                f"Source FPS for clip {clip_id!r} must be "
-                "a positive number"
+                f"Source FPS for clip {clip_id!r} must be a positive number"
             ) from error
 
         if fps <= 0.0:
             raise ValueError(
-                f"Source FPS for clip {clip_id!r} must be "
-                "a positive number"
+                f"Source FPS for clip {clip_id!r} must be a positive number"
             )
 
         normalised[str(clip_id).strip()] = fps
@@ -271,15 +249,11 @@ def _validate_event_identifiers(
     events: list[PredictedRepetitionEvent],
     source_name: str,
 ) -> None:
-    identifiers = [
-        (event.clip_id, event.predicted_rep_id)
-        for event in events
-    ]
+    identifiers = [(event.clip_id, event.predicted_rep_id) for event in events]
 
     if len(identifiers) != len(set(identifiers)):
         raise ValueError(
-            f"{source_name} contains duplicate "
-            "(clip_id, predicted_rep_id) identifiers"
+            f"{source_name} contains duplicate (clip_id, predicted_rep_id) identifiers"
         )
 
 
@@ -372,9 +346,7 @@ def extract_baseline_events(
             source_name,
         )
 
-    source_fps = _normalise_source_fps(
-        source_fps_by_clip
-    )
+    source_fps = _normalise_source_fps(source_fps_by_clip)
     run_ids = _text_series(
         frame_data,
         "run_id",
@@ -441,9 +413,7 @@ def extract_baseline_events(
                 f"{clip_id!r}"
             )
 
-        count_differences = rows[
-            "baseline_rep_count"
-        ].diff()
+        count_differences = rows["baseline_rep_count"].diff()
 
         if count_differences.iloc[1:].lt(0).any():
             raise ValueError(
@@ -459,9 +429,7 @@ def extract_baseline_events(
                 f"{clip_id!r}"
             )
 
-        completion_rows = rows.loc[
-            count_differences.eq(1)
-        ]
+        completion_rows = rows.loc[count_differences.eq(1)]
 
         for row_index, row in completion_rows.iterrows():
             completion_frame = int(row["frame_index"])
@@ -476,9 +444,7 @@ def extract_baseline_events(
                         _completion_timestamp(
                             row_index=row_index,
                             clip_id=clip_id,
-                            completion_frame=(
-                                completion_frame
-                            ),
+                            completion_frame=(completion_frame),
                             recorded_timestamps=timestamps,
                             row_source_fps=row_fps,
                             source_fps_by_clip=source_fps,
@@ -489,15 +455,11 @@ def extract_baseline_events(
             )
 
     _validate_event_identifiers(events, source_name)
-    completion_keys = [
-        (event.clip_id, event.completion_frame)
-        for event in events
-    ]
+    completion_keys = [(event.clip_id, event.completion_frame) for event in events]
 
     if len(completion_keys) != len(set(completion_keys)):
         raise ValueError(
-            f"{source_name} contains duplicate completion "
-            "frames within a clip"
+            f"{source_name} contains duplicate completion frames within a clip"
         )
 
     return sorted(
@@ -547,9 +509,7 @@ def extract_enhanced_events(
         ENHANCED_REQUIRED_COLUMNS,
         source_name,
     )
-    source_fps = _normalise_source_fps(
-        source_fps_by_clip
-    )
+    source_fps = _normalise_source_fps(source_fps_by_clip)
     run_ids = _text_series(
         repetition_data,
         "run_id",
@@ -600,10 +560,7 @@ def extract_enhanced_events(
         source_name,
     )
 
-    invalid_order = (
-        start_frames.gt(bottom_frames)
-        | bottom_frames.gt(end_frames)
-    )
+    invalid_order = start_frames.gt(bottom_frames) | bottom_frames.gt(end_frames)
 
     if invalid_order.any():
         rows = list(repetition_data.index[invalid_order])
@@ -622,15 +579,9 @@ def extract_enhanced_events(
             EnhancedRepetitionEvent(
                 run_id=run_ids.loc[row_index],
                 clip_id=clip_id,
-                predicted_rep_id=int(
-                    repetition_ids.loc[row_index]
-                ),
-                start_frame=int(
-                    start_frames.loc[row_index]
-                ),
-                bottom_frame=int(
-                    bottom_frames.loc[row_index]
-                ),
+                predicted_rep_id=int(repetition_ids.loc[row_index]),
+                start_frame=int(start_frames.loc[row_index]),
+                bottom_frame=int(bottom_frames.loc[row_index]),
                 completion_frame=completion_frame,
                 completion_timestamp_ms=(
                     _completion_timestamp(
@@ -642,9 +593,7 @@ def extract_enhanced_events(
                         source_fps_by_clip=source_fps,
                     )
                 ),
-                predicted_class=(
-                    predicted_classes.loc[row_index]
-                ),
+                predicted_class=(predicted_classes.loc[row_index]),
             )
         )
 
@@ -693,12 +642,7 @@ def extract_ground_truth_events(
         source_name=source_name,
         manifest_source_name=manifest_source_name,
     )
-    manifest_clip_ids = (
-        manifest["clip_id"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
+    manifest_clip_ids = manifest["clip_id"].fillna("").astype(str).str.strip()
     source_fps_by_clip = dict(
         zip(
             manifest_clip_ids,
@@ -715,31 +659,17 @@ def extract_ground_truth_events(
     )
     events = []
 
-    for row_index, row in annotations.loc[
-        evaluable
-    ].iterrows():
+    for row_index, row in annotations.loc[evaluable].iterrows():
         clip_id = str(row["clip_id"]).strip()
-        completion_frame = int(
-            row["completion_end_top_frame"]
-        )
-        source_fps = float(
-            source_fps_by_clip[clip_id]
-        )
+        completion_frame = int(row["completion_end_top_frame"])
+        source_fps = float(source_fps_by_clip[clip_id])
         events.append(
             GroundTruthRepetitionEvent(
                 clip_id=clip_id,
-                ground_truth_attempt_id=str(
-                    row["ground_truth_attempt_id"]
-                ).strip(),
+                ground_truth_attempt_id=str(row["ground_truth_attempt_id"]).strip(),
                 completion_frame=completion_frame,
-                completion_timestamp_ms=(
-                    completion_frame
-                    / source_fps
-                    * 1000.0
-                ),
-                ground_truth_class=str(
-                    row["ground_truth_class"]
-                ).strip(),
+                completion_timestamp_ms=(completion_frame / source_fps * 1000.0),
+                ground_truth_class=str(row["ground_truth_class"]).strip(),
             )
         )
 

@@ -94,24 +94,14 @@ def test_alignment_summary_reports_requested_metrics():
     )
 
     assert "Elbow-valid frames: 4 (0.800)" in summary
-    assert (
-        "Alignment-valid frames on elbow-selected side: 2 (0.400)"
-        in summary
-    )
+    assert "Alignment-valid frames on elbow-selected side: 2 (0.400)" in summary
     assert "Opposite-side rescue opportunities: 1 (0.500" in summary
     assert "Selected elbow-side change frames: 2" in summary
     assert "Direct left/right elbow-side switches: 1" in summary
     assert "- descending: frames=1" in summary
     assert "Mean repetition alignment coverage: 0.500" in summary
-    assert (
-        "Final predicted-class unscorable repetitions: 1"
-        in summary
-    )
-    assert (
-        "Alignment-evidence-unscorable repetitions "
-        "(coverage < 0.500): 1"
-        in summary
-    )
+    assert "Final predicted-class unscorable repetitions: 1" in summary
+    assert "Alignment-evidence-unscorable repetitions (coverage < 0.500): 1" in summary
     assert summary.startswith(
         "Alignment visibility development diagnostic — 2026-07-28"
     )
@@ -279,9 +269,7 @@ def test_historical_summary_dates_are_preserved():
 
 def test_alignment_summary_separates_evidence_from_final_class():
     repetitions = make_repetition_data()
-    repetitions.loc[0, "predicted_class"] = (
-        "incomplete_extension"
-    )
+    repetitions.loc[0, "predicted_class"] = "incomplete_extension"
 
     summary = build_summary(
         frame_data=make_frame_data(),
@@ -292,15 +280,8 @@ def test_alignment_summary_separates_evidence_from_final_class():
         minimum_alignment_valid_ratio=0.50,
     )
 
-    assert (
-        "Final predicted-class unscorable repetitions: 0"
-        in summary
-    )
-    assert (
-        "Alignment-evidence-unscorable repetitions "
-        "(coverage < 0.500): 1"
-        in summary
-    )
+    assert "Final predicted-class unscorable repetitions: 0" in summary
+    assert "Alignment-evidence-unscorable repetitions (coverage < 0.500): 1" in summary
 
 
 def test_alignment_summary_rejects_duplicate_repetitions():

@@ -41,28 +41,18 @@ class RepetitionFeatureAggregator:
             self.reset()
             return None
 
-        if (
-            self._window_start_frame
-            != repetition_window_start_frame
-        ):
+        if self._window_start_frame != repetition_window_start_frame:
             self.reset()
-            self._window_start_frame = (
-                repetition_window_start_frame
-            )
+            self._window_start_frame = repetition_window_start_frame
 
         if (
             frame_index >= repetition_window_start_frame
             and body_alignment_angle is not None
         ):
-            self._alignment_angles.append(
-                float(body_alignment_angle)
-            )
+            self._alignment_angles.append(float(body_alignment_angle))
 
         if completed_repetition is not None:
-            if (
-                completed_repetition.start_frame
-                != repetition_window_start_frame
-            ):
+            if completed_repetition.start_frame != repetition_window_start_frame:
                 raise ValueError(
                     "Completed repetition start frame does not match "
                     "the active aggregation window"
@@ -70,9 +60,7 @@ class RepetitionFeatureAggregator:
 
             enriched = replace(
                 completed_repetition,
-                alignment_angles=tuple(
-                    self._alignment_angles
-                ),
+                alignment_angles=tuple(self._alignment_angles),
             )
 
             # The completion frame is also the state machine's next top
@@ -81,9 +69,7 @@ class RepetitionFeatureAggregator:
             self.reset()
             self._window_start_frame = frame_index
             if body_alignment_angle is not None:
-                self._alignment_angles.append(
-                    float(body_alignment_angle)
-                )
+                self._alignment_angles.append(float(body_alignment_angle))
 
             return enriched
 

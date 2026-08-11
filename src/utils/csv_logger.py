@@ -21,17 +21,13 @@ def ensure_output_paths_available(
         return
 
     existing_paths = [
-        Path(output_path)
-        for output_path in output_paths
-        if Path(output_path).exists()
+        Path(output_path) for output_path in output_paths if Path(output_path).exists()
     ]
 
     if not existing_paths:
         return
 
-    formatted_paths = "\n".join(
-        f"- {path}" for path in existing_paths
-    )
+    formatted_paths = "\n".join(f"- {path}" for path in existing_paths)
     raise FileExistsError(
         "Output file already exists. Refusing to append or replace it:\n"
         f"{formatted_paths}\n"
@@ -52,9 +48,7 @@ def prepare_output_paths(
     paths = [Path(output_path) for output_path in output_paths]
 
     if len(paths) != len(set(paths)):
-        raise ValueError(
-            "Output paths for one run must be unique"
-        )
+        raise ValueError("Output paths for one run must be unique")
 
     ensure_output_paths_available(
         paths,
@@ -64,19 +58,12 @@ def prepare_output_paths(
     if not overwrite:
         return
 
-    non_files = [
-        path
-        for path in paths
-        if path.exists() and not path.is_file()
-    ]
+    non_files = [path for path in paths if path.exists() and not path.is_file()]
 
     if non_files:
-        formatted_paths = "\n".join(
-            f"- {path}" for path in non_files
-        )
+        formatted_paths = "\n".join(f"- {path}" for path in non_files)
         raise IsADirectoryError(
-            "Cannot overwrite non-file output paths:\n"
-            f"{formatted_paths}"
+            f"Cannot overwrite non-file output paths:\n{formatted_paths}"
         )
 
     for path in paths:
