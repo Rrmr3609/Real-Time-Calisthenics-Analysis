@@ -31,6 +31,12 @@ from evaluation.formal_evaluation import (
     EnhancedClipEvaluation,
     GroundTruthClassDetectionRecall,
 )
+from evaluation.formal_evidence_metrics import (
+    ClipEvidenceMetrics,
+    FormalEvidenceMetrics,
+    aggregate_formal_evidence,
+    unavailable_clip_evidence,
+)
 from utils.csv_logger import prepare_output_paths
 from utils.run_provenance import (
     collect_git_state,
@@ -39,10 +45,11 @@ from utils.run_provenance import (
     write_json_atomically,
 )
 
-FORMAL_EVALUATION_REPORT_SCHEMA_VERSION = 1
+FORMAL_EVALUATION_REPORT_SCHEMA_VERSION = 2
 
 PER_CLIP_COLUMNS = (
     "clip_id",
+    "source_fps",
     "ground_truth_repetition_count",
     "baseline_predicted_count",
     "baseline_signed_count_error",
@@ -65,6 +72,48 @@ PER_CLIP_COLUMNS = (
     "enhanced_matched_classification_count",
     "enhanced_classification_accuracy",
     "enhanced_classification_macro_f1",
+    "baseline_analyzed_frame_count",
+    "baseline_mean_measured_processing_time_ms",
+    "baseline_median_measured_processing_time_ms",
+    "baseline_measured_analysis_throughput_fps",
+    "baseline_pose_available_frames",
+    "baseline_pose_denominator_frames",
+    "baseline_pose_availability_rate",
+    "baseline_elbow_available_frames",
+    "baseline_elbow_denominator_frames",
+    "baseline_elbow_availability_rate",
+    "baseline_alignment_available_frames",
+    "baseline_alignment_denominator_frames",
+    "baseline_alignment_availability_rate",
+    "baseline_selected_side_available_frames",
+    "baseline_selected_side_denominator_frames",
+    "baseline_selected_side_availability_rate",
+    "baseline_instantaneous_side_change_count",
+    "enhanced_analyzed_frame_count",
+    "enhanced_mean_measured_processing_time_ms",
+    "enhanced_median_measured_processing_time_ms",
+    "enhanced_measured_analysis_throughput_fps",
+    "enhanced_pose_available_frames",
+    "enhanced_pose_denominator_frames",
+    "enhanced_pose_availability_rate",
+    "enhanced_elbow_valid_frames",
+    "enhanced_elbow_denominator_frames",
+    "enhanced_elbow_availability_rate",
+    "enhanced_alignment_valid_frames",
+    "enhanced_alignment_denominator_frames",
+    "enhanced_alignment_availability_rate",
+    "enhanced_selected_side_available_frames",
+    "enhanced_selected_side_denominator_frames",
+    "enhanced_selected_side_availability_rate",
+    "enhanced_stable_side_change_count",
+    "enhanced_predicted_unscorable_count",
+    "enhanced_predicted_unscorable_rate",
+    "enhanced_alignment_coverage_observation_count",
+    "enhanced_mean_alignment_valid_ratio",
+    "human_evaluable_attempt_count",
+    "human_alignment_evidence_adequate_count",
+    "human_alignment_evidence_inadequate_count",
+    "human_alignment_evidence_adequate_rate",
 )
 
 CLASSIFICATION_PER_CLASS_COLUMNS = (
@@ -94,6 +143,39 @@ class EvaluationClipContext:
     clip_id: str
     split: str
     source_fps: float
+    evidence_metrics: ClipEvidenceMetrics | None = None
+
+
+@dataclass(frozen=True)
+class EvaluationEvidenceProvenance:
+    """Privacy-safe identities and hashes for the exact formal evidence set."""
+
+    manifest_path: str
+    manifest_sha256: str
+    annotations_path: str
+    annotations_sha256: str
+    frozen_annotation_sha256: str
+    review_metadata_path: str
+    review_metadata_sha256: str
+    review_status: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "dataset_manifest": {
+                "path": self.manifest_path,
+                "sha256": self.manifest_sha256,
+            },
+            "repetition_annotations": {
+                "path": self.annotations_path,
+                "sha256": self.annotations_sha256,
+                "frozen_sha256": self.frozen_annotation_sha256,
+            },
+            "annotation_review": {
+                "path": self.review_metadata_path,
+                "sha256": self.review_metadata_sha256,
+                "status": self.review_status,
+            },
+        }
 
 
 @dataclass(frozen=True)
@@ -114,6 +196,8 @@ class SourceRunProvenance:
     consumed_output_name: str
     consumed_output_path: str
     consumed_output_sha256: str
+    descriptive_frame_csv_path: str
+    descriptive_frame_csv_sha256: str
     source_input_video_sha256: str
     source_git_commit: str | None
     source_git_dirty: bool | None
@@ -133,6 +217,10 @@ class SourceRunProvenance:
                 "output_name": self.consumed_output_name,
                 "path": self.consumed_output_path,
                 "sha256": self.consumed_output_sha256,
+            },
+            "descriptive_frame_csv": {
+                "path": self.descriptive_frame_csv_path,
+                "sha256": self.descriptive_frame_csv_sha256,
             },
             "source_input_video_sha256": (self.source_input_video_sha256),
             "source_git": {
@@ -179,6 +267,7 @@ class PerClipFormalMetrics:
     """Side-by-side baseline/enhanced metrics for one manifest clip."""
 
     clip_id: str
+    source_fps: float
     ground_truth_repetition_count: int
     baseline_predicted_count: int
     baseline_signed_count_error: int
@@ -201,6 +290,48 @@ class PerClipFormalMetrics:
     enhanced_matched_classification_count: int
     enhanced_classification_accuracy: float | None
     enhanced_classification_macro_f1: float | None
+    baseline_analyzed_frame_count: int
+    baseline_mean_measured_processing_time_ms: float | None
+    baseline_median_measured_processing_time_ms: float | None
+    baseline_measured_analysis_throughput_fps: float | None
+    baseline_pose_available_frames: int | None
+    baseline_pose_denominator_frames: int
+    baseline_pose_availability_rate: float | None
+    baseline_elbow_available_frames: int | None
+    baseline_elbow_denominator_frames: int
+    baseline_elbow_availability_rate: float | None
+    baseline_alignment_available_frames: int | None
+    baseline_alignment_denominator_frames: int
+    baseline_alignment_availability_rate: float | None
+    baseline_selected_side_available_frames: int | None
+    baseline_selected_side_denominator_frames: int
+    baseline_selected_side_availability_rate: float | None
+    baseline_instantaneous_side_change_count: int | None
+    enhanced_analyzed_frame_count: int
+    enhanced_mean_measured_processing_time_ms: float | None
+    enhanced_median_measured_processing_time_ms: float | None
+    enhanced_measured_analysis_throughput_fps: float | None
+    enhanced_pose_available_frames: int | None
+    enhanced_pose_denominator_frames: int
+    enhanced_pose_availability_rate: float | None
+    enhanced_elbow_valid_frames: int | None
+    enhanced_elbow_denominator_frames: int
+    enhanced_elbow_availability_rate: float | None
+    enhanced_alignment_valid_frames: int | None
+    enhanced_alignment_denominator_frames: int
+    enhanced_alignment_availability_rate: float | None
+    enhanced_selected_side_available_frames: int | None
+    enhanced_selected_side_denominator_frames: int
+    enhanced_selected_side_availability_rate: float | None
+    enhanced_stable_side_change_count: int | None
+    enhanced_predicted_unscorable_count: int
+    enhanced_predicted_unscorable_rate: float | None
+    enhanced_alignment_coverage_observation_count: int
+    enhanced_mean_alignment_valid_ratio: float | None
+    human_evaluable_attempt_count: int
+    human_alignment_evidence_adequate_count: int
+    human_alignment_evidence_inadequate_count: int
+    human_alignment_evidence_adequate_rate: float | None
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -226,6 +357,7 @@ class FormalEvaluationReport:
         GroundTruthClassDetectionRecall, ...
     ]
     per_clip_metrics: tuple[PerClipFormalMetrics, ...]
+    descriptive_evidence: FormalEvidenceMetrics
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -241,6 +373,7 @@ class FormalEvaluationReport:
                 for row in (self.enhanced_detection_recall_by_ground_truth_class)
             ],
             "per_clip_metrics": [row.to_dict() for row in self.per_clip_metrics],
+            "descriptive_evidence": self.descriptive_evidence.to_dict(),
         }
 
 
@@ -332,6 +465,14 @@ def _validated_contexts(
         if not math.isfinite(source_fps) or source_fps <= 0.0:
             raise ValueError(
                 f"Clip {context.clip_id!r} source FPS must be a positive finite number"
+            )
+
+        if context.evidence_metrics is not None and not isinstance(
+            context.evidence_metrics,
+            ClipEvidenceMetrics,
+        ):
+            raise ValueError(
+                f"Clip {context.clip_id!r} evidence must be ClipEvidenceMetrics"
             )
 
         indexed[context.clip_id] = context
@@ -726,6 +867,106 @@ def _aggregate_detection_recall_by_class(
     return tuple(rows)
 
 
+def _per_clip_evidence_fields(
+    context: EvaluationClipContext,
+) -> dict[str, object]:
+    """Flatten one clip's descriptive evidence for the per-clip CSV."""
+    evidence = context.evidence_metrics or unavailable_clip_evidence()
+    baseline = evidence.baseline_frames
+    enhanced = evidence.enhanced_frames
+    repetitions = evidence.enhanced_repetitions
+    human = evidence.human_alignment_evidence
+    return {
+        "source_fps": context.source_fps,
+        "baseline_analyzed_frame_count": baseline.analyzed_frame_count,
+        "baseline_mean_measured_processing_time_ms": (
+            baseline.mean_measured_processing_time_ms
+        ),
+        "baseline_median_measured_processing_time_ms": (
+            baseline.median_measured_processing_time_ms
+        ),
+        "baseline_measured_analysis_throughput_fps": (
+            baseline.measured_analysis_throughput_fps
+        ),
+        "baseline_pose_available_frames": (baseline.pose_availability.available_frames),
+        "baseline_pose_denominator_frames": (
+            baseline.pose_availability.denominator_frames
+        ),
+        "baseline_pose_availability_rate": baseline.pose_availability.rate,
+        "baseline_elbow_available_frames": (
+            baseline.elbow_availability.available_frames
+        ),
+        "baseline_elbow_denominator_frames": (
+            baseline.elbow_availability.denominator_frames
+        ),
+        "baseline_elbow_availability_rate": baseline.elbow_availability.rate,
+        "baseline_alignment_available_frames": (
+            baseline.alignment_availability.available_frames
+        ),
+        "baseline_alignment_denominator_frames": (
+            baseline.alignment_availability.denominator_frames
+        ),
+        "baseline_alignment_availability_rate": (baseline.alignment_availability.rate),
+        "baseline_selected_side_available_frames": (
+            baseline.selected_side_availability.available_frames
+        ),
+        "baseline_selected_side_denominator_frames": (
+            baseline.selected_side_availability.denominator_frames
+        ),
+        "baseline_selected_side_availability_rate": (
+            baseline.selected_side_availability.rate
+        ),
+        "baseline_instantaneous_side_change_count": baseline.side_change_count,
+        "enhanced_analyzed_frame_count": enhanced.analyzed_frame_count,
+        "enhanced_mean_measured_processing_time_ms": (
+            enhanced.mean_measured_processing_time_ms
+        ),
+        "enhanced_median_measured_processing_time_ms": (
+            enhanced.median_measured_processing_time_ms
+        ),
+        "enhanced_measured_analysis_throughput_fps": (
+            enhanced.measured_analysis_throughput_fps
+        ),
+        "enhanced_pose_available_frames": (enhanced.pose_availability.available_frames),
+        "enhanced_pose_denominator_frames": (
+            enhanced.pose_availability.denominator_frames
+        ),
+        "enhanced_pose_availability_rate": enhanced.pose_availability.rate,
+        "enhanced_elbow_valid_frames": (enhanced.elbow_availability.available_frames),
+        "enhanced_elbow_denominator_frames": (
+            enhanced.elbow_availability.denominator_frames
+        ),
+        "enhanced_elbow_availability_rate": enhanced.elbow_availability.rate,
+        "enhanced_alignment_valid_frames": (
+            enhanced.alignment_availability.available_frames
+        ),
+        "enhanced_alignment_denominator_frames": (
+            enhanced.alignment_availability.denominator_frames
+        ),
+        "enhanced_alignment_availability_rate": (enhanced.alignment_availability.rate),
+        "enhanced_selected_side_available_frames": (
+            enhanced.selected_side_availability.available_frames
+        ),
+        "enhanced_selected_side_denominator_frames": (
+            enhanced.selected_side_availability.denominator_frames
+        ),
+        "enhanced_selected_side_availability_rate": (
+            enhanced.selected_side_availability.rate
+        ),
+        "enhanced_stable_side_change_count": enhanced.side_change_count,
+        "enhanced_predicted_unscorable_count": (repetitions.predicted_unscorable_count),
+        "enhanced_predicted_unscorable_rate": (repetitions.predicted_unscorable_rate),
+        "enhanced_alignment_coverage_observation_count": (
+            repetitions.alignment_coverage_observation_count
+        ),
+        "enhanced_mean_alignment_valid_ratio": (repetitions.mean_alignment_valid_ratio),
+        "human_evaluable_attempt_count": human.evaluable_attempt_count,
+        "human_alignment_evidence_adequate_count": human.adequate_attempt_count,
+        "human_alignment_evidence_inadequate_count": human.inadequate_attempt_count,
+        "human_alignment_evidence_adequate_rate": human.adequate_attempt_rate,
+    }
+
+
 def aggregate_formal_evaluation(
     *,
     baseline_results: Sequence[DetectionSummary],
@@ -831,6 +1072,7 @@ def aggregate_formal_evaluation(
     per_clip_rows = tuple(
         PerClipFormalMetrics(
             clip_id=clip_id,
+            **_per_clip_evidence_fields(contexts_by_clip[clip_id]),
             ground_truth_repetition_count=(
                 baseline_by_clip[clip_id].ground_truth_event_count
             ),
@@ -885,6 +1127,13 @@ def aggregate_formal_evaluation(
         enhanced_classification=pooled_classification,
         enhanced_detection_recall_by_ground_truth_class=(pooled_detection_recall),
         per_clip_metrics=per_clip_rows,
+        descriptive_evidence=aggregate_formal_evidence(
+            tuple(
+                contexts_by_clip[clip_id].evidence_metrics
+                or unavailable_clip_evidence()
+                for clip_id in ordered_clip_ids
+            )
+        ),
     )
 
 
@@ -1052,7 +1301,7 @@ def _metadata_path(
     try:
         return resolved.relative_to(repository_root.resolve()).as_posix()
     except ValueError:
-        return str(resolved)
+        return resolved.name
 
 
 def _ordered_source_run_metadata(
@@ -1087,6 +1336,7 @@ def _ordered_source_run_metadata(
         for source_path in (
             record.source_metadata_path,
             record.consumed_output_path,
+            record.descriptive_frame_csv_path,
         ):
             if (
                 not isinstance(source_path, str)
@@ -1127,6 +1377,46 @@ def _ordered_source_run_metadata(
     }
 
 
+def _evidence_metadata(
+    evidence: EvaluationEvidenceProvenance,
+) -> dict[str, object]:
+    """Validate privacy-safe immutable evidence provenance for publication."""
+    if not isinstance(evidence, EvaluationEvidenceProvenance):
+        raise ValueError(
+            "Evidence provenance must be an EvaluationEvidenceProvenance record"
+        )
+    for source_path in (
+        evidence.manifest_path,
+        evidence.annotations_path,
+        evidence.review_metadata_path,
+    ):
+        if (
+            not isinstance(source_path, str)
+            or not source_path.strip()
+            or Path(source_path).is_absolute()
+        ):
+            raise ValueError(
+                "Formal evidence paths must be privacy-safe relative identifiers"
+            )
+    for hash_value in (
+        evidence.manifest_sha256,
+        evidence.annotations_sha256,
+        evidence.frozen_annotation_sha256,
+        evidence.review_metadata_sha256,
+    ):
+        if (
+            not isinstance(hash_value, str)
+            or len(hash_value) != 64
+            or any(character not in "0123456789abcdef" for character in hash_value)
+        ):
+            raise ValueError("Formal evidence hashes must be lowercase SHA-256 values")
+    if evidence.review_status != "complete":
+        raise ValueError("Formal annotation review status must be 'complete'")
+    if evidence.annotations_sha256 != evidence.frozen_annotation_sha256:
+        raise ValueError("Annotation SHA-256 does not match the frozen review hash")
+    return evidence.to_dict()
+
+
 def _base_evaluation_metadata(
     report: FormalEvaluationReport,
     output_paths: FormalEvaluationOutputPaths,
@@ -1135,12 +1425,13 @@ def _base_evaluation_metadata(
     repository_root: Path,
     started_utc: str,
     source_runs: Mapping[str, Sequence[Mapping[str, object]]],
+    evidence: Mapping[str, object],
     software_versions: Mapping[str, Any] | None,
     git_state: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     """Build non-metric evaluation metadata in its initial running state."""
     return {
-        "metadata_schema_version": 1,
+        "metadata_schema_version": 2,
         "status": "running",
         "evaluation_run_id": run_id,
         "report_schema_version": report.report_schema_version,
@@ -1152,6 +1443,7 @@ def _base_evaluation_metadata(
             method: [dict(record) for record in records]
             for method, records in source_runs.items()
         },
+        "formal_evidence": dict(evidence),
         "outputs": {
             name: _metadata_path(path, repository_root)
             for name, path in output_paths.named_paths().items()
@@ -1177,10 +1469,12 @@ def write_formal_evaluation_report(
     run_id: str,
     repository_root: str | Path,
     source_run_provenance: Sequence[SourceRunProvenance],
+    evidence_provenance: EvaluationEvidenceProvenance,
     overwrite: bool = False,
     software_versions: Mapping[str, Any] | None = None,
     git_state: Mapping[str, Any] | None = None,
     timestamp_factory: Callable[[], str] = utc_timestamp,
+    pre_publication_validation: Callable[[], None] | None = None,
 ) -> FormalEvaluationOutputPaths:
     """Write deterministic metrics plus separate evaluation provenance.
 
@@ -1199,6 +1493,7 @@ def write_formal_evaluation_report(
         report,
         source_run_provenance,
     )
+    evidence = _evidence_metadata(evidence_provenance)
 
     output_paths = formal_evaluation_output_paths(
         output_directory,
@@ -1219,6 +1514,7 @@ def write_formal_evaluation_report(
         repository_root=repository,
         started_utc=started_utc,
         source_runs=source_runs,
+        evidence=evidence,
         software_versions=software_versions,
         git_state=git_state,
     )
@@ -1239,6 +1535,9 @@ def write_formal_evaluation_report(
             output_paths,
             staged_paths,
         )
+
+        if pre_publication_validation is not None:
+            pre_publication_validation()
 
         for final_path in metric_paths:
             os.replace(staged_paths[final_path], final_path)

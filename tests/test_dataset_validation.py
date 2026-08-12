@@ -19,6 +19,7 @@ def make_manifest():
                 "clip_id": "fictional_clip",
                 "split": "development",
                 "video_path": ("data/raw/fictional/fictional_clip.mp4"),
+                "video_sha256": "a" * 64,
                 "participant_id": "P_FICTIONAL",
                 "camera_view": "side",
                 "source_fps": 30.0,
@@ -89,6 +90,14 @@ def test_manifest_rejects_infinite_source_fps():
     manifest.loc[0, "source_fps"] = float("inf")
 
     with pytest.raises(ValueError, match="positive numbers"):
+        validate_dataset_manifest(manifest)
+
+
+def test_manifest_rejects_invalid_video_sha256():
+    manifest = make_manifest()
+    manifest.loc[0, "video_sha256"] = "not-a-sha256"
+
+    with pytest.raises(ValueError, match="64 hexadecimal"):
         validate_dataset_manifest(manifest)
 
 

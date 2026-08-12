@@ -20,6 +20,7 @@ MANIFEST_COLUMNS = (
     "clip_id",
     "split",
     "video_path",
+    "video_sha256",
     "participant_id",
     "camera_view",
     "source_fps",
@@ -225,9 +226,10 @@ def validate_dataset_manifest(
 
     Clip IDs must be unique, split values must use the configured development
     or test vocabulary, camera views must be allowed, and video paths must be
-    project-relative. FPS must be positive and finite; frame counts and pixel
-    dimensions must be positive integers. Validation does not assert that the
-    referenced video exists or change a clip's assigned split.
+    project-relative and each row carries the exact source-video SHA-256. FPS
+    must be positive and finite; frame counts and pixel dimensions must be
+    positive integers. Validation does not assert that the referenced video
+    exists or change a clip's assigned split.
     """
     require_columns(
         manifest,
@@ -244,6 +246,7 @@ def validate_dataset_manifest(
             "clip_id",
             "split",
             "video_path",
+            "video_sha256",
             "participant_id",
             "camera_view",
             "recording_condition",
@@ -288,6 +291,16 @@ def validate_dataset_manifest(
         raise ValueError(
             f"{source_name} video_path values must be "
             f"project-relative; absolute paths found at rows {rows}"
+        )
+
+    hashes = _normalised_text(manifest, "video_sha256").str.lower()
+    invalid_hash_mask = ~hashes.str.fullmatch(r"[0-9a-f]{64}")
+
+    if invalid_hash_mask.any():
+        rows = list(manifest.index[invalid_hash_mask])
+        raise ValueError(
+            f"{source_name} video_sha256 values must be 64 hexadecimal "
+            f"characters; invalid rows {rows}"
         )
 
     _positive_numeric_series(

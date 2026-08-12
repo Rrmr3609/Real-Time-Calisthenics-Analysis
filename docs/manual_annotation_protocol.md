@@ -24,6 +24,7 @@ Each manifest row represents one recorded clip.
 | `clip_id` | text | Required and unique |
 | `split` | enum | `development` or `test` |
 | `video_path` | text | Required project-relative local path |
+| `video_sha256` | text | Exact 64-character hexadecimal source-video SHA-256 |
 | `participant_id` | text | Required anonymised identifier |
 | `camera_view` | enum | `side` or `side_diagonal` |
 | `source_fps` | number | Finite and greater than zero |
@@ -38,9 +39,8 @@ support calibration and protocol refinement. Test clips must not be used to
 tune thresholds, matching tolerances, or decision rules.
 
 Formal execution requires both methods to cover every manifest clip in the
-chosen split. It also checks manifest FPS, frame count, width and height against
-both completed-run provenance records rather than silently preferring either
-source.
+chosen split. It checks manifest source path, source SHA-256, FPS, frame count,
+width and height independently against both completed-run provenance records.
 
 ## Repetition annotation schema
 

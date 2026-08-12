@@ -1,5 +1,13 @@
 # Project Change Log
 
+## 12 August 2026 - Formal evidence binding and complete reporting
+
+- Required frozen annotation review evidence and bound formal outputs to exact
+  manifest, annotation, review and per-method source-run identities/hashes.
+- Added frame-weighted processing/availability reporting, method-specific side
+  stability, enhanced unscorable/alignment coverage and independent human
+  evidence-adequacy summaries without changing scientific algorithms.
+
 ## 12 August 2026 - Annotation evidence presentation and correction safety
 
 - Moved source-only annotation controls into a bounded right-side panel so the

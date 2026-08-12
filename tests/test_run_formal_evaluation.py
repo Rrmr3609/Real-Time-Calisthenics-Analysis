@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import evaluation.formal_reporting as reporting_module
 import evaluation.run_formal_evaluation as runner_module
 from evaluation.formal_reporting import (
     formal_evaluation_output_paths,
@@ -19,6 +20,7 @@ MANIFEST_COLUMNS = (
     "clip_id",
     "split",
     "video_path",
+    "video_sha256",
     "participant_id",
     "camera_view",
     "source_fps",
@@ -128,6 +130,7 @@ def manifest_row(clip_id, split, fps):
         "clip_id": clip_id,
         "split": split,
         "video_path": f"data/raw/fictional/{clip_id}.mp4",
+        "video_sha256": "a" * 64,
         "participant_id": f"P_{clip_id.upper()}",
         "camera_view": "side",
         "source_fps": fps,
@@ -236,7 +239,7 @@ def recorded_run_metadata(
         },
         "input_video": {
             "path": f"data/raw/fictional/{clip_id}.mp4",
-            "sha256": "0" * 64,
+            "sha256": "a" * 64,
             "size_bytes": 100,
             "source_fps": source_fps,
             "frame_count": 100,
@@ -292,13 +295,30 @@ def create_run_files(root, clip_id, split, fps, predicted_class):
     )
     write_csv(
         enhanced_frame_csv,
-        ("run_id", "clip_id", "frame_index"),
         (
+            "run_id",
+            "clip_id",
+            "frame_index",
+            "processing_time_ms",
+            "pose_detected",
+            "selected_side",
+            "side_changed",
+            "elbow_feature_valid",
+            "alignment_feature_valid",
+        ),
+        tuple(
             {
                 "run_id": enhanced_run_id,
                 "clip_id": clip_id,
-                "frame_index": 0,
-            },
+                "frame_index": frame_index,
+                "processing_time_ms": 2.0,
+                "pose_detected": True,
+                "selected_side": "left",
+                "side_changed": frame_index == 0,
+                "elbow_feature_valid": True,
+                "alignment_feature_valid": frame_index % 2 == 0,
+            }
+            for frame_index in range(100)
         ),
     )
     write_csv(
@@ -313,6 +333,7 @@ def create_run_files(root, clip_id, split, fps, predicted_class):
             "completion_timestamp_ms",
             "source_fps",
             "predicted_class",
+            "alignment_valid_ratio",
         ),
         (
             {
@@ -325,6 +346,7 @@ def create_run_files(root, clip_id, split, fps, predicted_class):
                 "completion_timestamp_ms": 15 / fps * 1000.0,
                 "source_fps": fps,
                 "predicted_class": predicted_class,
+                "alignment_valid_ratio": 0.5,
             },
         ),
     )
@@ -380,6 +402,18 @@ def create_fictional_inputs(tmp_path, *, split="development"):
             for clip_id, _, ground_truth_class in clip_definitions
         ),
     )
+    write_json(
+        annotations_path.with_suffix(".review.json"),
+        {
+            "schema_version": 1,
+            "annotation_file": expected_source_identity_path(
+                annotations_path,
+                runner_module.PROJECT_ROOT,
+            ),
+            "review_status": "complete",
+            "frozen_annotation_sha256": sha256_bytes(annotations_path),
+        },
+    )
     baseline_metadata_paths = []
     enhanced_metadata_paths = []
 
@@ -404,7 +438,30 @@ def create_fictional_inputs(tmp_path, *, split="development"):
     )
 
 
-def run_inputs(inputs, *, run_id="fictional-evaluation", **overrides):
+def freeze_fixture_annotations(inputs):
+    write_json(
+        inputs.annotations_path.with_suffix(".review.json"),
+        {
+            "schema_version": 1,
+            "annotation_file": expected_source_identity_path(
+                inputs.annotations_path,
+                runner_module.PROJECT_ROOT,
+            ),
+            "review_status": "complete",
+            "frozen_annotation_sha256": sha256_bytes(inputs.annotations_path),
+        },
+    )
+
+
+def run_inputs(
+    inputs,
+    *,
+    run_id="fictional-evaluation",
+    refresh_review=True,
+    **overrides,
+):
+    if refresh_review:
+        freeze_fixture_annotations(inputs)
     arguments = {
         "manifest_path": inputs.manifest_path,
         "annotations_path": inputs.annotations_path,
@@ -550,6 +607,14 @@ def test_evaluation_metadata_binds_exact_source_runs(tmp_path):
                 ),
                 "sha256": sha256_bytes(consumed_path),
             }
+            frame_path = Path(document["outputs"]["frame_csv"])
+            assert record["descriptive_frame_csv"] == {
+                "path": expected_source_identity_path(
+                    frame_path,
+                    runner_module.PROJECT_ROOT,
+                ),
+                "sha256": sha256_bytes(frame_path),
+            }
             assert (
                 record["source_input_video_sha256"]
                 == (document["input_video"]["sha256"])
@@ -589,6 +654,7 @@ def test_repository_source_paths_are_relative_and_posix(
             for file_record in (
                 record["source_metadata_file"],
                 record["consumed_output_csv"],
+                record["descriptive_frame_csv"],
             ):
                 assert file_record["path"].startswith("runs/")
                 assert "\\" not in file_record["path"]
@@ -628,6 +694,9 @@ def test_external_source_paths_use_privacy_safe_identifiers(
         "path": baseline_csv.name,
         "sha256": sha256_bytes(baseline_csv),
     }
+    for evidence_record in metadata["formal_evidence"].values():
+        assert not Path(evidence_record["path"]).is_absolute()
+        assert str(external_root.resolve()) not in evidence_record["path"]
 
     metadata_text = json.dumps(metadata)
     assert str(external_root.resolve()) not in metadata_text
@@ -638,6 +707,7 @@ def test_external_source_paths_use_privacy_safe_identifiers(
         for file_record in (
             record["source_metadata_file"],
             record["consumed_output_csv"],
+            record["descriptive_frame_csv"],
         )
     )
 
@@ -1316,7 +1386,7 @@ def test_mismatched_input_hashes_are_rejected(tmp_path):
         lambda document: document["input_video"].update(sha256="1" * 64),
     )
 
-    with pytest.raises(ValueError, match="SHA-256 hashes do not match"):
+    with pytest.raises(ValueError, match="SHA-256 does not match the manifest"):
         run_inputs(inputs)
 
 
@@ -1328,6 +1398,230 @@ def test_cli_success_return_code_and_summary(tmp_path, capsys):
     assert "Formal evaluation completed." in captured.out
     assert "formal_evaluation_json:" in captured.out
     assert captured.err == ""
+
+
+def test_completed_review_and_exact_evidence_hashes_are_recorded(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    paths = run_inputs(inputs)
+    metadata = read_json(paths.metadata_json)
+    evidence = metadata["formal_evidence"]
+
+    assert evidence["dataset_manifest"]["sha256"] == sha256_bytes(inputs.manifest_path)
+    assert evidence["repetition_annotations"]["sha256"] == sha256_bytes(
+        inputs.annotations_path
+    )
+    assert evidence["repetition_annotations"]["frozen_sha256"] == sha256_bytes(
+        inputs.annotations_path
+    )
+    assert evidence["annotation_review"]["status"] == "complete"
+    assert evidence["annotation_review"]["sha256"] == sha256_bytes(
+        inputs.annotations_path.with_suffix(".review.json")
+    )
+    assert all(
+        not Path(record["path"]).is_absolute()
+        for record in evidence.values()
+        if "path" in record
+    )
+
+
+def test_missing_review_metadata_is_rejected(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    inputs.annotations_path.with_suffix(".review.json").unlink()
+
+    with pytest.raises(FileNotFoundError, match="review metadata does not exist"):
+        run_inputs(inputs, refresh_review=False)
+
+
+@pytest.mark.parametrize("review_status", ["not_started", "in_progress"])
+def test_incomplete_review_metadata_is_rejected(tmp_path, review_status):
+    inputs = create_fictional_inputs(tmp_path)
+    review_path = inputs.annotations_path.with_suffix(".review.json")
+    review = read_json(review_path)
+    review["review_status"] = review_status
+    write_json(review_path, review)
+
+    with pytest.raises(ValueError, match="review_status='complete'"):
+        run_inputs(inputs, refresh_review=False)
+
+
+def test_completed_review_without_frozen_hash_is_rejected(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    review_path = inputs.annotations_path.with_suffix(".review.json")
+    review = read_json(review_path)
+    review["frozen_annotation_sha256"] = None
+    write_json(review_path, review)
+
+    with pytest.raises(ValueError, match="frozen_annotation_sha256"):
+        run_inputs(inputs, refresh_review=False)
+
+
+def test_annotation_changed_after_freeze_is_rejected(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    inputs.annotations_path.write_text(
+        inputs.annotations_path.read_text(encoding="utf-8") + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="does not match its frozen review hash"):
+        run_inputs(inputs, refresh_review=False)
+
+
+def test_malformed_review_metadata_is_rejected(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    inputs.annotations_path.with_suffix(".review.json").write_text(
+        "{not-json",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="not valid JSON"):
+        run_inputs(inputs, refresh_review=False)
+
+
+@pytest.mark.parametrize(
+    ("metadata_collection", "method"),
+    [
+        ("baseline_metadata_paths", "baseline"),
+        ("enhanced_metadata_paths", "enhanced"),
+    ],
+)
+def test_each_method_wrong_manifest_video_path_is_rejected(
+    tmp_path,
+    metadata_collection,
+    method,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    metadata_path = getattr(inputs, metadata_collection)[0]
+    rewrite_metadata(
+        metadata_path,
+        lambda document: document["input_video"].update(
+            path="data/raw/fictional/wrong-source.mp4"
+        ),
+    )
+
+    with pytest.raises(ValueError, match=f"{method} input video path"):
+        run_inputs(inputs)
+
+
+@pytest.mark.parametrize(
+    ("metadata_collection", "method"),
+    [
+        ("baseline_metadata_paths", "baseline"),
+        ("enhanced_metadata_paths", "enhanced"),
+    ],
+)
+def test_each_method_wrong_manifest_video_hash_is_rejected(
+    tmp_path,
+    metadata_collection,
+    method,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    metadata_path = getattr(inputs, metadata_collection)[0]
+    rewrite_metadata(
+        metadata_path,
+        lambda document: document["input_video"].update(sha256="b" * 64),
+    )
+
+    with pytest.raises(ValueError, match=f"{method} input video SHA-256"):
+        run_inputs(inputs)
+
+
+def test_methods_agreeing_on_wrong_hash_are_rejected_against_manifest(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    for metadata_path in (
+        inputs.baseline_metadata_paths[0],
+        inputs.enhanced_metadata_paths[0],
+    ):
+        rewrite_metadata(
+            metadata_path,
+            lambda document: document["input_video"].update(sha256="b" * 64),
+        )
+
+    with pytest.raises(ValueError, match="baseline input video SHA-256"):
+        run_inputs(inputs)
+
+
+@pytest.mark.parametrize("evidence_name", ["manifest", "annotations"])
+def test_evidence_mutation_during_execution_is_rejected(
+    tmp_path,
+    monkeypatch,
+    evidence_name,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    original_aggregate = runner_module.aggregate_formal_evaluation
+
+    def mutate_after_aggregation(**kwargs):
+        report = original_aggregate(**kwargs)
+        path = (
+            inputs.manifest_path
+            if evidence_name == "manifest"
+            else inputs.annotations_path
+        )
+        path.write_text(
+            path.read_text(encoding="utf-8") + "\n",
+            encoding="utf-8",
+        )
+        return report
+
+    monkeypatch.setattr(
+        runner_module,
+        "aggregate_formal_evaluation",
+        mutate_after_aggregation,
+    )
+
+    with pytest.raises(RuntimeError, match="changed during formal evaluation"):
+        run_inputs(inputs)
+
+    paths = formal_evaluation_output_paths(
+        inputs.output_directory,
+        "fictional-evaluation",
+    )
+    assert not any(path.exists() for path in paths.all_paths())
+
+
+def test_prepublication_mutation_records_failed_lifecycle(
+    tmp_path,
+    monkeypatch,
+):
+    inputs = create_fictional_inputs(tmp_path)
+    original_write = reporting_module._write_report_temporary_files
+
+    def mutate_after_staging(*args, **kwargs):
+        original_write(*args, **kwargs)
+        inputs.manifest_path.write_text(
+            inputs.manifest_path.read_text(encoding="utf-8") + "\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(
+        reporting_module,
+        "_write_report_temporary_files",
+        mutate_after_staging,
+    )
+
+    with pytest.raises(RuntimeError, match="changed during formal evaluation"):
+        run_inputs(inputs)
+
+    paths = formal_evaluation_output_paths(
+        inputs.output_directory,
+        "fictional-evaluation",
+    )
+    metadata = read_json(paths.metadata_json)
+    assert metadata["status"] == "failed"
+    assert "completed_utc" not in metadata["timestamps"]
+    assert all(
+        not path.exists() for path in paths.all_paths() if path != paths.metadata_json
+    )
+
+
+def test_formal_report_keeps_source_fps_distinct_from_analysis_throughput(tmp_path):
+    inputs = create_fictional_inputs(tmp_path)
+    paths = run_inputs(inputs)
+    report = read_json(paths.report_json)
+    first = report["per_clip_metrics"][0]
+
+    assert first["source_fps"] == 10.0
+    assert first["baseline_measured_analysis_throughput_fps"] == 1000.0
+    assert first["enhanced_measured_analysis_throughput_fps"] == 500.0
 
 
 def test_cli_validation_failure_return_code(tmp_path, capsys):

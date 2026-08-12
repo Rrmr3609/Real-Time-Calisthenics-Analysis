@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,8 +31,15 @@ from evaluation.formal_evaluation import (
     EnhancedClipEvaluation,
     evaluate_enhanced_clip,
 )
+from evaluation.formal_evidence_metrics import (
+    ClipEvidenceMetrics,
+    human_alignment_evidence_metrics,
+    load_enhanced_repetition_evidence_metrics,
+    load_frame_evidence_metrics,
+)
 from evaluation.formal_reporting import (
     EvaluationClipContext,
+    EvaluationEvidenceProvenance,
     FormalEvaluationOutputPaths,
     SourceRunProvenance,
     aggregate_formal_evaluation,
@@ -68,14 +76,26 @@ class _RecordedRun:
     width_px: int
     height_px: int
     processed_frames: int
+    input_path: str
     input_sha256: str
     output_paths: Mapping[str, Path]
     metadata_sha256: str
     consumed_output_name: str
     consumed_output_sha256: str
+    output_sha256s: Mapping[str, str]
     source_git_commit: str | None
     source_git_dirty: bool | None
     resolved_configuration_sha256: str | None
+
+
+@dataclass(frozen=True)
+class _FormalEvidenceBinding:
+    """Initial hashes and report-safe provenance for formal input evidence."""
+
+    manifest_path: Path
+    annotations_path: Path
+    review_metadata_path: Path
+    provenance: EvaluationEvidenceProvenance
 
 
 def _required_mapping(
@@ -293,6 +313,11 @@ def _load_recorded_run(
         "input_video",
         source_name,
     )
+    input_path = _required_text(
+        input_video,
+        "path",
+        source_name,
+    )
     input_sha256 = _required_text(
         input_video,
         "sha256",
@@ -378,6 +403,14 @@ def _load_recorded_run(
         output_paths[consumed_output_name],
         description=(f"{expected_method.title()} consumed output CSV"),
     )
+    output_sha256s = {
+        name: _source_file_sha256(
+            output_paths[name],
+            description=f"{expected_method.title()} {name}",
+        )
+        for name in required_output_names
+        if name != "metadata_json"
+    }
     source_git_commit, source_git_dirty = _optional_source_git(document)
     resolved_configuration_sha256 = _optional_resolved_configuration_sha256(document)
 
@@ -392,11 +425,13 @@ def _load_recorded_run(
         width_px=width_px,
         height_px=height_px,
         processed_frames=processed_frames,
+        input_path=input_path,
         input_sha256=input_sha256,
         output_paths=output_paths,
         metadata_sha256=metadata_sha256,
         consumed_output_name=consumed_output_name,
         consumed_output_sha256=consumed_output_sha256,
+        output_sha256s=output_sha256s,
         source_git_commit=source_git_commit,
         source_git_dirty=source_git_dirty,
         resolved_configuration_sha256=(resolved_configuration_sha256),
@@ -434,7 +469,7 @@ def _load_recorded_runs(
 
 
 def _verify_source_files_unchanged(run: _RecordedRun) -> None:
-    """Re-hash source metadata and its consumed CSV after validation."""
+    """Re-hash source metadata and every CSV consumed by reporting."""
     current_metadata_sha256 = _source_file_sha256(
         run.metadata_path,
         description="Source-run metadata file",
@@ -445,17 +480,17 @@ def _verify_source_files_unchanged(run: _RecordedRun) -> None:
             f"Source-run metadata changed after validation: {run.metadata_path}"
         )
 
-    consumed_output_path = run.output_paths[run.consumed_output_name]
-    current_output_sha256 = _source_file_sha256(
-        consumed_output_path,
-        description=(f"{run.method.title()} consumed output CSV"),
-    )
-
-    if current_output_sha256 != run.consumed_output_sha256:
-        raise RuntimeError(
-            f"{run.method.title()} consumed output CSV changed "
-            f"after validation: {consumed_output_path}"
+    for output_name, expected_sha256 in run.output_sha256s.items():
+        output_path = run.output_paths[output_name]
+        current_output_sha256 = _source_file_sha256(
+            output_path,
+            description=(f"{run.method.title()} {output_name}"),
         )
+        if current_output_sha256 != expected_sha256:
+            raise RuntimeError(
+                f"{run.method.title()} {output_name} changed after validation: "
+                f"{output_path}"
+            )
 
 
 def _source_identity_path(
@@ -469,6 +504,130 @@ def _source_identity_path(
         return resolved_path.relative_to(repository_root.resolve()).as_posix()
     except ValueError:
         return resolved_path.name
+
+
+def _load_formal_evidence_binding(
+    manifest_path: str | Path,
+    annotations_path: str | Path,
+    review_metadata_path: str | Path | None,
+) -> _FormalEvidenceBinding:
+    """Require a completed review and bind exact manifest/annotation bytes."""
+    manifest = Path(manifest_path).resolve()
+    annotations = Path(annotations_path).resolve()
+    review = (
+        Path(review_metadata_path).resolve()
+        if review_metadata_path is not None
+        else annotations.with_suffix(".review.json")
+    )
+    for path, description in (
+        (manifest, "Dataset manifest"),
+        (annotations, "Repetition annotation CSV"),
+        (review, "Annotation review metadata"),
+    ):
+        if not path.is_file():
+            raise FileNotFoundError(f"{description} does not exist: {path}")
+    manifest_sha256 = _source_file_sha256(
+        manifest,
+        description="Dataset manifest",
+    )
+    annotations_sha256 = _source_file_sha256(
+        annotations,
+        description="Repetition annotation CSV",
+    )
+    review_sha256 = _source_file_sha256(
+        review,
+        description="Annotation review metadata",
+    )
+    try:
+        document = json.loads(review.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"Annotation review metadata is not valid JSON: {review}"
+        ) from error
+    if not isinstance(document, Mapping):
+        raise ValueError("Annotation review metadata must contain one JSON object")
+    if document.get("schema_version") != 1:
+        raise ValueError("Annotation review metadata has an unsupported schema")
+    expected_annotation_identity = _source_identity_path(annotations, PROJECT_ROOT)
+    if document.get("annotation_file") != expected_annotation_identity:
+        raise ValueError(
+            "Annotation review metadata identifies a different annotation CSV"
+        )
+    review_status = document.get("review_status")
+    if review_status != "complete":
+        raise ValueError(
+            "Formal evaluation requires annotation review_status='complete'; "
+            f"found {review_status!r}"
+        )
+    frozen_hash = document.get("frozen_annotation_sha256")
+    if (
+        not isinstance(frozen_hash, str)
+        or len(frozen_hash) != 64
+        or any(character not in "0123456789abcdef" for character in frozen_hash)
+    ):
+        raise ValueError(
+            "Completed annotation review metadata requires a lowercase "
+            "frozen_annotation_sha256"
+        )
+    if annotations_sha256 != frozen_hash:
+        raise ValueError(
+            "Annotation CSV SHA-256 does not match its frozen review hash; "
+            "repeat human review and finalisation before formal evaluation"
+        )
+    if (
+        _source_file_sha256(
+            review,
+            description="Annotation review metadata",
+        )
+        != review_sha256
+    ):
+        raise RuntimeError("Annotation review metadata changed while being read")
+    return _FormalEvidenceBinding(
+        manifest_path=manifest,
+        annotations_path=annotations,
+        review_metadata_path=review,
+        provenance=EvaluationEvidenceProvenance(
+            manifest_path=_source_identity_path(manifest, PROJECT_ROOT),
+            manifest_sha256=manifest_sha256,
+            annotations_path=_source_identity_path(annotations, PROJECT_ROOT),
+            annotations_sha256=annotations_sha256,
+            frozen_annotation_sha256=frozen_hash,
+            review_metadata_path=_source_identity_path(review, PROJECT_ROOT),
+            review_metadata_sha256=review_sha256,
+            review_status="complete",
+        ),
+    )
+
+
+def _verify_formal_evidence_unchanged(binding: _FormalEvidenceBinding) -> None:
+    """Reject evidence mutation between initial validation and publication."""
+    checks = (
+        (
+            binding.manifest_path,
+            binding.provenance.manifest_sha256,
+            "Dataset manifest",
+        ),
+        (
+            binding.annotations_path,
+            binding.provenance.annotations_sha256,
+            "Repetition annotation CSV",
+        ),
+        (
+            binding.review_metadata_path,
+            binding.provenance.review_metadata_sha256,
+            "Annotation review metadata",
+        ),
+    )
+    for path, expected_hash, description in checks:
+        if _source_file_sha256(path, description=description) != expected_hash:
+            raise RuntimeError(f"{description} changed during formal evaluation")
+
+
+def _canonical_project_path(raw_path: str) -> str:
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    return os.path.normcase(str(path.resolve()))
 
 
 def _build_source_run_provenance(
@@ -495,6 +654,11 @@ def _build_source_run_provenance(
             repository_root,
         ),
         consumed_output_sha256=run.consumed_output_sha256,
+        descriptive_frame_csv_path=_source_identity_path(
+            run.output_paths["frame_csv"],
+            repository_root,
+        ),
+        descriptive_frame_csv_sha256=run.output_sha256s["frame_csv"],
         source_input_video_sha256=run.input_sha256,
         source_git_commit=run.source_git_commit,
         source_git_dirty=run.source_git_dirty,
@@ -560,10 +724,12 @@ def _validate_manifest_run_metadata(
     manifest_frame_count: int,
     manifest_width_px: int,
     manifest_height_px: int,
+    manifest_video_path: str,
+    manifest_video_sha256: str,
     baseline_run: _RecordedRun,
     enhanced_run: _RecordedRun,
 ) -> None:
-    """Bind manifest FPS, frame count and resolution to both source runs."""
+    """Bind each method independently to the manifest source and metadata."""
     if not (
         _source_fps_matches(manifest_fps, baseline_run.source_fps)
         and _source_fps_matches(
@@ -583,6 +749,26 @@ def _validate_manifest_run_metadata(
         )
 
     for run in (baseline_run, enhanced_run):
+        if run.clip_id != clip_id:
+            raise ValueError(
+                f"Clip {clip_id!r} {run.method} metadata identifies "
+                f"clip {run.clip_id!r}"
+            )
+
+        if _canonical_project_path(run.input_path) != _canonical_project_path(
+            manifest_video_path
+        ):
+            raise ValueError(
+                f"Clip {clip_id!r} {run.method} input video path does not "
+                "match the manifest video_path"
+            )
+
+        if run.input_sha256 != manifest_video_sha256.lower():
+            raise ValueError(
+                f"Clip {clip_id!r} {run.method} input video SHA-256 does not "
+                "match the manifest video_sha256"
+            )
+
         if run.frame_count != manifest_frame_count:
             raise ValueError(
                 f"Clip {clip_id!r} {run.method} frame count "
@@ -634,6 +820,7 @@ def run_formal_evaluation(
     split: str,
     output_directory: str | Path,
     evaluation_run_id: str,
+    review_metadata_path: str | Path | None = None,
     tolerance_seconds: float = (DEFAULT_EVENT_TOLERANCE_SECONDS),
     overwrite: bool = False,
     allow_final_test: bool = False,
@@ -670,9 +857,14 @@ def run_formal_evaluation(
             "setting allow_final_test=True."
         )
 
+    evidence_binding = _load_formal_evidence_binding(
+        manifest_path,
+        annotations_path,
+        review_metadata_path,
+    )
     manifest, annotations = load_and_validate_evaluation_data(
-        Path(manifest_path),
-        Path(annotations_path),
+        evidence_binding.manifest_path,
+        evidence_binding.annotations_path,
     )
     baseline_runs = _load_recorded_runs(
         baseline_metadata_paths,
@@ -738,6 +930,20 @@ def run_formal_evaluation(
             manifest["height_px"],
         )
     }
+    video_path_by_clip = {
+        clip_id: str(video_path).strip()
+        for clip_id, video_path in zip(
+            manifest_clip_ids,
+            manifest["video_path"],
+        )
+    }
+    video_sha256_by_clip = {
+        clip_id: str(video_sha256).strip().lower()
+        for clip_id, video_sha256 in zip(
+            manifest_clip_ids,
+            manifest["video_sha256"],
+        )
+    }
 
     for clip_id in sorted(baseline_clip_ids):
         manifest_fps = source_fps_by_clip[clip_id]
@@ -747,6 +953,8 @@ def run_formal_evaluation(
             manifest_frame_count=frame_count_by_clip[clip_id],
             manifest_width_px=width_by_clip[clip_id],
             manifest_height_px=height_by_clip[clip_id],
+            manifest_video_path=video_path_by_clip[clip_id],
+            manifest_video_sha256=video_sha256_by_clip[clip_id],
             baseline_run=baseline_runs[clip_id],
             enhanced_run=enhanced_runs[clip_id],
         )
@@ -815,6 +1023,31 @@ def run_formal_evaluation(
                 clip_id=clip_id,
                 split=selected_split,
                 source_fps=source_fps,
+                evidence_metrics=ClipEvidenceMetrics(
+                    baseline_frames=load_frame_evidence_metrics(
+                        baseline_run.output_paths["frame_csv"],
+                        method="baseline",
+                        expected_run_id=baseline_run.run_id,
+                        expected_clip_id=clip_id,
+                        expected_frame_count=baseline_run.frame_count,
+                    ),
+                    enhanced_frames=load_frame_evidence_metrics(
+                        enhanced_run.output_paths["frame_csv"],
+                        method="enhanced",
+                        expected_run_id=enhanced_run.run_id,
+                        expected_clip_id=clip_id,
+                        expected_frame_count=enhanced_run.frame_count,
+                    ),
+                    enhanced_repetitions=(
+                        load_enhanced_repetition_evidence_metrics(
+                            enhanced_run.output_paths["repetition_csv"]
+                        )
+                    ),
+                    human_alignment_evidence=human_alignment_evidence_metrics(
+                        annotations,
+                        clip_id=clip_id,
+                    ),
+                ),
             )
         )
 
@@ -838,12 +1071,17 @@ def run_formal_evaluation(
         )
         for clip_id in sorted(enhanced_runs)
     )
+    _verify_formal_evidence_unchanged(evidence_binding)
     return write_formal_evaluation_report(
         report,
         output_directory=output_directory,
         run_id=evaluation_run_id,
         repository_root=PROJECT_ROOT,
         source_run_provenance=source_run_provenance,
+        evidence_provenance=evidence_binding.provenance,
+        pre_publication_validation=lambda: _verify_formal_evidence_unchanged(
+            evidence_binding
+        ),
         overwrite=overwrite,
     )
 
@@ -867,6 +1105,13 @@ def parse_arguments(
         "--annotations",
         required=True,
         help="Validated manual repetition annotations CSV.",
+    )
+    parser.add_argument(
+        "--review-metadata",
+        help=(
+            "Completed annotation review JSON. Defaults to the annotation "
+            "CSV path with suffix .review.json."
+        ),
     )
     parser.add_argument(
         "--baseline-metadata",
@@ -928,6 +1173,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         output_paths = run_formal_evaluation(
             manifest_path=args.manifest,
             annotations_path=args.annotations,
+            review_metadata_path=args.review_metadata,
             baseline_metadata_paths=args.baseline_metadata,
             enhanced_metadata_paths=args.enhanced_metadata,
             split=args.split,
@@ -937,7 +1183,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             overwrite=args.overwrite,
             allow_final_test=args.allow_final_test,
         )
-    except (OSError, ValueError) as error:
+    except (OSError, RuntimeError, ValueError) as error:
         print(f"Formal evaluation failed: {error}", file=sys.stderr)
         return 2
 

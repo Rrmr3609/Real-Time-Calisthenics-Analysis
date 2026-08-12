@@ -160,6 +160,7 @@ def build_manifest_row(
         "clip_id": clip_id,
         "split": "development",
         "video_path": metadata.video_path,
+        "video_sha256": metadata.sha256,
         "participant_id": participant_id,
         "camera_view": camera_view,
         "source_fps": metadata.source_fps,

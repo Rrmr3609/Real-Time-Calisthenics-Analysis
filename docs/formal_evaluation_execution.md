@@ -40,6 +40,11 @@ analysis. Do not change a test clip to development to bypass the execution
 safeguard. Formal execution always covers every manifest clip in the chosen
 split; neither method may supply only a subset or add another clip.
 
+Each manifest row includes `video_sha256`. Formal execution compares both the
+canonical input path and this hash independently against the baseline run and
+the enhanced run. Agreement between the two methods is not sufficient if both
+refer to a source that differs from the manifest.
+
 ### 3. Prepare and validate annotations
 
 Annotate every evaluable attempt independently of method predictions. Retain
@@ -65,6 +70,13 @@ metrics under the existing ambiguity rule. The current schema has no explicit
 review-complete representation for a genuine zero-attempt clip, so such clips
 are not supported by this formal workflow.
 
+The adjacent `<annotations>.review.json` record must then be explicitly
+finalised by the annotation workflow. Formal execution requires
+`review_status: complete`, a frozen annotation SHA-256, and an unchanged CSV
+whose current hash equals that frozen value. `--review-metadata` may identify a
+different review-record path; otherwise the adjacent path is used. Formal
+execution never freezes evidence automatically.
+
 ### 4. Run development evaluation
 
 Supply every baseline and enhanced metadata path explicitly. The following
@@ -77,6 +89,7 @@ $env:PYTHONPATH = "$PWD\src"
   src\evaluation\run_formal_evaluation.py `
   --manifest "data\manifests\fictional_development_manifest.csv" `
   --annotations "data\annotations\fictional_development_annotations.csv" `
+  --review-metadata "data\annotations\fictional_development_annotations.review.json" `
   --baseline-metadata `
     "experiments\logs\fictional-a-baseline_metadata.json" `
     "experiments\logs\fictional-b-baseline_metadata.json" `
@@ -127,6 +140,8 @@ must never be used to retune the tolerance or any analysis rule.
 The orchestrator rejects the complete run rather than skipping a bad clip when:
 
 - a manifest or annotation fails the existing schema validation;
+- annotation review metadata is missing, malformed, incomplete, identifies a
+  different CSV, lacks a frozen hash, or no longer matches the annotation CSV;
 - metadata is absent, malformed, not schema version 1, not completed or does
   not record full-clip processing;
 - completed metadata lacks a completion timestamp;
@@ -136,14 +151,17 @@ The orchestrator rejects the complete run rather than skipping a bad clip when:
 - a selected manifest clip has no annotation row proving manual review;
 - source FPS differs between manifest, baseline and enhanced provenance;
 - frame count, width or height differs between the manifest and either run;
-- baseline and enhanced input SHA-256 hashes differ for one clip;
+- either run's canonical input path or input SHA-256 differs from its manifest
+  row, including when both methods agree with the same wrong source;
 - a required metadata output path is missing or its file does not exist;
 - the baseline frame CSV lacks the current runner header, contains a run or
   clip identity contradicting metadata, omits/duplicates frame indices, or has
   a row count different from completed-run metadata;
 - loaded event run, clip or method identity contradicts its metadata;
-- a source metadata file or consumed CSV disappears or changes after it has
-  been accepted and before formal report writing;
+- a source metadata file or any CSV used for event/descriptive reporting
+  disappears or changes after acceptance;
+- the manifest, annotation CSV or review record changes between initial
+  validation and final report publication;
 - event tolerance is zero, negative, NaN or infinite;
 - test evaluation lacks the explicit final-test flag; or
 - any report output already exists without `--overwrite`.
@@ -161,6 +179,9 @@ Source metadata and consumed CSV paths stored in final evaluation metadata are
 repository-relative POSIX-style paths when the files are inside the repository.
 For external files, only the basename is published; the streaming SHA-256 still
 provides deterministic file identity without exposing an absolute machine path.
+The metadata also records privacy-safe identities and SHA-256 hashes for the
+manifest, annotation CSV and review record, plus the frozen annotation hash and
+completed review status.
 
 ## Generated report files
 
@@ -185,6 +206,7 @@ The same workflow is available through:
 run_formal_evaluation(
     manifest_path=...,
     annotations_path=...,
+    review_metadata_path=...,  # optional; adjacent .review.json by default
     baseline_metadata_paths=[...],
     enhanced_metadata_paths=[...],
     split="development",

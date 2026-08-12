@@ -11,10 +11,11 @@ detection recall stratified by ground-truth form class, and classification for
 one-to-one matched repetitions. Baseline warnings are never interpreted as
 repetition classes, and misses or extras never enter a confusion matrix.
 
-`EvaluationClipContext` supplies the clip ID, frozen dataset split and source
-FPS that are not stored in the existing per-clip metric types. The aggregator
-continues to consume the repository-native `DetectionSummary` and
-`EnhancedClipEvaluation` objects directly.
+`EvaluationClipContext` supplies the clip ID, frozen dataset split, source FPS
+and recorded descriptive evidence that are not stored in the existing
+per-clip metric types. The aggregator continues to consume the
+repository-native `DetectionSummary` and `EnhancedClipEvaluation` objects
+directly.
 
 ## Input validation
 
@@ -73,6 +74,52 @@ This is equivalent to pooling all matched timing observations and prevents a
 clip with one match from receiving the same weight as a clip with many matches.
 Timing means are `None` when there are no matched timing observations.
 
+Processing performance is a separate measurement. `processing_time_ms` is the
+runner's explicitly timed per-frame computer-vision/analysis region; it
+excludes video decoding, display, CSV serialization and setup/initialisation.
+Per-clip mean and median use recorded frame observations. Measured analysis
+throughput is:
+
+```text
+timed frame observations * 1000 / sum(processing_time_ms)
+```
+
+Aggregate processing mean, median and throughput pool every recorded frame
+observation, so clips are frame-weighted rather than given equal weight.
+`source_fps` remains the video time-base and is reported separately; it is not
+measured analysis throughput.
+
+## Descriptive availability and stability evidence
+
+Availability uses explicit frame counts and denominators. Baseline pose,
+elbow-angle, body-alignment-angle and valid selected-side availability are
+derived from its recorded frame values. Enhanced pose, elbow-valid,
+alignment-valid and selected-side availability use its established boolean and
+side columns. Aggregate rates sum available-frame numerators and evidence-frame
+denominators before division. A historical output without a column reports
+`None` with a zero evidence denominator rather than an invented zero rate.
+
+Baseline side changes count transitions in its instantaneous/stateless
+`selected_side` sequence. Enhanced side changes sum its stable selector's
+recorded `side_changed` events. These are descriptive stability measures, not
+accuracy measures, and the two semantics remain labelled separately.
+
+Enhanced predicted unscorable rate is the number of completed/predicted
+repetitions whose canonical `predicted_class` is `unscorable`, divided by all
+enhanced completed/predicted repetitions. It is independent of GT ambiguous
+fragments. Model-derived alignment coverage retains the existing
+`alignment_valid_ratio`: per-repetition values remain in the provenance-bound
+enhanced repetition CSV, while the report gives per-clip and aggregate means.
+The aggregate mean pools available repetition observations, so it is weighted
+per repetition, not per clip.
+
+Human alignment-evidence adequacy is reported separately from model coverage.
+It uses validated annotation `source_video_visibility_status` on evaluable
+attempts: `sufficient` and `partially_obscured` are adequate under the existing
+protocol, while `insufficient` is inadequate. Ambiguous fragments are not in
+this denominator. This describes independent source-video assessability and
+must not be inferred from model landmark coverage.
+
 ## Enhanced pooled classification
 
 The raw enhanced confusion-matrix counts are summed cell by cell in
@@ -113,6 +160,9 @@ support, match and miss totals are checked against overall enhanced detection.
 - baseline and enhanced pooled detection;
 - enhanced pooled classification;
 - enhanced detection recall by ground-truth class;
+- baseline/enhanced processing, availability and side-stability evidence;
+- enhanced unscorable and model alignment-coverage evidence;
+- independent human annotation evidence adequacy;
 - deterministic per-clip audit rows.
 
 The result contains no timestamp. Repeating the same aggregation produces the
@@ -135,8 +185,10 @@ accuracy and macro F1.
 6. `<run_id>_evaluation_metadata.json`
 
 The per-clip CSV contains the count, match, miss, extra and event metrics for
-both methods plus enhanced matched-classification count, accuracy and macro
-F1. Rows are ordered by clip ID.
+both methods; enhanced matched-classification results; source FPS; processing,
+availability and side-stability evidence; enhanced predicted-unscorable and
+alignment-coverage evidence; and human evidence adequacy. Rows are ordered by
+clip ID.
 
 The confusion-matrix CSV starts with `ground_truth_class`; the remaining
 columns and all rows use supported class order. The classification-per-class
@@ -178,6 +230,10 @@ split; the source metadata file path and SHA-256; the consumed baseline frame
 CSV or enhanced repetition CSV path and SHA-256; the input-video SHA-256
 inherited from source metadata; source Git commit and dirty state where
 present; and a canonical resolved-configuration SHA-256 where available.
+Each record also binds the frame CSV used for descriptive reporting. A separate
+`formal_evidence` object binds the exact manifest, annotation CSV and review
+record by privacy-safe identity and SHA-256, and records the frozen annotation
+hash and completed review status.
 
 Source metadata and CSV hashing is streamed. Resolved configuration hashing
 uses UTF-8 canonical JSON with sorted keys and stable compact separators.
@@ -186,7 +242,7 @@ POSIX separators. External source paths are represented by basename only, so
 absolute machine-specific paths are not published; hashes retain exact file
 identity.
 
-The source records are lifecycle provenance only. They are not added to
+The source/evidence records are lifecycle provenance only. They are not added to
 `FormalEvaluationReport.to_dict()` or any metric file, so identical metric
 inputs continue to produce identical deterministic metric content. Missing
 upstream Git or resolved-configuration values are recorded as `None`, not
@@ -195,10 +251,10 @@ metadata hashes are preserved.
 
 ## Current limitations and evaluation warning
 
-There is intentionally no CLI because no repository-native serialized
-per-clip evaluation input format exists yet. The layer also provides no result
-discovery, cross-run manifest, plots, confidence intervals, runtime metrics,
-feature-availability metrics or final-test execution.
+The formal CLI consumes explicitly supplied completed-run metadata and does not
+discover results, process videos, create plots or calculate confidence
+intervals. Historical source outputs that lack newer descriptive columns
+retain unavailable values rather than being rewritten.
 
 All development decisions—including thresholds, annotation rules and class
 priority—must be frozen before the final test results are evaluated. The

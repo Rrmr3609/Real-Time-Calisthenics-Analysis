@@ -21,6 +21,7 @@ def test_detection_cli_reports_only_detection_metrics(
                 "clip_id": "fictional-clip",
                 "split": "development",
                 "video_path": ("data/raw/fictional/clip.mp4"),
+                "video_sha256": "a" * 64,
                 "participant_id": "P_FICTIONAL",
                 "camera_view": "side",
                 "source_fps": 20.0,

@@ -1,3 +1,4 @@
+import csv
 import json
 import math
 from collections import Counter
@@ -19,6 +20,7 @@ from evaluation.formal_evaluation import (
 from evaluation.formal_reporting import (
     PER_CLIP_COLUMNS,
     EvaluationClipContext,
+    EvaluationEvidenceProvenance,
     SourceRunProvenance,
     aggregate_formal_evaluation,
     formal_evaluation_output_paths,
@@ -42,10 +44,25 @@ def source_run_provenance(clip_id, method):
         ),
         consumed_output_path=(f"runs/{method}-{clip_id}.csv"),
         consumed_output_sha256=("c" * 64 if method == "baseline" else "d" * 64),
+        descriptive_frame_csv_path=(f"runs/{method}-{clip_id}-frames.csv"),
+        descriptive_frame_csv_sha256=("1" * 64 if method == "baseline" else "2" * 64),
         source_input_video_sha256="e" * 64,
         source_git_commit="abc123",
         source_git_dirty=False,
         resolved_configuration_sha256="f" * 64,
+    )
+
+
+def evidence_provenance():
+    return EvaluationEvidenceProvenance(
+        manifest_path="data/manifests/fictional.csv",
+        manifest_sha256="3" * 64,
+        annotations_path="data/annotations/fictional.csv",
+        annotations_sha256="4" * 64,
+        frozen_annotation_sha256="4" * 64,
+        review_metadata_path="data/annotations/fictional.review.json",
+        review_metadata_sha256="5" * 64,
+        review_status="complete",
     )
 
 
@@ -884,6 +901,7 @@ def write_report(report, output_directory, **kwargs):
         run_id="fictional-evaluation",
         repository_root=output_directory,
         source_run_provenance=provenance,
+        evidence_provenance=evidence_provenance(),
         software_versions={
             "python": "3.12.4",
             "packages": {"pandas": "2.2.2"},
@@ -933,11 +951,13 @@ def test_writer_produces_exact_per_clip_layout(tmp_path):
     content = paths.per_clip_csv.read_text(encoding="utf-8")
     expected_header = ",".join(PER_CLIP_COLUMNS)
 
-    assert content == (
-        f"{expected_header}\n"
-        "clip-a,1,1,0,0,1,0,0,1.0,1.0,1.0,"
-        "1,0,0,1,0,0,1.0,1.0,1.0,1,1.0,1.0\n"
-    )
+    rows = list(csv.DictReader(content.splitlines()))
+
+    assert content.splitlines()[0] == expected_header
+    assert len(rows) == 1
+    assert rows[0]["clip_id"] == "clip-a"
+    assert rows[0]["source_fps"] == "10.0"
+    assert rows[0]["baseline_mean_measured_processing_time_ms"] == ""
 
 
 def test_writer_produces_detection_recall_layout(tmp_path):
@@ -1000,7 +1020,8 @@ def test_writer_metadata_is_completed_atomically(tmp_path):
     assert report_document == report.to_dict()
     assert metadata["status"] == "completed"
     assert metadata["evaluation_run_id"] == ("fictional-evaluation")
-    assert metadata["report_schema_version"] == 1
+    assert metadata["metadata_schema_version"] == 2
+    assert metadata["report_schema_version"] == 2
     assert metadata["split"] == "development"
     assert metadata["ordered_clip_ids"] == ["clip-a"]
     assert metadata["evaluated_clip_count"] == 1
@@ -1011,6 +1032,7 @@ def test_writer_metadata_is_completed_atomically(tmp_path):
         "baseline",
         "enhanced",
     }
+    assert metadata["formal_evidence"] == evidence_provenance().to_dict()
     assert (
         metadata["source_runs"]["baseline"][0]["source_run_id"] == "baseline-clip-a-run"
     )

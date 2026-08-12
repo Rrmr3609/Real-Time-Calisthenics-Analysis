@@ -22,6 +22,7 @@ def make_manifest(*, second_clip=False):
             "clip_id": "fictional_dev_01",
             "split": "development",
             "video_path": "data/raw/fictional/fictional_dev_01.mp4",
+            "video_sha256": "a" * 64,
             "participant_id": "P_FICTIONAL_01",
             "camera_view": "side",
             "source_fps": 30.0,
@@ -90,7 +91,7 @@ def test_manifest_technical_metadata_mapping_uses_established_schema():
     assert tuple(row) == MANIFEST_COLUMNS
     assert row["split"] == "development"
     assert row["video_path"] == metadata.video_path
-    assert "sha256" not in row
+    assert row["video_sha256"] == metadata.sha256
     validate_dataset_manifest(pd.DataFrame([row]))
 
 
