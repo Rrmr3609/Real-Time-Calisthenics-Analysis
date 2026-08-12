@@ -1,5 +1,14 @@
 # Project Change Log
 
+## 12 August 2026 - Annotation evidence presentation and correction safety
+
+- Moved source-only annotation controls into a bounded right-side panel so the
+  complete video frame remains unobscured at both low and high resolutions.
+- Added explicit schema-validated, deterministic atomic correction of one saved
+  annotation identity while review remains open, with frozen-review rejection.
+- Documented recording-intent non-blinding without treating filenames or
+  external source groupings as ground truth.
+
 ## 12 August 2026 - Real development annotation preparation
 
 - Inventoried and manifested the six controlled self-recorded and six selected

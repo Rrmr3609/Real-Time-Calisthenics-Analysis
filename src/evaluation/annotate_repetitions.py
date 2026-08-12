@@ -15,6 +15,7 @@ import json
 import math
 import os
 import tempfile
+import textwrap
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -318,7 +319,7 @@ def sort_annotation_rows(
         str(clip_id).strip(): index for index, clip_id in enumerate(manifest["clip_id"])
     }
 
-    def key(row: dict[str, object]) -> tuple[int, int, str]:
+    def key(row: dict[str, object]) -> tuple[int, int | float, str]:
         locating_frames = []
         for column in (
             "start_top_frame",
@@ -359,6 +360,72 @@ def append_annotation_row(
         raise ValueError(f"Duplicate annotation identity: {identity}")
 
     combined = sort_annotation_rows([*existing, row], manifest)
+    validate_repetition_annotations(
+        pd.DataFrame(combined, columns=ANNOTATION_COLUMNS),
+        manifest,
+        source_name=str(annotations_path),
+    )
+    _write_annotation_rows_atomic(annotations_path, combined)
+    return combined
+
+
+def _require_editable_review(
+    metadata_path: Path,
+    *,
+    annotations_path: Path,
+) -> None:
+    """Require an active review record before replacing a saved annotation."""
+    path = Path(metadata_path)
+    if not path.is_file():
+        raise ValueError("Review metadata must exist before correcting annotations")
+
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if document.get("schema_version") != REVIEW_SCHEMA_VERSION:
+        raise ValueError("Unsupported annotation review metadata schema")
+    if document.get("annotation_file") != _portable_path_identity(annotations_path):
+        raise ValueError("Review metadata identifies a different annotation CSV")
+
+    review_status = document.get("review_status")
+    if review_status == "complete":
+        raise ValueError("The annotation CSV is frozen and cannot be corrected")
+    if review_status not in {"not_started", "in_progress"}:
+        raise ValueError("Annotation review metadata has an invalid review status")
+
+
+def replace_annotation_row(
+    annotations_path: Path,
+    row: dict[str, object],
+    manifest: pd.DataFrame,
+    *,
+    metadata_path: Path,
+) -> list[dict[str, object]]:
+    """Atomically replace one existing identity while review remains open."""
+    _require_editable_review(
+        metadata_path,
+        annotations_path=annotations_path,
+    )
+    existing: list[dict[str, object]] = load_annotation_rows(annotations_path)
+    identity = (
+        str(row["clip_id"]).strip(),
+        str(row["ground_truth_attempt_id"]).strip(),
+    )
+    matching_indices = [
+        index
+        for index, item in enumerate(existing)
+        if (
+            str(item["clip_id"]).strip(),
+            str(item["ground_truth_attempt_id"]).strip(),
+        )
+        == identity
+    ]
+    if len(matching_indices) != 1:
+        raise ValueError(
+            f"Correction requires exactly one existing annotation identity: {identity}"
+        )
+
+    combined = [*existing]
+    combined[matching_indices[0]] = row
+    combined = sort_annotation_rows(combined, manifest)
     validate_repetition_annotations(
         pd.DataFrame(combined, columns=ANNOTATION_COLUMNS),
         manifest,
@@ -671,8 +738,14 @@ def _draft_class(draft: AnnotationDraft) -> str:
     )
 
 
-def _draw_annotation_overlay(
-    frame,
+def _annotation_panel_width(frame_width: int) -> int:
+    """Return a bounded panel width that leaves low-resolution video prominent."""
+    if frame_width <= 0:
+        raise ValueError("Source-frame width must be positive")
+    return min(520, max(400, round(frame_width * 0.30)))
+
+
+def _annotation_panel_lines(
     *,
     clip_id: str,
     frame_index: int,
@@ -682,15 +755,9 @@ def _draw_annotation_overlay(
     draft: AnnotationDraft,
     saved_rows: int,
     status_message: str,
-) -> None:
-    height, width = frame.shape[:2]
-    scale = max(0.42, min(0.7, width / 1500.0))
-    line_height = max(17, round(25 * scale / 0.7))
-    panel_height = min(height, (8 * line_height) + 16)
-    overlay = frame.copy()
-    cv2.rectangle(overlay, (0, 0), (width, panel_height), (15, 18, 20), -1)
-    cv2.addWeighted(overlay, 0.90, frame, 0.10, 0.0, frame)
-
+    wrap_width: int,
+) -> list[str]:
+    """Build concise viewer text independently of source-frame rendering."""
     elapsed = frame_index / fps
     duration = frame_count / fps
     progress = 100.0 * (frame_index + 1) / frame_count
@@ -704,35 +771,99 @@ def _draw_annotation_overlay(
 
     state = "AMBIGUOUS FRAGMENT" if draft.ambiguity_flag else "EVALUABLE ATTEMPT"
     lines = [
+        "ANNOTATION CONTROLS",
+        f"Clip: {clip_id}",
+        f"Frame {frame_index}/{frame_count - 1} ({progress:.1f}%)",
         (
-            f"{clip_id} | Frame {frame_index}/{frame_count - 1} | "
-            f"{elapsed:.2f}/{duration:.2f}s ({progress:.1f}%) | "
-            f"{'PLAYING' if playing else 'PAUSED'} | Saved rows: {saved_rows}"
+            f"Time {elapsed:.2f}/{duration:.2f}s | "
+            f"{'PLAYING' if playing else 'PAUSED'} | Saved: {saved_rows}"
         ),
         (
-            f"Start[A]: {_friendly_frame(draft.start_top_frame)}   "
-            f"Bottom[B]: {_friendly_frame(draft.bottom_turnaround_frame)}   "
-            f"End/top[E]: {_friendly_frame(draft.completion_end_top_frame)}"
+            f"A start: {_friendly_frame(draft.start_top_frame)} | "
+            f"B bottom: {_friendly_frame(draft.bottom_turnaround_frame)}"
         ),
-        (
-            f"State: {state} | Class: {FRIENDLY_CLASS_LABELS[_draft_class(draft)]} "
-            f"| Flags: {', '.join(flags) if flags else 'none'}"
-        ),
-        (
-            f"Visibility[V]: {draft.source_video_visibility_status} | "
-            f"Note[N]: {draft.annotator_notes or 'none'}"
-        ),
-        "Space play/pause | ,/. one frame | [/] ten frames | Q quit",
-        "A start | B bottom/turnaround | E completion/end-top | R reset draft",
-        "1 correct | 2 depth | 3 extension | 4 alignment | 5 unscorable | M ambiguous",
-        f"S save current row | {status_message}",
+        f"E end/top: {_friendly_frame(draft.completion_end_top_frame)}",
+        f"State: {state}",
+        f"Class: {FRIENDLY_CLASS_LABELS[_draft_class(draft)]}",
+        f"Flags: {', '.join(flags) if flags else 'none'}",
+        f"Visibility: {draft.source_video_visibility_status}",
     ]
+    lines.extend(
+        textwrap.wrap(
+            f"Note: {draft.annotator_notes or 'none'}",
+            width=wrap_width,
+            subsequent_indent="  ",
+        )
+    )
+    lines.extend(
+        [
+            "",
+            "Space play/pause | Q/Esc quit",
+            ",/. or arrows: +/-1 | [/] +/-10",
+            "A start | B bottom | E end/top",
+            "1 correct | 2 depth | 3 extension",
+            "4 alignment | 5 unscorable",
+            "V visibility | M ambiguous | N note",
+            "R reset | S save",
+        ]
+    )
+    lines.extend(
+        textwrap.wrap(
+            status_message,
+            width=wrap_width,
+            initial_indent="Status: ",
+            subsequent_indent="  ",
+        )
+    )
+    return lines
+
+
+def _build_annotation_canvas(
+    frame,
+    *,
+    clip_id: str,
+    frame_index: int,
+    frame_count: int,
+    fps: float,
+    playing: bool,
+    draft: AnnotationDraft,
+    saved_rows: int,
+    status_message: str,
+):
+    """Place an unchanged source frame beside a dedicated control panel."""
+    height, width = frame.shape[:2]
+    panel_width = _annotation_panel_width(width)
+    canvas = cv2.copyMakeBorder(
+        frame,
+        0,
+        0,
+        0,
+        panel_width,
+        cv2.BORDER_CONSTANT,
+        value=(15, 18, 20),
+    )
+    padding = 12
+    scale = max(0.32, min(0.48, panel_width / 1000.0, height / 800.0))
+    wrap_width = max(28, round((panel_width - (2 * padding)) / (18 * scale)))
+    lines = _annotation_panel_lines(
+        clip_id=clip_id,
+        frame_index=frame_index,
+        frame_count=frame_count,
+        fps=fps,
+        playing=playing,
+        draft=draft,
+        saved_rows=saved_rows,
+        status_message=status_message,
+        wrap_width=wrap_width,
+    )
+    line_height = max(14, min(22, (height - 12) // max(1, len(lines))))
+    text_x = width + padding
     y_position = line_height
     for line in lines:
         cv2.putText(
-            frame,
+            canvas,
             line,
-            (10, y_position),
+            (text_x, y_position),
             cv2.FONT_HERSHEY_SIMPLEX,
             scale,
             (240, 240, 240),
@@ -740,6 +871,52 @@ def _draw_annotation_overlay(
             cv2.LINE_AA,
         )
         y_position += line_height
+    return canvas
+
+
+def annotation_key_action(key_code: int) -> tuple[str, int | None]:
+    """Map one OpenCV key code to the established annotation action."""
+    if key_code < 0:
+        return "none", None
+    if key_code in {0x250000, 65361}:
+        return "move", -1
+    if key_code in {0x270000, 65363}:
+        return "move", 1
+
+    key = key_code & 0xFF
+    if key == 27:
+        return "quit", None
+    if key == 32:
+        return "toggle_play", None
+
+    character = chr(key).lower() if 0 <= key <= 255 else ""
+    if character == "q":
+        return "quit", None
+    if character == ",":
+        return "move", -1
+    if character == ".":
+        return "move", 1
+    if character == "[":
+        return "move", -10
+    if character == "]":
+        return "move", 10
+
+    actions = {
+        "a": "mark_start",
+        "b": "mark_bottom",
+        "e": "mark_end",
+        "1": "select_correct",
+        "2": "toggle_depth",
+        "3": "toggle_extension",
+        "4": "toggle_alignment",
+        "5": "select_unscorable",
+        "m": "toggle_ambiguous",
+        "v": "cycle_visibility",
+        "n": "edit_note",
+        "r": "reset",
+        "s": "save",
+    }
+    return actions.get(character, "none"), None
 
 
 def _cycle_visibility(current: str) -> str:
@@ -747,11 +924,74 @@ def _cycle_visibility(current: str) -> str:
     return statuses[(statuses.index(current) + 1) % len(statuses)]
 
 
+def _draft_from_saved_row(row: dict[str, object]) -> AnnotationDraft:
+    """Restore a schema row as an explicitly editable viewer draft."""
+
+    def frame_value(column: str) -> int | None:
+        raw_value = str(row[column]).strip()
+        return None if not raw_value else int(float(raw_value))
+
+    def boolean_value(column: str) -> bool:
+        raw_value = str(row[column]).strip().lower()
+        if raw_value not in {"true", "false"}:
+            raise ValueError(f"Saved annotation has invalid {column!r}")
+        return raw_value == "true"
+
+    return AnnotationDraft(
+        start_top_frame=frame_value("start_top_frame"),
+        bottom_turnaround_frame=frame_value("bottom_turnaround_frame"),
+        completion_end_top_frame=frame_value("completion_end_top_frame"),
+        insufficient_depth_flag=boolean_value("insufficient_depth_flag"),
+        incomplete_extension_flag=boolean_value("incomplete_extension_flag"),
+        alignment_deviation_flag=boolean_value("alignment_deviation_flag"),
+        ambiguity_flag=boolean_value("ambiguity_flag"),
+        source_video_visibility_status=str(
+            row["source_video_visibility_status"]
+        ).strip(),
+        annotator_notes=str(row["annotator_notes"]).strip(),
+    )
+
+
+def _load_correction_draft(
+    rows: list[dict[str, object]],
+    *,
+    clip_id: str,
+    attempt_id: str,
+) -> tuple[int, AnnotationDraft]:
+    """Load one exact saved identity and choose its first locating frame."""
+    matches = [
+        row
+        for row in rows
+        if str(row["clip_id"]).strip() == clip_id
+        and str(row["ground_truth_attempt_id"]).strip() == attempt_id
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "Correction requires exactly one existing annotation identity: "
+            f"{(clip_id, attempt_id)}"
+        )
+    draft = _draft_from_saved_row(matches[0])
+    locating_frames = [
+        frame
+        for frame in (
+            draft.start_top_frame,
+            draft.bottom_turnaround_frame,
+            draft.completion_end_top_frame,
+        )
+        if frame is not None
+    ]
+    if not locating_frames:
+        raise ValueError("Saved annotation has no locating frame")
+    return min(locating_frames), draft
+
+
 def annotate_clip(
     *,
     manifest: pd.DataFrame,
     annotations_path: Path,
     clip_id: str,
+    metadata_path: Path,
+    correction_attempt_id: str | None = None,
 ) -> int:
     """Run the source-only frame viewer and save rows only on explicit request."""
     manifest_row = _manifest_clip_row(manifest, clip_id)
@@ -761,7 +1001,20 @@ def annotate_clip(
     rows: list[dict[str, object]] = load_annotation_rows(annotations_path)
     checkpoint_path = resume_checkpoint_path(annotations_path)
     resumed = load_resume_checkpoint(checkpoint_path, clip_id=clip_id)
-    current_index, draft = resumed or (0, AnnotationDraft())
+    correction_mode = correction_attempt_id is not None
+    if correction_mode:
+        if resumed is not None and not resumed[1].is_blank:
+            raise ValueError(
+                "Save or reset the unfinished annotation draft before correcting "
+                "a saved row"
+            )
+        current_index, draft = _load_correction_draft(
+            rows,
+            clip_id=clip_id,
+            attempt_id=correction_attempt_id,
+        )
+    else:
+        current_index, draft = resumed or (0, AnnotationDraft())
     current_index = min(max(current_index, 0), frame_count - 1)
 
     capture = cv2.VideoCapture(str(video_path))
@@ -770,22 +1023,26 @@ def annotate_clip(
         raise RuntimeError(f"Could not open source video: {manifest_row['video_path']}")
 
     playing = False
-    status_message = "Source video only — no predictions are displayed"
+    status_message = (
+        f"Correcting {clip_id}/{correction_attempt_id}; no predictions displayed"
+        if correction_mode
+        else "Source video only — no predictions are displayed"
+    )
     try:
         _verify_capture_metadata(capture, manifest_row)
         current_index, frame = _read_frame(capture, current_index, frame_count)
         cv2.namedWindow(WINDOW_TITLE, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+        source_width = int(manifest_row["width_px"])
         window_width, window_height = _window_size(
-            int(manifest_row["width_px"]),
+            source_width + _annotation_panel_width(source_width),
             int(manifest_row["height_px"]),
         )
         cv2.resizeWindow(WINDOW_TITLE, window_width, window_height)
 
         while True:
-            display = frame.copy()
             saved_for_clip = sum(str(row["clip_id"]).strip() == clip_id for row in rows)
-            _draw_annotation_overlay(
-                display,
+            display = _build_annotation_canvas(
+                frame,
                 clip_id=clip_id,
                 frame_index=current_index,
                 frame_count=frame_count,
@@ -814,50 +1071,41 @@ def annotate_clip(
                         )
                 continue
 
-            key = key_code & 0xFF
-            character = chr(key).lower() if 0 <= key <= 255 else ""
-            if character == "q" or key == 27:
+            action, movement = annotation_key_action(key_code)
+            if action == "quit":
                 break
-            if key == 32:
+            if action == "toggle_play":
                 playing = not playing
                 status_message = "Playing" if playing else "Paused"
                 continue
 
-            movement = None
-            if character == "," or key_code in {0x250000, 65361}:
-                movement = -1
-            elif character == "." or key_code in {0x270000, 65363}:
-                movement = 1
-            elif character == "[":
-                movement = -10
-            elif character == "]":
-                movement = 10
-            if movement is not None:
+            if action == "move":
                 playing = False
                 current_index, frame = _read_frame(
                     capture,
                     current_index + movement,
                     frame_count,
                 )
-                save_resume_checkpoint(
-                    checkpoint_path,
-                    clip_id=clip_id,
-                    current_frame=current_index,
-                    draft=draft,
-                )
+                if not correction_mode:
+                    save_resume_checkpoint(
+                        checkpoint_path,
+                        clip_id=clip_id,
+                        current_frame=current_index,
+                        draft=draft,
+                    )
                 continue
 
             changed = True
-            if character == "a":
+            if action == "mark_start":
                 draft.start_top_frame = current_index
                 status_message = "Start/top frame marked"
-            elif character == "b":
+            elif action == "mark_bottom":
                 draft.bottom_turnaround_frame = current_index
                 status_message = "Bottom/turnaround frame marked"
-            elif character == "e":
+            elif action == "mark_end":
                 draft.completion_end_top_frame = current_index
                 status_message = "Completion/end-top frame marked"
-            elif character == "1":
+            elif action == "select_correct":
                 draft.ambiguity_flag = False
                 if draft.source_video_visibility_status == "insufficient":
                     draft.source_video_visibility_status = "sufficient"
@@ -865,32 +1113,36 @@ def annotate_clip(
                 draft.incomplete_extension_flag = False
                 draft.alignment_deviation_flag = False
                 status_message = "Class selection: meets project criteria"
-            elif character in {"2", "3", "4"}:
+            elif action in {
+                "toggle_depth",
+                "toggle_extension",
+                "toggle_alignment",
+            }:
                 draft.ambiguity_flag = False
                 if draft.source_video_visibility_status == "insufficient":
                     draft.source_video_visibility_status = "sufficient"
                 attribute = {
-                    "2": "insufficient_depth_flag",
-                    "3": "incomplete_extension_flag",
-                    "4": "alignment_deviation_flag",
-                }[character]
+                    "toggle_depth": "insufficient_depth_flag",
+                    "toggle_extension": "incomplete_extension_flag",
+                    "toggle_alignment": "alignment_deviation_flag",
+                }[action]
                 setattr(draft, attribute, not getattr(draft, attribute))
                 status_message = "Deviation flag toggled"
-            elif character == "5":
+            elif action == "select_unscorable":
                 draft.ambiguity_flag = False
                 draft.source_video_visibility_status = "insufficient"
                 draft.insufficient_depth_flag = False
                 draft.incomplete_extension_flag = False
                 draft.alignment_deviation_flag = False
                 status_message = "Class selection: unscorable"
-            elif character == "m":
+            elif action == "toggle_ambiguous":
                 draft.ambiguity_flag = not draft.ambiguity_flag
                 if draft.ambiguity_flag:
                     draft.insufficient_depth_flag = False
                     draft.incomplete_extension_flag = False
                     draft.alignment_deviation_flag = False
                 status_message = "Ambiguous fragment state toggled"
-            elif character == "v":
+            elif action == "cycle_visibility":
                 draft.source_video_visibility_status = _cycle_visibility(
                     draft.source_video_visibility_status
                 )
@@ -899,7 +1151,7 @@ def annotate_clip(
                     draft.incomplete_extension_flag = False
                     draft.alignment_deviation_flag = False
                 status_message = "Source visibility changed"
-            elif character == "n":
+            elif action == "edit_note":
                 playing = False
                 try:
                     draft.annotator_notes = input(
@@ -908,11 +1160,11 @@ def annotate_clip(
                     status_message = "Annotation note updated"
                 except EOFError:
                     status_message = "No console input available; note unchanged"
-            elif character == "r":
+            elif action == "reset":
                 draft = AnnotationDraft()
                 status_message = "Unsaved draft reset"
-            elif character == "s":
-                attempt_id = next_attempt_id(
+            elif action == "save":
+                attempt_id = correction_attempt_id or next_attempt_id(
                     [dict(row) for row in rows],
                     clip_id=clip_id,
                     ambiguous=draft.ambiguity_flag,
@@ -923,20 +1175,31 @@ def annotate_clip(
                         attempt_id=attempt_id,
                         draft=draft,
                     )
-                    rows = append_annotation_row(
-                        annotations_path,
-                        row,
-                        manifest,
-                    )
+                    if correction_mode:
+                        rows = replace_annotation_row(
+                            annotations_path,
+                            row,
+                            manifest,
+                            metadata_path=metadata_path,
+                        )
+                    else:
+                        rows = append_annotation_row(
+                            annotations_path,
+                            row,
+                            manifest,
+                        )
                 except ValueError as error:
                     status_message = f"NOT SAVED: {error}"
                 else:
+                    if correction_mode:
+                        print(f"Corrected annotation {clip_id}/{attempt_id}.")
+                        break
                     status_message = f"Saved {clip_id}/{attempt_id}"
                     draft = AnnotationDraft()
             else:
                 changed = False
 
-            if changed:
+            if changed and not correction_mode:
                 save_resume_checkpoint(
                     checkpoint_path,
                     clip_id=clip_id,
@@ -944,12 +1207,13 @@ def annotate_clip(
                     draft=draft,
                 )
     finally:
-        save_resume_checkpoint(
-            checkpoint_path,
-            clip_id=clip_id,
-            current_frame=current_index,
-            draft=draft,
-        )
+        if not correction_mode:
+            save_resume_checkpoint(
+                checkpoint_path,
+                clip_id=clip_id,
+                current_frame=current_index,
+                draft=draft,
+            )
         capture.release()
         cv2.destroyAllWindows()
 
@@ -968,6 +1232,13 @@ def parse_arguments(argv=None) -> argparse.Namespace:
     parser.add_argument("--annotations", type=Path, required=True)
     parser.add_argument("--clip-id", help="Manifest clip ID to annotate.")
     parser.add_argument("--annotator", help="Anonymised annotator identifier.")
+    parser.add_argument(
+        "--correct-attempt-id",
+        help=(
+            "Load and atomically replace one saved attempt/fragment identity "
+            "while review remains open."
+        ),
+    )
     parser.add_argument(
         "--review-metadata",
         type=Path,
@@ -1031,6 +1302,8 @@ def main(argv=None) -> int:
         manifest=manifest,
         annotations_path=args.annotations,
         clip_id=args.clip_id,
+        metadata_path=metadata_path,
+        correction_attempt_id=args.correct_attempt_id,
     )
     print(f"Annotation viewer closed: {saved_rows} saved rows for {args.clip_id}.")
     return 0

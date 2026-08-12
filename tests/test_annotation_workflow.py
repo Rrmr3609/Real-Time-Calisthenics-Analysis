@@ -3,6 +3,7 @@ import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -178,6 +179,198 @@ def test_duplicate_prevention_does_not_replace_existing_row(tmp_path):
         )
 
     assert annotations_path.read_bytes() == before
+
+
+@pytest.mark.parametrize(("width", "height"), [(640, 360), (1920, 1080)])
+def test_annotation_canvas_preserves_complete_unobscured_source_frame(
+    width,
+    height,
+):
+    source = np.arange(height * width * 3, dtype=np.uint8).reshape(
+        height,
+        width,
+        3,
+    )
+
+    canvas = annotate_repetitions._build_annotation_canvas(
+        source,
+        clip_id="fictional_dev_01",
+        frame_index=10,
+        frame_count=500,
+        fps=30.0,
+        playing=False,
+        draft=make_draft(),
+        saved_rows=2,
+        status_message="Source video only; fictional test.",
+    )
+
+    assert canvas.shape == (
+        height,
+        width + annotate_repetitions._annotation_panel_width(width),
+        3,
+    )
+    assert np.array_equal(canvas[:, :width], source)
+    assert not np.shares_memory(canvas, source)
+
+
+def test_annotation_panel_width_is_bounded_and_keeps_low_resolution_video_prominent():
+    low_resolution_panel = annotate_repetitions._annotation_panel_width(640)
+    high_resolution_panel = annotate_repetitions._annotation_panel_width(1920)
+
+    assert low_resolution_panel == 400
+    assert low_resolution_panel < 640
+    assert high_resolution_panel == 520
+    assert high_resolution_panel < 1920
+
+
+@pytest.mark.parametrize(
+    ("key_code", "expected"),
+    [
+        (32, ("toggle_play", None)),
+        (ord("q"), ("quit", None)),
+        (27, ("quit", None)),
+        (ord(","), ("move", -1)),
+        (ord("."), ("move", 1)),
+        (ord("["), ("move", -10)),
+        (ord("]"), ("move", 10)),
+        (ord("a"), ("mark_start", None)),
+        (ord("b"), ("mark_bottom", None)),
+        (ord("e"), ("mark_end", None)),
+        (ord("1"), ("select_correct", None)),
+        (ord("2"), ("toggle_depth", None)),
+        (ord("3"), ("toggle_extension", None)),
+        (ord("4"), ("toggle_alignment", None)),
+        (ord("5"), ("select_unscorable", None)),
+        (ord("v"), ("cycle_visibility", None)),
+        (ord("m"), ("toggle_ambiguous", None)),
+        (ord("n"), ("edit_note", None)),
+        (ord("r"), ("reset", None)),
+        (ord("s"), ("save", None)),
+    ],
+)
+def test_annotation_key_actions_preserve_established_controls(key_code, expected):
+    assert annotate_repetitions.annotation_key_action(key_code) == expected
+
+
+def test_saved_annotation_can_be_atomically_corrected_while_review_is_open(tmp_path):
+    annotations_path = tmp_path / "annotations.csv"
+    metadata_path = tmp_path / "annotations.review.json"
+    manifest = make_manifest()
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+    annotate_repetitions.start_review_metadata(
+        metadata_path,
+        annotations_path=annotations_path,
+        annotator="ANN_FICTIONAL_01",
+    )
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        make_row(
+            attempt_id="A002",
+            start_top_frame=100,
+            bottom_turnaround_frame=110,
+            completion_end_top_frame=120,
+        ),
+        manifest,
+    )
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        make_row(attempt_id="A001", start_top_frame=10),
+        manifest,
+    )
+
+    corrected = make_row(
+        attempt_id="A001",
+        start_top_frame=12,
+        bottom_turnaround_frame=22,
+        completion_end_top_frame=32,
+        alignment_deviation_flag=True,
+        annotator_notes="Fictional reviewed correction.",
+    )
+    rows = annotate_repetitions.replace_annotation_row(
+        annotations_path,
+        corrected,
+        manifest,
+        metadata_path=metadata_path,
+    )
+
+    assert len(rows) == 2
+    assert [row["ground_truth_attempt_id"] for row in rows] == ["A001", "A002"]
+    assert rows[0]["start_top_frame"] == 12
+    assert rows[0]["ground_truth_class"] == "alignment_deviation"
+    assert not list(tmp_path.glob(".annotations.csv.*.tmp"))
+    validate_repetition_annotations(
+        pd.read_csv(annotations_path),
+        manifest,
+    )
+
+
+def test_annotation_correction_is_rejected_after_review_freeze(tmp_path):
+    manifest_path = tmp_path / "manifest.csv"
+    annotations_path = tmp_path / "annotations.csv"
+    metadata_path = tmp_path / "annotations.review.json"
+    manifest = make_manifest()
+    write_manifest(manifest_path, manifest)
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+    annotate_repetitions.start_review_metadata(
+        metadata_path,
+        annotations_path=annotations_path,
+        annotator="ANN_FICTIONAL_01",
+    )
+    original = make_row()
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        original,
+        manifest,
+    )
+    annotate_repetitions.finalise_review_metadata(
+        metadata_path,
+        manifest_path=manifest_path,
+        annotations_path=annotations_path,
+        reviewer="REVIEWER_FICTIONAL_01",
+    )
+    before = annotations_path.read_bytes()
+
+    with pytest.raises(ValueError, match="frozen"):
+        annotate_repetitions.replace_annotation_row(
+            annotations_path,
+            {**original, "annotator_notes": "Must not replace frozen GT."},
+            manifest,
+            metadata_path=metadata_path,
+        )
+
+    assert annotations_path.read_bytes() == before
+
+
+def test_correction_cli_selects_one_existing_identity():
+    arguments = annotate_repetitions.parse_arguments(
+        [
+            "--manifest",
+            "fictional_manifest.csv",
+            "--annotations",
+            "fictional_annotations.csv",
+            "--clip-id",
+            "fictional_dev_01",
+            "--annotator",
+            "ANN_FICTIONAL_01",
+            "--correct-attempt-id",
+            "A001",
+        ]
+    )
+
+    assert arguments.correct_attempt_id == "A001"
+
+
+def test_protocol_discloses_non_blinding_without_changing_stored_semantics():
+    protocol_path = (
+        Path(__file__).resolve().parents[1] / "docs" / "manual_annotation_protocol.md"
+    )
+    protocol = protocol_path.read_text(encoding="utf-8")
+    normalised_protocol = " ".join(protocol.split())
+
+    assert "not blinded to the intended recording condition" in normalised_protocol
+    assert "what is visibly present" in normalised_protocol
+    assert "must not determine project ground truth" in normalised_protocol
+    assert make_row()["ground_truth_class"] == "correct"
 
 
 def test_safe_resume_restores_unsaved_draft_and_protects_other_clip(tmp_path):

@@ -206,7 +206,18 @@ $env:PYTHONPATH = "$PWD\src"
 the project-relative raw-video path; no personal absolute path is stored. The
 viewer displays source frames only. It does not import or show pose landmarks,
 angles, predicted phases, predicted repetitions, predicted classes, baseline
-outputs or enhanced outputs.
+outputs or enhanced outputs. The complete source frame is placed unchanged on
+the left of the viewer canvas. A bounded control panel occupies a separate area
+on the right; no annotation text, shading or control covers source pixels. The
+combined canvas may be scaled to the screen while retaining the source aspect
+ratio and every source pixel.
+
+Ground truth is independent of algorithm predictions, but the annotator is not
+blinded to the intended recording condition of the self-recorded controlled
+clips. IDs such as `dev01_correct` describe recording intent, not an accepted
+label. Annotation must record what is visibly present rather than accepting the
+ID or filename. The Kaggle `Correct sequence` and `Wrong sequence` groupings
+likewise must not determine project ground truth.
 
 ### Viewer controls
 
@@ -255,6 +266,36 @@ locating frame and stable attempt ID. A single ignored adjacent `.resume.json`
 checkpoint retains the current frame and unsaved draft; it prevents unfinished
 work for one clip from being silently replaced by another clip. The annotation
 CSV remains one shared file rather than a collection of per-video files.
+
+### Correcting a saved row before freeze
+
+Do not correct ground truth by casually editing the CSV in a spreadsheet. While
+the adjacent review record remains `not_started` or `in_progress`, reopen the
+exact saved identity with `--correct-attempt-id`:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+& ".\.venv\Scripts\python.exe" `
+  src\evaluation\annotate_repetitions.py `
+  --manifest "data\manifests\development_dataset_manifest.csv" `
+  --annotations "data\annotations\development_repetition_annotations.csv" `
+  --clip-id "dev01_correct" `
+  --annotator "ANN01" `
+  --correct-attempt-id "A001"
+```
+
+The viewer loads that row's existing frames, flags, visibility and note. Adjust
+the draft using the normal controls and press `S` once to replace only that
+identity. The complete CSV is schema-validated, deterministically sorted and
+atomically replaced. A missing or duplicate identity is rejected. An unfinished
+new-row draft must first be saved or reset, so correction cannot silently
+discard it. Closing correction mode without `S` leaves the saved CSV unchanged.
+
+Once review status is `complete`, both normal viewer startup and explicit
+correction are rejected. A post-freeze change therefore requires a separately
+documented decision to reopen annotation; it must never occur silently through
+normal viewer operation.
 
 ### Review and freeze record
 
