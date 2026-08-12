@@ -187,6 +187,12 @@ def test_annotation_canvas_preserves_complete_unobscured_source_frame(
     width,
     height,
 ):
+    panel_width = (
+        annotate_repetitions.MIN_PANEL_WIDTH
+        if width == 640
+        else annotate_repetitions.PANEL_WIDTH
+    )
+    display_width = width + panel_width
     source = np.arange(height * width * 3, dtype=np.uint8).reshape(
         height,
         width,
@@ -203,25 +209,70 @@ def test_annotation_canvas_preserves_complete_unobscured_source_frame(
         draft=make_draft(),
         saved_rows=2,
         status_message="Source video only; fictional test.",
+        display_width=display_width,
+        display_height=height,
     )
 
-    assert canvas.shape == (
-        height,
-        width + annotate_repetitions._annotation_panel_width(width),
-        3,
+    layout = annotate_repetitions._annotation_layout(
+        source_width=width,
+        source_height=height,
+        display_width=display_width,
+        display_height=height,
     )
-    assert np.array_equal(canvas[:, :width], source)
+    video_x, video_y, video_width, video_height = layout["video"]
+    panel_x, _, _, _ = layout["panel"]
+
+    assert canvas.shape == (height, display_width, 3)
+    assert (video_width, video_height) == (width, height)
+    assert video_x + video_width <= panel_x
+    assert np.array_equal(
+        canvas[
+            video_y : video_y + video_height,
+            video_x : video_x + video_width,
+        ],
+        source,
+    )
     assert not np.shares_memory(canvas, source)
 
 
-def test_annotation_panel_width_is_bounded_and_keeps_low_resolution_video_prominent():
-    low_resolution_panel = annotate_repetitions._annotation_panel_width(640)
-    high_resolution_panel = annotate_repetitions._annotation_panel_width(1920)
+@pytest.mark.parametrize(("source_width", "source_height"), [(1920, 1080), (640, 360)])
+def test_source_resolution_does_not_change_panel_geometry(
+    source_width,
+    source_height,
+):
+    layout = annotate_repetitions._annotation_layout(
+        source_width=source_width,
+        source_height=source_height,
+        display_width=annotate_repetitions.INITIAL_WINDOW_WIDTH,
+        display_height=annotate_repetitions.INITIAL_WINDOW_HEIGHT,
+    )
+    video_x, video_y, video_width, video_height = layout["video"]
+    panel_x, panel_y, panel_width, panel_height = layout["panel"]
+
+    assert panel_width == annotate_repetitions.PANEL_WIDTH
+    assert (panel_x, panel_y, panel_height) == (1100, 0, 900)
+    assert video_x >= 0
+    assert video_y >= 0
+    assert video_x + video_width <= panel_x
+    assert video_y + video_height <= panel_height
+    assert video_width / video_height == pytest.approx(
+        source_width / source_height,
+        rel=0.002,
+    )
+
+
+def test_panel_font_and_initial_window_use_readable_fixed_display_units():
+    low_resolution_panel = annotate_repetitions._annotation_panel_width(1000)
+    large_window_panel = annotate_repetitions._annotation_panel_width(
+        annotate_repetitions.INITIAL_WINDOW_WIDTH
+    )
 
     assert low_resolution_panel == 400
-    assert low_resolution_panel < 640
-    assert high_resolution_panel == 520
-    assert high_resolution_panel < 1920
+    assert large_window_panel == 500
+    assert annotate_repetitions.INITIAL_WINDOW_WIDTH >= 1500
+    assert annotate_repetitions.INITIAL_WINDOW_HEIGHT >= 850
+    assert annotate_repetitions.PANEL_FONT_SCALE >= 0.55
+    assert annotate_repetitions.PANEL_LINE_HEIGHT >= 28
 
 
 @pytest.mark.parametrize(

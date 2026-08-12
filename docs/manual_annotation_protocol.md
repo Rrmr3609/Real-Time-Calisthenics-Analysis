@@ -204,11 +204,10 @@ source folders. Start the source-only viewer for one manifest clip with:
 the project-relative raw-video path; no personal absolute path is stored. The
 viewer displays source frames only. It does not import or show pose landmarks,
 angles, predicted phases, predicted repetitions, predicted classes, baseline
-outputs or enhanced outputs. The complete source frame is placed unchanged on
-the left of the viewer canvas. A bounded control panel occupies a separate area
-on the right; no annotation text, shading or control covers source pixels. The
-combined canvas may be scaled to the screen while retaining the source aspect
-ratio and every source pixel.
+outputs or enhanced outputs. The complete source frame is aspect-fitted without
+cropping on the left. A fixed-pixel control panel is rendered afterward in a
+separate area on the right, so window presentation never shrinks panel text as
+part of a source-sized composite and no control covers source pixels.
 
 Ground truth is independent of algorithm predictions, but the annotator is not
 blinded to the intended recording condition of the self-recorded controlled

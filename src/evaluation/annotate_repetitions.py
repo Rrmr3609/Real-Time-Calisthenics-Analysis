@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import cv2
+import numpy as np
 import pandas as pd
 
 from evaluation.dataset_validation import (
@@ -34,6 +35,13 @@ from utils.paths import PROJECT_ROOT
 WINDOW_TITLE = "Manual repetition annotation - source video only"
 REVIEW_SCHEMA_VERSION = 1
 REPEAT_REVIEW_STATUSES = frozenset({"not_performed", "pending", "complete"})
+INITIAL_WINDOW_WIDTH = 1600
+INITIAL_WINDOW_HEIGHT = 900
+PANEL_WIDTH = 500
+MIN_PANEL_WIDTH = 400
+PANEL_PADDING = 18
+PANEL_FONT_SCALE = 0.58
+PANEL_LINE_HEIGHT = 29
 
 FRIENDLY_CLASS_LABELS = {
     "correct": "Meets project criteria",
@@ -711,11 +719,18 @@ def _read_frame(capture, frame_index: int, frame_count: int):
     return index, frame
 
 
-def _window_size(width: int, height: int) -> tuple[int, int]:
-    scale = min(1.0, 1280 / width, 800 / height)
-    if width < 960 and height < 540:
-        scale = min(960 / width, 540 / height)
-    return max(1, round(width * scale)), max(1, round(height * scale))
+def _window_content_size(
+    default_width: int = INITIAL_WINDOW_WIDTH,
+    default_height: int = INITIAL_WINDOW_HEIGHT,
+) -> tuple[int, int]:
+    """Return the current drawable window size or the large initial default."""
+    try:
+        _, _, width, height = cv2.getWindowImageRect(WINDOW_TITLE)
+    except cv2.error:
+        return default_width, default_height
+    if width <= 0 or height <= 0:
+        return default_width, default_height
+    return width, height
 
 
 def _window_closed() -> bool:
@@ -739,11 +754,34 @@ def _draft_class(draft: AnnotationDraft) -> str:
     )
 
 
-def _annotation_panel_width(frame_width: int) -> int:
-    """Return a bounded panel width that leaves low-resolution video prominent."""
-    if frame_width <= 0:
-        raise ValueError("Source-frame width must be positive")
-    return min(520, max(400, round(frame_width * 0.30)))
+def _annotation_panel_width(display_width: int) -> int:
+    """Return a readable panel width independent of source-video resolution."""
+    if display_width <= 0:
+        raise ValueError("Display width must be positive")
+    return min(PANEL_WIDTH, max(MIN_PANEL_WIDTH, round(display_width * 0.32)))
+
+
+def _annotation_layout(
+    *,
+    source_width: int,
+    source_height: int,
+    display_width: int,
+    display_height: int,
+) -> dict[str, tuple[int, int, int, int]]:
+    """Fit the complete source beside a fixed-pixel annotation panel."""
+    if min(source_width, source_height, display_width, display_height) <= 0:
+        raise ValueError("Source and display dimensions must be positive")
+    panel_width = _annotation_panel_width(display_width)
+    video_area_width = max(1, display_width - panel_width)
+    scale = min(video_area_width / source_width, display_height / source_height)
+    scaled_width = max(1, min(video_area_width, round(source_width * scale)))
+    scaled_height = max(1, min(display_height, round(source_height * scale)))
+    video_x = (video_area_width - scaled_width) // 2
+    video_y = (display_height - scaled_height) // 2
+    return {
+        "video": (video_x, video_y, scaled_width, scaled_height),
+        "panel": (video_area_width, 0, panel_width, display_height),
+    }
 
 
 def _annotation_panel_lines(
@@ -830,22 +868,45 @@ def _build_annotation_canvas(
     draft: AnnotationDraft,
     saved_rows: int,
     status_message: str,
+    display_width: int,
+    display_height: int,
 ):
-    """Place an unchanged source frame beside a dedicated control panel."""
-    height, width = frame.shape[:2]
-    panel_width = _annotation_panel_width(width)
-    canvas = cv2.copyMakeBorder(
-        frame,
-        0,
-        0,
-        0,
-        panel_width,
-        cv2.BORDER_CONSTANT,
-        value=(15, 18, 20),
+    """Scale source evidence first, then render a crisp fixed-pixel panel."""
+    source_height, source_width = frame.shape[:2]
+    layout = _annotation_layout(
+        source_width=source_width,
+        source_height=source_height,
+        display_width=display_width,
+        display_height=display_height,
     )
-    padding = 12
-    scale = max(0.32, min(0.48, panel_width / 1000.0, height / 800.0))
-    wrap_width = max(28, round((panel_width - (2 * padding)) / (18 * scale)))
+    video_x, video_y, video_width, video_height = layout["video"]
+    panel_x, _, panel_width, _ = layout["panel"]
+    canvas = np.full(
+        (display_height, display_width, 3),
+        (15, 18, 20),
+        dtype=np.uint8,
+    )
+    if (video_width, video_height) == (source_width, source_height):
+        scaled_frame = frame
+    else:
+        interpolation = (
+            cv2.INTER_AREA
+            if video_width < source_width or video_height < source_height
+            else cv2.INTER_NEAREST
+        )
+        scaled_frame = cv2.resize(
+            frame,
+            (video_width, video_height),
+            interpolation=interpolation,
+        )
+    canvas[
+        video_y : video_y + video_height,
+        video_x : video_x + video_width,
+    ] = scaled_frame
+    wrap_width = max(
+        28,
+        round((panel_width - (2 * PANEL_PADDING)) / (17 * PANEL_FONT_SCALE)),
+    )
     lines = _annotation_panel_lines(
         clip_id=clip_id,
         frame_index=frame_index,
@@ -857,18 +918,22 @@ def _build_annotation_canvas(
         status_message=status_message,
         wrap_width=wrap_width,
     )
-    line_height = max(14, min(22, (height - 12) // max(1, len(lines))))
-    text_x = width + padding
-    y_position = line_height
+    available_line_height = max(
+        18,
+        (display_height - (2 * PANEL_PADDING)) // max(1, len(lines)),
+    )
+    line_height = min(PANEL_LINE_HEIGHT, available_line_height)
+    text_x = panel_x + PANEL_PADDING
+    y_position = PANEL_PADDING + line_height
     for line in lines:
         cv2.putText(
             canvas,
             line,
             (text_x, y_position),
             cv2.FONT_HERSHEY_SIMPLEX,
-            scale,
+            PANEL_FONT_SCALE,
             (240, 240, 240),
-            1,
+            2,
             cv2.LINE_AA,
         )
         y_position += line_height
@@ -1032,16 +1097,16 @@ def annotate_clip(
     try:
         _verify_capture_metadata(capture, manifest_row)
         current_index, frame = _read_frame(capture, current_index, frame_count)
-        cv2.namedWindow(WINDOW_TITLE, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-        source_width = int(manifest_row["width_px"])
-        window_width, window_height = _window_size(
-            source_width + _annotation_panel_width(source_width),
-            int(manifest_row["height_px"]),
+        cv2.namedWindow(WINDOW_TITLE, cv2.WINDOW_NORMAL | cv2.WINDOW_FREERATIO)
+        cv2.resizeWindow(
+            WINDOW_TITLE,
+            INITIAL_WINDOW_WIDTH,
+            INITIAL_WINDOW_HEIGHT,
         )
-        cv2.resizeWindow(WINDOW_TITLE, window_width, window_height)
 
         while True:
             saved_for_clip = sum(str(row["clip_id"]).strip() == clip_id for row in rows)
+            display_width, display_height = _window_content_size()
             display = _build_annotation_canvas(
                 frame,
                 clip_id=clip_id,
@@ -1052,6 +1117,8 @@ def annotate_clip(
                 draft=draft,
                 saved_rows=saved_for_clip,
                 status_message=status_message,
+                display_width=display_width,
+                display_height=display_height,
             )
             cv2.imshow(WINDOW_TITLE, display)
             delay = max(1, round(1000.0 / fps)) if playing else 30

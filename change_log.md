@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 12 August 2026 - Annotation viewer display sizing
+
+- Separated aspect-fitted source-video scaling from fixed-pixel panel rendering
+  so high- and low-resolution clips retain complete unobscured evidence and
+  readable controls without changing annotation semantics.
+
 ## 12 August 2026 - Final CLI and provenance consistency
 
 - Added repository-root-invocable evaluation wrappers that need no manual
