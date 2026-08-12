@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 12 August 2026 - Final CLI and provenance consistency
+
+- Added repository-root-invocable evaluation wrappers that need no manual
+  `PYTHONPATH`, completed verified external dataset provenance and corrected
+  stale output, scope and evaluation documentation.
+
 ## 12 August 2026 - Formal evidence binding and complete reporting
 
 - Required frozen annotation review evidence and bound formal outputs to exact

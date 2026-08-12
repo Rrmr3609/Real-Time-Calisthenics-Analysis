@@ -155,8 +155,6 @@ does not claim that the full clip was processed.
 From the repository root in PowerShell:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" src\run_video.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
@@ -166,8 +164,6 @@ $env:PYTHONPATH = "$PWD\src"
 ```
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `

@@ -13,12 +13,30 @@ development manifest.
 ## External source
 
 Six selected local videos came from the Kaggle dataset **LSTM Exercise
-Classification: Push Up Videos**. `Correct sequence` and `Wrong sequence` are
-external source groupings only; they are not this project's repetition labels
-and are not used to derive ground truth. Every visible attempt is independently
-annotated under `docs/manual_annotation_protocol.md`. The dataset's
-`labels/correct.npy` and `labels/incorrect.npy` files are not used or tracked as
-project ground truth.
+Classification: Push Up Videos**:
+
+- Creator: Mohamad Ashraf (Kaggle account `mohamadashrafsalama`).
+- Dataset URL: https://www.kaggle.com/datasets/mohamadashrafsalama/pushup
+- Licence: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+  International (CC BY-NC-SA 4.0), as displayed by Kaggle:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
+- Local access/download date: 2026-08-11.
+
+Suggested reference: Ashraf, M. (n.d.) *LSTM Exercise Classification: Push Up
+Videos*. Kaggle. Available at:
+https://www.kaggle.com/datasets/mohamadashrafsalama/pushup (Accessed: 11 August
+2026).
+
+`Correct sequence` and `Wrong sequence` are external source groupings only;
+they are not this project's repetition labels and are not used to derive ground
+truth. Every visible attempt is independently annotated under
+`docs/manual_annotation_protocol.md`. The dataset's `labels/correct.npy` and
+`labels/incorrect.npy` files are not used or tracked as project ground truth.
+
+The manifest values `P_EXT_KAGGLE_*` are clip-local unknown-identity
+surrogates. They do not establish that the six clips contain six known,
+independent human participants. Participant-level independence or
+generalisation must therefore not be claimed from these external clips.
 
 Selected original source identities:
 

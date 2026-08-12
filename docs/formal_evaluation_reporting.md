@@ -256,6 +256,10 @@ discover results, process videos, create plots or calculate confidence
 intervals. Historical source outputs that lack newer descriptive columns
 retain unavailable values rather than being rewritten.
 
+The CLI supports guarded final-test execution through `--allow-final-test`, but
+only after development decisions, frozen evidence and the final event tolerance
+have been fixed as required by the formal execution protocol.
+
 All development decisions—including thresholds, annotation rules and class
 priority—must be frozen before the final test results are evaluated. The
 current `0.5`-second tolerance is a provisional default, not a permanently

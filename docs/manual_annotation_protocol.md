@@ -192,10 +192,8 @@ not add recalled attempt counts or derive labels from filenames or external
 source folders. Start the source-only viewer for one manifest clip with:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" `
-  src\evaluation\annotate_repetitions.py `
+  src\annotate_repetitions.py `
   --manifest "data\manifests\development_dataset_manifest.csv" `
   --annotations "data\annotations\development_repetition_annotations.csv" `
   --clip-id "dev01_correct" `
@@ -274,10 +272,8 @@ the adjacent review record remains `not_started` or `in_progress`, reopen the
 exact saved identity with `--correct-attempt-id`:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" `
-  src\evaluation\annotate_repetitions.py `
+  src\annotate_repetitions.py `
   --manifest "data\manifests\development_dataset_manifest.csv" `
   --annotations "data\annotations\development_repetition_annotations.csv" `
   --clip-id "dev01_correct" `
@@ -306,10 +302,8 @@ evaluable-attempt or ambiguous-fragment row and human review is complete,
 explicitly freeze the validated CSV with:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" `
-  src\evaluation\annotate_repetitions.py `
+  src\annotate_repetitions.py `
   --manifest "data\manifests\development_dataset_manifest.csv" `
   --annotations "data\annotations\development_repetition_annotations.csv" `
   --finalise-review `
@@ -328,10 +322,8 @@ resume that frozen annotation file. A repeat review is optional; when marked
 From PowerShell:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" `
-  src\evaluation\dataset_validation.py `
+  src\validate_dataset.py `
   --manifest "data\examples\manifests\example_dataset_manifest.csv" `
   --annotations "data\examples\annotations\example_repetition_annotations.csv"
 ```

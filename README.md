@@ -69,6 +69,9 @@ Run the live baseline:
 & ".\.venv\Scripts\python.exe" src\main.py
 ```
 
+The baseline writes the fixed path `experiments/logs/live_feature.csv`.
+Rerunning after that file exists requires an explicit `--overwrite`.
+
 Run the enhanced live feedback system:
 
 ```powershell

@@ -53,11 +53,9 @@ requires a named file from those locations.
 
 The project is developed on Windows using PowerShell and Python 3.12.
 
-Before running project modules in PowerShell, use:
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-```
+Run user-facing commands from the repository root through the entry points in
+`src/`. The live and recorded runners, dataset validator, annotation viewer and
+formal evaluator do not require a manually configured `PYTHONPATH`.
 
 Preferred test command:
 
@@ -125,39 +123,15 @@ Never mix runs silently.
 Frame-level logs and repetition-level outputs must include enough identifiers
 to trace them to the input clip, configuration, and method.
 
-## Current known issues to verify
+## Current evaluation cautions
 
-Do not assume these descriptions are correct without checking the code, but
-investigate them early:
-
-1. `src/run_video_enhanced.py` appears to reference
-   `repetition_logger.close` without calling it.
-2. The enhanced runner appears to initialise `feedback_test` but later use
-   `feedback_text`.
-3. `CSVLogger` opens files in append mode, which can duplicate complete runs.
-4. The baseline depth and extension frame-warning conditions may be unreachable
-   because the position thresholds and warning thresholds are identical.
-5. Enhanced side selection is driven by elbow visibility while body alignment
-   requires shoulder, hip, and ankle visibility on the selected side. This may
-   explain very low alignment coverage and `unscorable` repetitions.
-6. The README contains statements that may now be stale because enhanced
-   temporal segmentation and repetition classification have been implemented.
-
-## Preferred solution for alignment visibility
-
-Investigate before implementing. The likely design is feature-specific stable
-side selection:
-
-- one stable selector for elbow features;
-- one stable selector for alignment features;
-- log both selected sides and both left/right visibility scores;
-- reset only the smoother associated with the feature whose side changed;
-- never insert stale values on invalid frames;
-- preserve temporal consistency;
-- add focused tests;
-- compare alignment coverage before and after on the same development clip.
-
-Do not merely lower `minimum_alignment_valid_ratio` to hide missing data.
+- The `0.5`-second event tolerance remains provisional until justified and
+  frozen from development evidence.
+- Alignment availability is a reported evidence limitation. Do not hide it by
+  lowering `minimum_alignment_valid_ratio` or introduce feature-specific side
+  selection without new approved development evidence.
+- Baseline warnings remain diagnostic frame messages and must not be converted
+  into repetition classes.
 
 ## Evaluation expectations
 

@@ -52,10 +52,8 @@ ambiguous fragments according to the manual protocol. Validate the complete
 manifest and annotations before evaluation:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" `
-  src\evaluation\dataset_validation.py `
+  src\validate_dataset.py `
   --manifest "data\examples\manifests\example_dataset_manifest.csv" `
   --annotations "data\examples\annotations\example_repetition_annotations.csv"
 ```
@@ -83,10 +81,8 @@ Supply every baseline and enhanced metadata path explicitly. The following
 PowerShell command uses fictional names:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" `
-  src\evaluation\run_formal_evaluation.py `
+  src\run_formal_evaluation.py `
   --manifest "data\manifests\fictional_development_manifest.csv" `
   --annotations "data\annotations\fictional_development_annotations.csv" `
   --review-metadata "data\annotations\fictional_development_annotations.review.json" `
