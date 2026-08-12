@@ -19,8 +19,8 @@ overview and quick start.
 ## Annotation and per-clip evaluation
 
 - [Manual annotation protocol](manual_annotation_protocol.md) — defines the
-  dataset manifest, repetition annotations, ambiguity handling and annotation
-  quality-control procedure.
+  dataset manifest, repetition annotations, ambiguity handling, source-only
+  annotation viewer and review/freeze procedure.
 - [Repetition-event detection evaluation](event_detection_evaluation.md) —
   specifies event extraction, validation, deterministic matching and detection
   metrics.

@@ -64,3 +64,6 @@ experiments/outputs/*
 
 # Local pytest temporary directory
 .pytest_tmp/
+
+# In-progress manual-annotation viewer checkpoint
+data/annotations/*.resume.json

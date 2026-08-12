@@ -1,5 +1,15 @@
 # Project Change Log
 
+## 12 August 2026 - Real development annotation preparation
+
+- Inventoried and manifested the six controlled self-recorded and six selected
+  external development clips without running pose or push-up analysis.
+- Documented external Kaggle source provenance while keeping source groupings
+  separate from independently assigned project ground truth.
+- Added a source-only frame annotation viewer with schema-valid atomic output,
+  deterministic resume, ambiguity/multi-deviation support and explicit review
+  freeze metadata.
+
 ## 12 August 2026 - Enhanced live hardware and presentation completion
 
 - Preferred DirectShow for Windows webcams with a released one-step fallback,

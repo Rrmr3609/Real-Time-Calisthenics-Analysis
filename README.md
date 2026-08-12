@@ -131,8 +131,10 @@ Use only fictional example CSVs when learning the schemas:
 - `data/examples/annotations/example_repetition_annotations.csv`.
 
 The [manual annotation protocol](docs/manual_annotation_protocol.md) defines
-ground truth. The [formal execution guide](docs/formal_evaluation_execution.md)
-defines the development-first safeguards and commands.
+ground truth and the source-only frame annotation viewer. Real development
+inputs and source provenance are indexed in [`data/README.md`](data/README.md).
+The [formal execution guide](docs/formal_evaluation_execution.md) defines the
+development-first safeguards and commands.
 
 ## Repository Structure
 

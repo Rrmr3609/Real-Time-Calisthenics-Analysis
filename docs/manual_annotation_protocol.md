@@ -179,6 +179,109 @@ medical or universal form judgements.
 10. Confirm every clip in the formal split has at least one annotation row.
 11. Preserve the frozen annotation file unchanged during formal evaluation.
 
+## Development annotation viewer
+
+The active real-development inputs are:
+
+- `data/manifests/development_dataset_manifest.csv`;
+- `data/annotations/development_repetition_annotations.csv`;
+- `data/annotations/development_repetition_annotations.review.json`.
+
+The annotation CSV initially contains only the established schema header. Do
+not add recalled attempt counts or derive labels from filenames or external
+source folders. Start the source-only viewer for one manifest clip with:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+& ".\.venv\Scripts\python.exe" `
+  src\evaluation\annotate_repetitions.py `
+  --manifest "data\manifests\development_dataset_manifest.csv" `
+  --annotations "data\annotations\development_repetition_annotations.csv" `
+  --clip-id "dev01_correct" `
+  --annotator "ANN01"
+```
+
+`ANN01` is an example anonymised annotator identifier. The manifest resolves
+the project-relative raw-video path; no personal absolute path is stored. The
+viewer displays source frames only. It does not import or show pose landmarks,
+angles, predicted phases, predicted repetitions, predicted classes, baseline
+outputs or enhanced outputs.
+
+### Viewer controls
+
+| Key | Action |
+| --- | --- |
+| Space | Play or pause |
+| `,` / `.` or Left / Right | Step backward or forward one frame |
+| `[` / `]` | Jump backward or forward ten frames |
+| `A` | Mark the representative start/top frame immediately before descent |
+| `B` | Mark the lowest point or descent-to-ascent turnaround frame |
+| `E` | Mark the completion/end-top frame |
+| `1` | Select no visible deviation (`correct`) and clear deviation flags |
+| `2` | Toggle insufficient-depth evidence |
+| `3` | Toggle incomplete-extension evidence |
+| `4` | Toggle alignment-deviation evidence |
+| `5` | Select insufficient source visibility (`unscorable`) |
+| `V` | Cycle source visibility: sufficient, partially obscured, insufficient |
+| `M` | Toggle ambiguous-fragment status |
+| `N` | Enter or clear an optional note in the terminal |
+| `R` | Reset the unsaved draft |
+| `S` | Validate and atomically save the current row |
+| `Q` or Esc | Close the viewer, retaining saved rows and the resume checkpoint |
+
+The completion mark remains the first frame after ascent where the attempt has
+visibly returned to its ending/top posture. It is a visual source-video
+decision, never an application of the baseline or enhanced top thresholds.
+
+Keys `2`, `3` and `4` may be combined. The viewer stores every selected
+deviation flag and derives the canonical single class using the frozen
+priority: insufficient depth, incomplete extension, alignment deviation, then
+correct. It never infers a class from the clip ID, filename, rough performed
+count or Kaggle source grouping.
+
+An ambiguous fragment may retain any identifiable start, turnaround or end
+frame, but requires at least one locating frame and an explanatory note. It is
+saved as non-evaluable and unscorable with false deviation flags, exactly as
+required by the schema. An evaluable unscorable attempt requires all three
+event frames, insufficient source visibility and a note.
+
+### Resume and output safety
+
+Each explicit save appends a new unique `(clip_id, ground_truth_attempt_id)`
+row, validates the complete CSV and atomically replaces the file. Existing
+identities are never overwritten. Rows are ordered by manifest clip order,
+locating frame and stable attempt ID. A single ignored adjacent `.resume.json`
+checkpoint retains the current frame and unsaved draft; it prevents unfinished
+work for one clip from being silently replaced by another clip. The annotation
+CSV remains one shared file rather than a collection of per-video files.
+
+### Review and freeze record
+
+Opening the viewer changes the adjacent review record from `not_started` to
+`in_progress` and records the anonymised annotator and annotation date. It does
+not mark review complete. After every manifest clip has at least one retained
+evaluable-attempt or ambiguous-fragment row and human review is complete,
+explicitly freeze the validated CSV with:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+& ".\.venv\Scripts\python.exe" `
+  src\evaluation\annotate_repetitions.py `
+  --manifest "data\manifests\development_dataset_manifest.csv" `
+  --annotations "data\annotations\development_repetition_annotations.csv" `
+  --finalise-review `
+  --reviewer "REVIEWER01" `
+  --repeat-review-status "not_performed"
+```
+
+Finalisation refuses incomplete manifest coverage, revalidates the established
+schema, records reviewer/repeat-review/adjudication fields and stores the exact
+SHA-256 of the frozen annotation CSV. Once complete, the viewer refuses to
+resume that frozen annotation file. A repeat review is optional; when marked
+`complete`, its reviewer identifier is required.
+
 ## Validation command
 
 From PowerShell:

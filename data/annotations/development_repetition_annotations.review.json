@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "annotation_file": "data/annotations/development_repetition_annotations.csv",
+  "annotator": null,
+  "annotation_date": null,
+  "review_status": "not_started",
+  "reviewed_by": null,
+  "review_date": null,
+  "repeat_review_status": "not_performed",
+  "repeat_reviewed_by": null,
+  "notes": "",
+  "adjudication_notes": "",
+  "frozen_annotation_sha256": null,
+  "finalised_at_utc": null
+}
