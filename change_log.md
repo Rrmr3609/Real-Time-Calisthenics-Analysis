@@ -1,5 +1,22 @@
 # Project Change Log
 
+## 12 August 2026 - Enhanced live hardware and presentation completion
+
+- Preferred DirectShow for Windows webcams with a released one-step fallback,
+  verified first-frame buffering and source-sized resizable presentation.
+- Added responsive summary spacing and pagination plus more concise long-session
+  text reports that show optional evidence only when relevant.
+
+## 11 August 2026 - Enhanced real-time feedback interface
+
+- Added a webcam entry point that reuses the enhanced temporal and
+  classification pipeline while presenting persistent, non-medical
+  completed-repetition feedback and clear tracking guidance.
+- Added robust keyboard/window shutdown, a compact responsive overlay, a
+  post-session summary and collision-safe local human-readable reports.
+- Added friendly expected camera-unavailable handling while preserving
+  tracebacks for unexpected failures.
+
 ## 11 August 2026 - Repository presentation and navigation
 
 - Reworked the landing page and documentation navigation, made the `src`

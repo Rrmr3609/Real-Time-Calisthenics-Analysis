@@ -35,6 +35,8 @@ rather than a second version of the enhanced method. See the
 ## Current Status
 
 - The live baseline and both recorded-video runners are implemented.
+- An enhanced webcam entry point provides end-user completed-repetition
+  feedback, a session summary and a local text report.
 - Enhanced temporal segmentation and repetition classification are implemented.
 - Annotation validation, deterministic event matching, per-clip evaluation and
   cross-clip formal reporting are implemented and tested with fictional data.
@@ -67,6 +69,21 @@ Run the live baseline:
 & ".\.venv\Scripts\python.exe" src\main.py
 ```
 
+Run the enhanced live feedback system:
+
+```powershell
+& ".\.venv\Scripts\python.exe" src\run_live_enhanced.py `
+  --camera-index 0 `
+  --config "configs\default.yaml"
+```
+
+The enhanced live mode is the end-user real-time feedback interface. Focus its
+video window and use `Q` or `Esc` to finish; the summary also closes with Enter.
+Long summaries use Up/Down or PageUp/PageDown to move between repetition pages.
+Each normally finished session writes an ignored human-readable report under
+`experiments/outputs/live_sessions/`. These local summaries are not formal
+evaluation evidence.
+
 Run the baseline on a recorded development clip:
 
 ```powershell
@@ -89,6 +106,8 @@ Run the enhanced method on the same clip:
   --config "configs\default.yaml"
 ```
 
+The recorded baseline and enhanced modes support reproducible offline video
+processing and evaluation; they are not presented as polished end-user GUIs.
 Recorded runs write ignored outputs under `experiments/logs/` and
 `experiments/outputs/`. Each run records its resolved configuration, source
 identity, software versions, Git state and timing definition. Existing output
