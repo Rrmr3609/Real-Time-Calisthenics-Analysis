@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "annotation_file": "data/annotations/development_repetition_annotations.csv",
-  "annotator": null,
-  "annotation_date": null,
-  "review_status": "not_started",
-  "reviewed_by": null,
-  "review_date": null,
+  "annotator": "ANN01",
+  "annotation_date": "2026-08-13",
+  "review_status": "complete",
+  "reviewed_by": "ANN01",
+  "review_date": "2026-08-13",
   "repeat_review_status": "not_performed",
   "repeat_reviewed_by": null,
-  "notes": "",
+  "notes": "Annotations checked frame-by-frame during creation; several attempts were revisited and corrected where necessary. No separate full repeat annotation pass was performed.",
   "adjudication_notes": "",
-  "frozen_annotation_sha256": null,
-  "finalised_at_utc": null
+  "frozen_annotation_sha256": "307c9a15b2604d838e453c540d370d13570c43e92f7c45fb798c6d58d3a2fdb7",
+  "finalised_at_utc": "2026-08-13T21:14:22.922122Z"
 }
