@@ -405,3 +405,8 @@ The revised one-exercise push-up scope was discussed with and approved by superv
   depth, `150.0` degrees for incomplete extension, and `160.0` degrees for
   alignment. Development sensitivity results and the no-test-retuning rule are
   recorded in `docs/development_scientific_freeze.md`.
+
+- Pre-registered the held-out test collection protocol before final-test
+  recording or analysis. The planned six-clip self-recorded test set uses
+  neutral clip IDs, empty manifest/annotation schemas, frozen manual annotation
+  rules, and the scientific configuration frozen at commit `40a204c`.
