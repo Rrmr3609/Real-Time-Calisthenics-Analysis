@@ -7,6 +7,7 @@ import pytest
 import main as live_runner
 import run_video
 import run_video_enhanced
+from analysis.repetition_result import CompletedRepetition
 from utils.paths import PROJECT_ROOT
 
 
@@ -278,7 +279,7 @@ def test_enhanced_timing_excludes_repetition_csv_write(
     clock = FakeClock()
     frame_rows = []
     repetition_rows = []
-    completed_repetition = SimpleNamespace(
+    completed_repetition = CompletedRepetition(
         rep_id=1,
         start_frame=10,
         bottom_frame=12,
@@ -287,6 +288,7 @@ def test_enhanced_timing_excludes_repetition_csv_write(
         start_top_angle=155.0,
         minimum_elbow_angle=90.0,
         end_top_angle=154.0,
+        alignment_angles=(170.0,) * 5,
     )
     classification = SimpleNamespace(
         top_extension_angle=154.0,

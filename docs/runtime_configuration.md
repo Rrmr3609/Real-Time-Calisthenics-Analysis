@@ -89,12 +89,12 @@ classifier priority.
 
 ## Enhanced repetition measurement window
 
-Enhanced repetition measurements use one closed, inclusive frame interval.
-The interval begins at the frame containing the maximum genuine top
-observation (`elbow_angle >= top_region_threshold`) available before the
-contiguous descent-confirmation sequence. That anchor is frozen when the
-candidate sequence begins. The interval ends on the final confirmation frame
-that completes the return to the top region.
+Enhanced repetition detection and within-repetition aggregation use one closed,
+inclusive frame interval. The interval begins at the frame containing the
+maximum genuine top observation (`elbow_angle >= top_region_threshold`)
+available before the contiguous descent-confirmation sequence. That anchor is
+frozen when the candidate sequence begins. The interval ends on the final
+confirmation frame that completes the return to the top region.
 
 Within this interval:
 
@@ -105,12 +105,23 @@ Within this interval:
   interval;
 - minimum elbow angle and bottom frame use every valid elbow observation,
   including the retained confirmation candidates;
-- `start_top_angle` comes from the genuine top anchor and `end_top_angle` uses
-  only valid frames in the confirmed return-to-top sequence;
+- `start_top_angle` comes from the genuine top anchor;
 - body-alignment observations use the same start and end frames without
   fabricating values for missing observations;
 - alignment coverage is valid alignment observations divided by
   `duration_frames`, so complete availability produces coverage `1.0`.
+
+The incomplete-extension feature is finalised causally after detection.
+`end_top_angle` is the maximum valid elbow angle from the confirmed
+return-to-top sequence and the continuing stable returned `top` phase. The
+phase ends when the state machine confirms the next descent or otherwise
+leaves `top`; a pending final repetition is flushed when the stream ends.
+`top_extension_angle` uses this return peak only, because extension before the
+descent does not describe the posture achieved after the repetition bottom.
+This post-completion observation does not alter `end_frame`, repetition count,
+duration, minimum elbow angle, alignment observations or alignment-coverage
+denominator. It uses the existing stable phase boundary, so no new configured
+observation length or tuned threshold is introduced.
 
 Hysteresis, consecutive-frame confirmation and missing-frame tolerance control
 the transitions. Attempts abandoned before completion do not contribute
@@ -134,6 +145,15 @@ The enhanced method writes:
 - `experiments/logs/<run-id>_enhanced_temporal.csv`;
 - `experiments/outputs/<run-id>_enhanced_repetitions.csv`;
 - `experiments/outputs/<run-id>_enhanced_metadata.json`.
+
+Enhanced temporal-CSV completion fields remain attached to the original
+return-confirmation frame and therefore retain the confirmation-time
+`completed_end_top_angle`. The repetition CSV is written after causal
+return-top finalisation and records the representative return peak in
+`end_top_angle` and `top_extension_angle`. The shared `rep_id` and unchanged
+`end_frame` preserve the link between those records. Temporal-CSV
+classification fields occur on the frame where that causal classification is
+finalised, which can be later than the detector-completion row.
 
 Metadata records run and clip identity, method, split, input and config paths,
 SHA256 hashes, file size, source properties, the fully resolved configuration,

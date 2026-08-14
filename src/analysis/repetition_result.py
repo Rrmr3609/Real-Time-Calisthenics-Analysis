@@ -13,7 +13,11 @@ class CompletedRepetition:
     and ``duration_frames`` is ``end_frame - start_frame + 1``. Alignment
     values contain only valid observations from that interval, so missing
     evidence is represented by absence rather than a placeholder or stale
-    value. Classification is performed separately by ``RepetitionClassifier``.
+    value. ``end_top_angle`` is finalised separately as the valid elbow-angle
+    peak observed across return confirmation and the continuing returned top
+    phase; observations after ``end_frame`` do not extend the detection or
+    alignment window. Classification is performed separately by
+    ``RepetitionClassifier``.
     """
 
     rep_id: int

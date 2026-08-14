@@ -47,7 +47,7 @@ def test_insufficient_depth_repetition():
     assert result.insufficient_depth_triggered
 
 
-def test_incomplete_extension_uses_weaker_top_angle():
+def test_extension_uses_return_top_not_initial_top_angle():
     classifier = RepetitionClassifier()
 
     result = classifier.classify(
@@ -57,8 +57,23 @@ def test_incomplete_extension_uses_weaker_top_angle():
         )
     )
 
+    assert result.predicted_class == "correct"
+    assert result.top_extension_angle == 156.0
+    assert not result.incomplete_extension_triggered
+
+
+def test_genuinely_incomplete_return_extension_still_triggers():
+    classifier = RepetitionClassifier()
+
+    result = classifier.classify(
+        make_repetition(
+            start_top_angle=166.0,
+            end_top_angle=139.0,
+        )
+    )
+
     assert result.predicted_class == "incomplete_extension"
-    assert result.top_extension_angle == 145.0
+    assert result.top_extension_angle == 139.0
     assert result.incomplete_extension_triggered
 
 

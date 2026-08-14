@@ -588,7 +588,7 @@ def test_annotation_module_has_no_prediction_pipeline_imports_or_symbols():
     assert all(symbol not in source for symbol in prohibited_symbols)
 
 
-def test_real_development_manifest_and_empty_annotation_structure_validate():
+def test_real_development_manifest_and_frozen_annotations_validate():
     project_root = Path(__file__).resolve().parents[1]
     manifest = pd.read_csv(
         project_root / "data" / "manifests" / "development_dataset_manifest.csv"
@@ -628,6 +628,22 @@ def test_real_development_manifest_and_empty_annotation_structure_validate():
     ]
     assert set(manifest["split"]) == {"development"}
     assert not manifest["video_path"].str.contains("setup_test").any()
-    assert annotations.empty
+    assert len(annotations) == 44
     assert tuple(annotations.columns) == ANNOTATION_COLUMNS
+    assert annotations["is_evaluable_attempt"].value_counts().to_dict() == {
+        True: 43,
+        False: 1,
+    }
+    assert annotations["ambiguity_flag"].value_counts().to_dict() == {
+        False: 43,
+        True: 1,
+    }
+    assert annotations["ground_truth_class"].value_counts().to_dict() == {
+        "correct": 14,
+        "incomplete_extension": 10,
+        "alignment_deviation": 10,
+        "insufficient_depth": 9,
+        "unscorable": 1,
+    }
+    assert set(annotations["source_video_visibility_status"]) == {"sufficient"}
     validate_repetition_annotations(annotations, manifest)

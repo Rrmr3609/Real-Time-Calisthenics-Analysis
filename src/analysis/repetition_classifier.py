@@ -105,12 +105,9 @@ class RepetitionClassifier:
         Insufficient coverage makes alignment evidence unscorable, although a
         higher-priority elbow rule may still determine the final label.
         """
-        # Both ends of the repetition represent a top position.
-        # Use the weaker of the two extension measurements.
-        top_extension_angle = min(
-            repetition.start_top_angle,
-            repetition.end_top_angle,
-        )
+        # Extension quality is defined by the returned top posture after the
+        # repetition's bottom, not by the posture before descent began.
+        top_extension_angle = repetition.end_top_angle
 
         insufficient_depth = repetition.minimum_elbow_angle > self.depth_threshold
 
@@ -168,7 +165,7 @@ class RepetitionClassifier:
 
         elif incomplete_extension:
             predicted_class = RepetitionClass.INCOMPLETE_EXTENSION.value
-            reason = "At least one top position remained below the extension threshold."
+            reason = "Return-to-top extension remained below the extension threshold."
 
         elif not alignment_scorable:
             predicted_class = RepetitionClass.UNSCORABLE.value

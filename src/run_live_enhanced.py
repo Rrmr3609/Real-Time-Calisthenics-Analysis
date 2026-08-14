@@ -21,6 +21,7 @@ from analysis.repetition_classifier import (
     RepetitionClassification,
     RepetitionClassifier,
 )
+from analysis.return_top_finalizer import ReturnTopPeakFinalizer
 from capture.webcam import WebcamCapture
 from config.runtime import apply_cli_overrides, load_runtime_config
 from pose.estimator import PoseEstimator
@@ -949,6 +950,7 @@ def main() -> int:
         minimum_rep_frames=config.segmentation.minimum_repetition_frames,
     )
     repetition_aggregator = RepetitionFeatureAggregator()
+    return_top_finalizer = ReturnTopPeakFinalizer()
     repetition_classifier = RepetitionClassifier(
         depth_threshold=config.classification.depth_threshold,
         extension_threshold=config.classification.extension_threshold,
@@ -1039,13 +1041,18 @@ def main() -> int:
                     elbow_angle=feature_result["smoothed_elbow_angle"],
                     frame_index=frame_index,
                 )
-                completed_repetition = repetition_aggregator.update(
+                detected_repetition = repetition_aggregator.update(
                     frame_index=frame_index,
                     repetition_window_start_frame=(
                         phase_result["repetition_window_start_frame"]
                     ),
                     body_alignment_angle=(feature_result["smoothed_alignment_angle"]),
                     completed_repetition=phase_result["completed_repetition"],
+                )
+                completed_repetition = return_top_finalizer.update(
+                    detected_repetition=detected_repetition,
+                    elbow_angle=feature_result["smoothed_elbow_angle"],
+                    returned_top_phase_active=(phase_result["phase"] == "top"),
                 )
 
                 now = time.perf_counter()
@@ -1108,6 +1115,16 @@ def main() -> int:
                 if window_close_requested():
                     exit_reason = "window_closed"
                     break
+
+            completed_repetition = return_top_finalizer.flush()
+            if completed_repetition is not None:
+                classification = repetition_classifier.classify(completed_repetition)
+                session.record(
+                    classification,
+                    minimum_alignment_valid_ratio=(
+                        config.classification.minimum_alignment_valid_ratio
+                    ),
+                )
 
         report_path = save_live_session_report(
             session,

@@ -1,5 +1,11 @@
 # Project Change Log
 
+## 14 August 2026 - Return-top extension finalisation
+
+- Preserved enhanced repetition detection events while finalising extension
+  classification from the causal peak of the returned top phase in recorded
+  and live processing, including end-of-stream/session flush handling.
+
 ## 12 August 2026 - Annotation viewer display sizing
 
 - Separated aspect-fitted source-video scaling from fixed-pixel panel rendering
