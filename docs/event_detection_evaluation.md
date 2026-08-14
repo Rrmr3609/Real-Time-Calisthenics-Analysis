@@ -72,8 +72,8 @@ frame-bound validation.
 
 ## Deterministic one-to-one matching
 
-The provisional tolerance is `0.5` seconds. This value must be frozen using
-development evidence before final-test evaluation.
+The primary tolerance is frozen at `0.5` seconds following development-only
+sensitivity analysis. Final-test evaluation must use this frozen value.
 
 When both events have timestamps, candidate eligibility and error use their
 timestamp difference. Otherwise:

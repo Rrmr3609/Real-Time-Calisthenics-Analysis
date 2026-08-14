@@ -32,11 +32,13 @@ One report requires:
 No unmatched clip or invalid result is silently removed. Development and test
 clips cannot be mixed in one report.
 
-The current provisional default is `0.5` seconds. The reporting layer does not
-select or tune this value: it accepts a supplied tolerance, verifies the same
-value and corresponding frame tolerance for every result, and records it in
-the report and metadata. Development-set evidence must be used to choose and
-freeze the final tolerance before final-test evaluation begins.
+The primary event tolerance is frozen at `0.5` seconds following
+development-only sensitivity analysis. The reporting layer does not select
+or tune this value: it accepts a supplied tolerance, verifies the same value
+and corresponding frame tolerance for every result, and records it in the
+report and metadata. Alternative values are retained only for explicitly
+identified sensitivity analysis. Final-test evaluation must use `0.5`
+seconds.
 
 ## Pooled detection metrics
 
@@ -262,7 +264,7 @@ have been fixed as required by the formal execution protocol.
 
 All development decisions—including thresholds, annotation rules and class
 priority—must be frozen before the final test results are evaluated. The
-current `0.5`-second tolerance is a provisional default, not a permanently
-fixed reporting constraint. Its final value must be justified and frozen
-using development evidence before final-test evaluation begins. Final-test
-outputs must not be used for tuning.
+`0.5`-second tolerance is now the frozen primary reporting value following
+development-only sensitivity analysis. Alternative tolerances may be reported
+as sensitivity evidence, but final-test evaluation must use the frozen
+`0.5`-second value. Final-test outputs must not be used for tuning.

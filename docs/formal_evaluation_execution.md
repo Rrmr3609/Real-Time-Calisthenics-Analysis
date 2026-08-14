@@ -100,9 +100,10 @@ PowerShell command uses fictional names:
 
 `--baseline-metadata` and `--enhanced-metadata` each accept one or more paths.
 Each method's clip set must equal the complete chosen manifest split. The
-default tolerance is the current provisional `0.5` seconds, but another
-positive finite value may be supplied. The command passes that value through
-unchanged to every clip and method.
+primary tolerance is frozen at `0.5` seconds. Another positive finite
+value may be supplied only for explicitly identified sensitivity analysis.
+The command passes the supplied value through unchanged to every clip and
+method. Final-test evaluation must use the frozen `0.5`-second value.
 
 Existing report files cause a clear failure. Add `--overwrite` only when the
 complete report set for that evaluation run ID should be replaced.
