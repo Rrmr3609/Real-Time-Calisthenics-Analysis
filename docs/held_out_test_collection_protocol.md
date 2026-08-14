@@ -12,22 +12,30 @@ scientific configuration.
 
 ## Test-set structure
 
-The held-out test set consists of six newly recorded self-recorded clips.
+The held-out test set consists of four newly recorded self-recorded clips.
 
-Neutral clip IDs are used so filenames do not encode ground-truth labels:
+### Collection deviation
 
-| Clip ID | Camera view | Planned recording script |
+The original pre-registered collection protocol specified six clips. Before
+ground-truth annotation and before either system was run on the held-out data,
+the recording plan was reduced for feasibility.
+
+Four clips were ultimately collected:
+
+| Clip ID | Camera view | Recorded collection condition |
 | --- | --- | --- |
-| `test01` | side | Approximately 5-6 comfortable push-ups with intended normal form |
-| `test02` | side | Approximately 5-6 attempts intentionally using reduced depth |
-| `test03` | side | Approximately 5-6 attempts intentionally avoiding full return-top extension |
-| `test04` | side | Approximately 5-6 attempts intentionally showing body-alignment deviation |
-| `test05` | side | Approximately 6-8 mixed-quality attempts with varied/faster tempo |
-| `test06` | side-diagonal | Approximately 6-8 mixed-quality attempts at moderate tempo |
+| `test01` | side | Mixed normal and reduced-depth attempts |
+| `test02` | side | Mixed normal, incomplete-extension and alignment-deviation attempts |
+| `test03` | side | Alignment-deviation-focused attempts |
+| `test04` | side-diagonal | Mixed-quality attempts covering the planned form conditions |
 
-These scripts define collection coverage only. They are not ground truth.
-If the visible movement differs from the intended performance, annotation must
-follow the visible source video rather than the script.
+The recording descriptions above document collection intent only. They are not
+ground-truth labels. Ground truth must be assigned independently from visible
+source-video evidence using the frozen manual annotation protocol.
+
+The reduction and change in clip composition occurred before viewing baseline
+or enhanced predictions for these recordings. No held-out clip was selected,
+discarded, repeated, or retained based on system performance.
 
 ## Recording conditions
 
