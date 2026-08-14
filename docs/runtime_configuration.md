@@ -75,7 +75,7 @@ These values preserve the intentionally simple raw-threshold comparator.
 
 | Field | Default | Validation and use |
 | --- | ---: | --- |
-| `depth_threshold` | `100.0` | 0 to 180; insufficient-depth rule |
+| `depth_threshold` | `65.0` | 0 to 180; insufficient-depth rule |
 | `extension_threshold` | `150.0` | 0 to 180; incomplete-extension rule |
 | `alignment_minimum` | `160.0` | 0 to 180; alignment-deviation frame threshold |
 | `alignment_deviation_min_frames` | `3` | At least 1; required deviating valid-alignment frames |

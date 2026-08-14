@@ -25,7 +25,7 @@ def complete_repetition_sequence():
         # Confirm bottom.
         119.0,
         110.0,
-        90.0,
+        55.0,
         # Confirm ascent.
         123.0,
         126.0,
@@ -107,7 +107,7 @@ def test_non_monotonic_candidate_descent_preserves_earlier_minimum():
         157.0,
         # The earliest candidate is deepest, then the angle rises while
         # the three-frame descent confirmation is still pending.
-        90.0,
+        55.0,
         124.0,
         123.0,
         119.0,
@@ -127,7 +127,7 @@ def test_non_monotonic_candidate_descent_preserves_earlier_minimum():
     )
 
     repetition, _ = completed[0]
-    assert repetition.minimum_elbow_angle == 90.0
+    assert repetition.minimum_elbow_angle == 55.0
     assert repetition.bottom_frame == 3
 
 
@@ -146,7 +146,7 @@ def test_interrupted_noisy_descent_candidate_is_discarded():
         122.0,
         119.0,
         110.0,
-        95.0,
+        55.0,
         126.0,
         128.0,
         129.0,
@@ -164,11 +164,11 @@ def test_interrupted_noisy_descent_candidate_is_discarded():
     assert repetition.start_top_angle == 159.0
     assert repetition.end_frame == 17
     assert repetition.duration_frames == 13
-    assert repetition.minimum_elbow_angle == 95.0
+    assert repetition.minimum_elbow_angle == 55.0
     assert repetition.bottom_frame == 11
     assert len(repetition.alignment_angles) == 13
     assert 140.0 not in repetition.alignment_angles
-    assert classification.minimum_elbow_angle == 95.0
+    assert classification.minimum_elbow_angle == 55.0
     assert classification.predicted_class == RepetitionClass.CORRECT.value
 
 
@@ -182,7 +182,7 @@ def test_end_top_uses_only_return_confirmation_frames():
         122.0,
         119.0,
         110.0,
-        90.0,
+        55.0,
         # The final ascent-confirmation value is deliberately higher
         # than all three return-to-top confirmation values.
         126.0,
@@ -218,7 +218,7 @@ def test_brief_missing_elbow_observations_remain_in_window():
         None,
         119.0,
         110.0,
-        90.0,
+        55.0,
         126.0,
         128.0,
         129.0,
@@ -262,7 +262,7 @@ def test_abandoned_attempt_does_not_leak_into_next_repetition():
         122.0,
         119.0,
         110.0,
-        90.0,
+        55.0,
         126.0,
         128.0,
         129.0,

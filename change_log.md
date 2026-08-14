@@ -5,6 +5,12 @@
 - Preserved enhanced repetition detection events while finalising extension
   classification from the causal peak of the returned top phase in recorded
   and live processing, including end-of-stream/session flush handling.
+- Calibrated the enhanced insufficient-depth threshold from `100.0` to `65.0`
+  degrees using frozen development annotations only. A threshold sweep showed
+  a broad stable performance plateau from approximately 65 to 70 degrees;
+  `65.0` was selected as the lowest stable value above the largest observed
+  correctly labelled depth value (`64.06` degrees). Baseline thresholds were
+  not changed.
 
 ## 12 August 2026 - Annotation viewer display sizing
 

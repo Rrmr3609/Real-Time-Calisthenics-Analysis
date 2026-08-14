@@ -7,7 +7,7 @@ from analysis.repetition_result import CompletedRepetition
 
 
 def make_repetition(
-    minimum_elbow_angle=90.0,
+    minimum_elbow_angle=55.0,
     start_top_angle=155.0,
     end_top_angle=156.0,
     alignment_angles=None,

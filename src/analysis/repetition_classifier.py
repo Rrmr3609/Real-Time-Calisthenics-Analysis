@@ -70,7 +70,7 @@ class RepetitionClassifier:
 
     def __init__(
         self,
-        depth_threshold: float = 100.0,
+        depth_threshold: float = 65.0,
         extension_threshold: float = 150.0,
         alignment_minimum: float = 160.0,
         alignment_deviation_min_frames: int = 3,

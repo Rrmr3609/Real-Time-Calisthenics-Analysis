@@ -44,7 +44,7 @@ def test_default_config_loads_exact_current_values():
     assert config.segmentation.phase_confirmation_frames == 3
     assert config.segmentation.missing_angle_grace_frames == 5
     assert config.segmentation.minimum_repetition_frames == 8
-    assert config.classification.depth_threshold == 100.0
+    assert config.classification.depth_threshold == 65.0
     assert config.classification.extension_threshold == 150.0
     assert config.classification.alignment_minimum == 160.0
     assert config.classification.alignment_deviation_min_frames == 3
