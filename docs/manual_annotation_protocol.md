@@ -341,3 +341,5 @@ with representative fictional or development examples. If more than one
 annotator is available, independently annotate a subset and document agreement
 and adjudication. Protocol changes must be completed on development data before
 the final test annotations are analysed.
+
+Completed-project note: The frozen annotation records were reviewed during the annotation workflow, but no separate full repeat-annotation pass was performed; the committed review metadata records repeat_review_status: not_performed. No agreement statistic should therefore be claimed.

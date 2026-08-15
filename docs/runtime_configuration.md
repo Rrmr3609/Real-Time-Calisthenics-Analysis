@@ -169,6 +169,10 @@ Metadata is written atomically after resource cleanup. A successful run has
 user-requested early stop is recorded separately in the processing summary and
 does not claim that the full clip was processed.
 
+
+Raw development and held-out evaluation recordings are intentionally excluded from Git. The data\raw\development\example.mp4 paths below are illustrative; replace them with the path to a local video before running the recorded-video examples.
+
+
 ## Reproduction commands
 
 From the repository root in PowerShell:

@@ -12,7 +12,7 @@ def baseline_form_warnings(
     """
     Return direct frame-level warnings from raw angles in degrees.
 
-    These are provisional operational thresholds for development.
+    These are project-specific operational thresholds for the baseline.
     They are not universal definitions of correct push-up form.
     The messages are diagnostics and must not be interpreted as formal
     repetition-level classifications.

@@ -30,4 +30,4 @@ an earlier CSV append-integrity defect. It must not be interpreted as formal
 classification evidence. The alignment-visibility summaries likewise record
 development investigations, not final accuracy results.
 
-Future formal evaluation evidence belongs under `results/formal/`.
+Formal evaluation evidence is retained separately under `results/formal/`.

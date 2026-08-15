@@ -11,8 +11,7 @@ authoritative full floating-point precision.
   controlled operating conditions are recorded in
   [`change_log.md`](../change_log.md#1-july-2026--scope-reduction).
 - The current push-up-only, one-visible-person, side or side-diagonal scope is
-  summarised in the repository [`README`](../README.md#what-the-system-does) and
-  [`AGENTS.md`](../AGENTS.md#project-purpose).
+  summarised in the repository [`README`](../README.md#what-the-system-does).
 - [`configs/default.yaml`](../configs/default.yaml) is the authoritative frozen
   runtime configuration. The decision record is
   [`development_scientific_freeze.md`](development_scientific_freeze.md).
@@ -288,14 +287,16 @@ must not be inferred from the recorded mean, median or throughput values.
   coverage, including direct user-entry-point help checks in
   [`test_cli_entrypoints.py`](../tests/test_cli_entrypoints.py).
 - [`change_log.md`](../change_log.md) records historical additions to focused
-  test coverage, but no tracked file records the latest complete-suite result.
+  test coverage and the 15 August 2026 clean-clone certification.
 
-**Local certification to preserve during final clean-clone verification:** the
-current working-session report is `410 passed` with two third-party protobuf
-deprecation warnings, with Ruff check and Ruff format check passing. This is a
-local certification note supplied for final packaging, not pre-existing
-committed evidence. It should be replaced or supplemented by a preserved
-clean-clone verification record if one is created before submission.
+
+**Final submission-polish certification (15 August 2026):** the complete test
+suite passed with `410 passed` and two third-party protobuf deprecation warnings.
+Ruff lint and format checks passed, `pip check` reported no broken requirements,
+and both working-tree and staged Git diff checks were clean. The change log also
+records the earlier clean-clone certification performed during final
+reproducibility polishing.
+
 
 ## 10. Dissertation-ready outputs still to create
 
