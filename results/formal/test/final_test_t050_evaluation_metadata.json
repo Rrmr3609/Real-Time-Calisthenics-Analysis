@@ -1,0 +1,264 @@
+{
+  "evaluated_clip_count": 4,
+  "evaluation_run_id": "final_test_t050",
+  "event_tolerance_seconds": 0.5,
+  "formal_evidence": {
+    "annotation_review": {
+      "path": "data/annotations/test_repetition_annotations.review.json",
+      "sha256": "1dfcb66d26e99a53476ea397d5bec4aec924217556451adc0f7d754d76ad176c",
+      "status": "complete"
+    },
+    "dataset_manifest": {
+      "path": "data/manifests/test_dataset_manifest.csv",
+      "sha256": "084a4cecee289967578afec82b18298ec3667a07b0223999f6b31057280baa75"
+    },
+    "repetition_annotations": {
+      "frozen_sha256": "ca8f93ac28095d70ce207b0bfa27b33b628f3966b90510ad78826eb32fd8e27c",
+      "path": "data/annotations/test_repetition_annotations.csv",
+      "sha256": "ca8f93ac28095d70ce207b0bfa27b33b628f3966b90510ad78826eb32fd8e27c"
+    }
+  },
+  "git": {
+    "branch": "codex/repository-polish",
+    "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+    "dirty": true
+  },
+  "metadata_schema_version": 2,
+  "ordered_clip_ids": [
+    "test01",
+    "test02",
+    "test03",
+    "test04"
+  ],
+  "outputs": {
+    "classification_confusion_matrix_csv": "results/formal/test/final_test_t050_classification_confusion_matrix.csv",
+    "classification_per_class_csv": "results/formal/test/final_test_t050_classification_per_class.csv",
+    "detection_recall_by_class_csv": "results/formal/test/final_test_t050_detection_recall_by_class.csv",
+    "evaluation_metadata_json": "results/formal/test/final_test_t050_evaluation_metadata.json",
+    "formal_evaluation_json": "results/formal/test/final_test_t050_formal_evaluation.json",
+    "per_clip_metrics_csv": "results/formal/test/final_test_t050_per_clip_metrics.csv"
+  },
+  "report_schema_version": 2,
+  "software": {
+    "packages": {
+      "mediapipe": "0.10.14",
+      "numpy": "2.5.1",
+      "opencv": "5.0.0.93",
+      "pandas": "3.0.3"
+    },
+    "python": "3.12.4",
+    "python_implementation": "CPython"
+  },
+  "source_runs": {
+    "baseline": [
+      {
+        "clip_id": "test01",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_test_test01_baseline.csv",
+          "sha256": "4c06de91d5a3fe831ed025bf9621aa5a9b687ade3bf5753ed414a33fa4e75840"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test01_baseline.csv",
+          "sha256": "4c06de91d5a3fe831ed025bf9621aa5a9b687ade3bf5753ed414a33fa4e75840"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "3e21b63f0044b23f17ba373a659090883ea81449490d805cbbe54528a8d56590",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_test_test01_baseline_metadata.json",
+          "sha256": "96a088d2e23f9c7c815896ee45602acabf38b63790320cd9905246b414bec2c6"
+        },
+        "source_run_id": "formal_test_test01",
+        "split": "test"
+      },
+      {
+        "clip_id": "test02",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_test_test02_baseline.csv",
+          "sha256": "0d41c6460d0521237dd410886baa50e8f53329107efb0cf74b75e5deb82120ed"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test02_baseline.csv",
+          "sha256": "0d41c6460d0521237dd410886baa50e8f53329107efb0cf74b75e5deb82120ed"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "969d640e1c6152e2cd18571f31e81330aad89dda136bd2413ef22f844b8c2b93",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_test_test02_baseline_metadata.json",
+          "sha256": "4a2ade389e4f32bcfb904f39c5070b9019facb03a5fe7a11b551b06551087484"
+        },
+        "source_run_id": "formal_test_test02",
+        "split": "test"
+      },
+      {
+        "clip_id": "test03",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_test_test03_baseline.csv",
+          "sha256": "3dff00c0d1cb941adfb33df815db1251e6347eb7c2d7d1efbd7e4c03661141f8"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test03_baseline.csv",
+          "sha256": "3dff00c0d1cb941adfb33df815db1251e6347eb7c2d7d1efbd7e4c03661141f8"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "eff15dfe60637dd295692e4aaf35081daa805f6c2611580b11cd3f9dac12e161",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_test_test03_baseline_metadata.json",
+          "sha256": "4422bd1fdcccb39ea17ac68661f1322fd66d1de980c6a983efe5a123ffe28d6c"
+        },
+        "source_run_id": "formal_test_test03",
+        "split": "test"
+      },
+      {
+        "clip_id": "test04",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_test_test04_baseline.csv",
+          "sha256": "a3c74823a23ff041365bab5c1051baea8cb3a661c3bc90693565c06bb922f416"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test04_baseline.csv",
+          "sha256": "a3c74823a23ff041365bab5c1051baea8cb3a661c3bc90693565c06bb922f416"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "bdf4ee1829f5a9d2d9799bf6365c1ac7a499ce47991bb149bc9956354a686a41",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_test_test04_baseline_metadata.json",
+          "sha256": "e9461c09c4c1bc8875ab1b5087850dd1422f7ddcbea65e96898af42948b5edad"
+        },
+        "source_run_id": "formal_test_test04",
+        "split": "test"
+      }
+    ],
+    "enhanced": [
+      {
+        "clip_id": "test01",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_test_test01_enhanced_repetitions.csv",
+          "sha256": "d987cb468c34622c32c63da578d0ec294b34723e571e6bb148d41ef123e321e9"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test01_enhanced_temporal.csv",
+          "sha256": "4bf72043ae02989c186d00481a4752b4ca2919d02cabf4407d6c20f08cad9978"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "3e21b63f0044b23f17ba373a659090883ea81449490d805cbbe54528a8d56590",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_test_test01_enhanced_metadata.json",
+          "sha256": "e247e6b1646c2d9258384a301dcf0703aa2ebd23df6f5e756472ed6f0f83b3ff"
+        },
+        "source_run_id": "formal_test_test01",
+        "split": "test"
+      },
+      {
+        "clip_id": "test02",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_test_test02_enhanced_repetitions.csv",
+          "sha256": "0cb0cbf3efa6b747cf57ad9f54c88b95b42cabe40f6513cb97233b2f0fbe612d"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test02_enhanced_temporal.csv",
+          "sha256": "53b4e741ed68aba259be82b76fd58b69f5e7a4017afe53fa61f7963a9e816e3b"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "969d640e1c6152e2cd18571f31e81330aad89dda136bd2413ef22f844b8c2b93",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_test_test02_enhanced_metadata.json",
+          "sha256": "7453d9616d82e4b32de78b6f6b2d5144873cdb3eca004d8962d230ee053bbae5"
+        },
+        "source_run_id": "formal_test_test02",
+        "split": "test"
+      },
+      {
+        "clip_id": "test03",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_test_test03_enhanced_repetitions.csv",
+          "sha256": "c14d0b09e4ab5ec5010bb96a6a5b21052580a7b42dadb83dd825893d8c907ad5"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test03_enhanced_temporal.csv",
+          "sha256": "8ae1929b666266c544d958a40526f57b22b66f9df0e6eb67dc5d8e1f48adebb0"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "eff15dfe60637dd295692e4aaf35081daa805f6c2611580b11cd3f9dac12e161",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_test_test03_enhanced_metadata.json",
+          "sha256": "0894b04aed9a6f0c7d4bf9628225c5c91841ee3b030dc412ff00947749396773"
+        },
+        "source_run_id": "formal_test_test03",
+        "split": "test"
+      },
+      {
+        "clip_id": "test04",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_test_test04_enhanced_repetitions.csv",
+          "sha256": "fdc71656132d221fd0ee9668ac9ecb03bab7b79fc84d59862b3627d2942ddd9d"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_test_test04_enhanced_temporal.csv",
+          "sha256": "6126963aac22bc42c27fb9b925f08e7ca69f88b2762c697b5ccdb7fd9580b716"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "a0407d1fc2b30f658428c7032f8fe9222ae73f99",
+          "dirty": true
+        },
+        "source_input_video_sha256": "bdf4ee1829f5a9d2d9799bf6365c1ac7a499ce47991bb149bc9956354a686a41",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_test_test04_enhanced_metadata.json",
+          "sha256": "1e06473e037d264afed5737002173b74908d7368dc6a5f7b87e372d3e85daa42"
+        },
+        "source_run_id": "formal_test_test04",
+        "split": "test"
+      }
+    ]
+  },
+  "split": "test",
+  "status": "completed",
+  "timestamps": {
+    "completed_utc": "2026-08-15T02:00:11.991725+00:00",
+    "started_utc": "2026-08-15T02:00:11.676846+00:00"
+  }
+}

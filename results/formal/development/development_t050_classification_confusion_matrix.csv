@@ -1,0 +1,6 @@
+ground_truth_class,correct,insufficient_depth,incomplete_extension,alignment_deviation,unscorable
+correct,6,0,7,0,0
+insufficient_depth,1,0,8,0,0
+incomplete_extension,0,0,10,0,0
+alignment_deviation,1,1,4,1,0
+unscorable,0,0,0,0,0
