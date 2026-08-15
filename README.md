@@ -42,6 +42,83 @@ See the
 [baseline evaluation design](docs/baseline_evaluation_design.md)
 for the exact comparison semantics.
 
+## Quick Start
+
+The project targets Python 3.12 and PowerShell on Windows.
+
+Create a virtual environment and install runtime dependencies:
+
+```powershell
+py -3.12 -m venv .venv
+& ".\.venv\Scripts\python.exe" -m pip install -r requirements.txt
+```
+
+For testing and repository development, install the pinned development tools:
+
+```powershell
+& ".\.venv\Scripts\python.exe" -m pip install -r requirements-dev.txt
+```
+
+### Live baseline
+
+```powershell
+& ".\.venv\Scripts\python.exe" src\main.py
+```
+
+The baseline writes the fixed path `experiments/logs/live_feature.csv`.
+If that file already exists, rerun with `--overwrite` to replace it.
+
+### Enhanced live feedback
+
+```powershell
+& ".\.venv\Scripts\python.exe" src\run_live_enhanced.py `
+  --camera-index 0 `
+  --config "configs\default.yaml"
+```
+
+The enhanced live mode is the primary real-time user interface. Focus its video
+window and use `Q` or `Esc` to finish. A normally completed session writes a
+local human-readable summary under
+`experiments/outputs/live_sessions/`.
+
+These session summaries are not formal evaluation evidence.
+
+Raw evaluation recordings are intentionally excluded from Git. The path
+`data\raw\development\example.mp4` below is illustrative only; replace it with
+the path to your own local video.
+
+### Recorded baseline
+
+```powershell
+& ".\.venv\Scripts\python.exe" src\run_video.py `
+  --video "data\raw\development\example.mp4" `
+  --clip-id "example" `
+  --split development `
+  --run-id "example_baseline_001" `
+  --config "configs\default.yaml"
+```
+
+### Recorded enhanced method
+
+```powershell
+& ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
+  --video "data\raw\development\example.mp4" `
+  --clip-id "example" `
+  --split development `
+  --run-id "example_enhanced_001" `
+  --config "configs\default.yaml"
+```
+
+Recorded runs write generated outputs under `experiments/logs/` and
+`experiments/outputs/`. These directories are intentionally ignored by Git.
+Each run records configuration, source identity, software versions, Git state
+and timing provenance. Existing output sets are protected unless replacement
+is explicitly requested with `--overwrite`.
+
+See the
+[runtime and provenance guide](docs/runtime_configuration.md)
+for detailed runner options.
+
 ## Frozen Enhanced Configuration
 
 The final enhanced scientific configuration was frozen before held-out test
@@ -150,79 +227,6 @@ Completed components include:
 
 No classifier or event-matching parameter was retuned using held-out test
 performance.
-
-## Quick Start
-
-The project targets Python 3.12 and PowerShell on Windows.
-
-Create a virtual environment and install runtime dependencies:
-
-```powershell
-py -3.12 -m venv .venv
-& ".\.venv\Scripts\python.exe" -m pip install -r requirements.txt
-```
-
-For testing and repository development, install the pinned development tools:
-
-```powershell
-& ".\.venv\Scripts\python.exe" -m pip install -r requirements-dev.txt
-```
-
-### Live baseline
-
-```powershell
-& ".\.venv\Scripts\python.exe" src\main.py
-```
-
-The baseline writes the fixed path `experiments/logs/live_feature.csv`.
-If that file already exists, rerun with `--overwrite` to replace it.
-
-### Enhanced live feedback
-
-```powershell
-& ".\.venv\Scripts\python.exe" src\run_live_enhanced.py `
-  --camera-index 0 `
-  --config "configs\default.yaml"
-```
-
-The enhanced live mode is the primary real-time user interface. Focus its video
-window and use `Q` or `Esc` to finish. A normally completed session writes a
-local human-readable summary under
-`experiments/outputs/live_sessions/`.
-
-These session summaries are not formal evaluation evidence.
-
-### Recorded baseline
-
-```powershell
-& ".\.venv\Scripts\python.exe" src\run_video.py `
-  --video "data\raw\development\example.mp4" `
-  --clip-id "example" `
-  --split development `
-  --run-id "example_baseline_001" `
-  --config "configs\default.yaml"
-```
-
-### Recorded enhanced method
-
-```powershell
-& ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
-  --video "data\raw\development\example.mp4" `
-  --clip-id "example" `
-  --split development `
-  --run-id "example_enhanced_001" `
-  --config "configs\default.yaml"
-```
-
-Recorded runs write generated outputs under `experiments/logs/` and
-`experiments/outputs/`. These directories are intentionally ignored by Git.
-Each run records configuration, source identity, software versions, Git state
-and timing provenance. Existing output sets are protected unless replacement
-is explicitly requested with `--overwrite`.
-
-See the
-[runtime and provenance guide](docs/runtime_configuration.md)
-for detailed runner options.
 
 ## Evaluation Workflow
 

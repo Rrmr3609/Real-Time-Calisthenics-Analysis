@@ -1,5 +1,8 @@
 # AGENTS.md
 
+This file provides guidance for automated coding agents and contributors; it is
+not examiner-facing scientific evidence.
+
 ## Project purpose
 
 This repository contains an MSc Artificial Intelligence project titled
@@ -18,6 +21,7 @@ The implemented and approved scope is deliberately narrow:
   - insufficient depth;
   - incomplete elbow extension;
   - shoulder-hip-ankle alignment deviation;
+  - unscorable when evidence is insufficient;
 - non-medical feedback;
 - recorded-video evaluation comparing the baseline and enhanced methods.
 
@@ -38,7 +42,8 @@ Prioritise these paths:
 - `src/analysis/repetition_aggregator.py`: repetition-level alignment collection.
 - `src/analysis/repetition_classifier.py`: deterministic repetition classifier.
 - `src/pose/`: MediaPipe processing and landmark extraction.
-- `src/evaluation/`: diagnostic and summary scripts.
+- `src/evaluation/`: annotation, validation, diagnostic, summary and formal
+  evaluation modules.
 - `tests/`: unit tests.
 - `README.md` and `change_log.md`: current documentation.
 - `data/annotations/` and `data/manifests/`: frozen development and held-out
@@ -129,7 +134,7 @@ to trace them to the input clip, configuration, and method.
 - The primary `0.5`-second event tolerance is frozen from development evidence
   and must not be retuned from held-out results.
 - Alignment availability is a reported evidence limitation. Do not hide it by
-  lowering `minimum_alignment_valid_ratio` or introduce feature-specific side
+  lowering `minimum_alignment_valid_ratio` or introducing feature-specific side
   selection without new approved development evidence.
 - Baseline warnings remain diagnostic frame messages and must not be converted
   into repetition classes.

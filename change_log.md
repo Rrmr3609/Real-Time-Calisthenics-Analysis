@@ -1,5 +1,17 @@
 # Project Change Log
 
+## 15 August 2026 - Submission finalisation and clean-clone certification
+
+- Documented the reduction from six planned held-out clips to four before
+  ground-truth annotation or inspection of baseline and enhanced predictions.
+- Froze the held-out ground truth, ran the frozen baseline and enhanced methods
+  once on the held-out set, and preserved the formal results without retuning.
+- Finalised the repository documentation and dissertation evidence index.
+- Made historical-summary content hashes stable across Git and platform line
+  endings, then completed successful final clean-clone certification with 410
+  tests passing, Ruff checks passing, `pip check` passing, and both live
+  interfaces smoke-tested successfully.
+
 ## 14 August 2026 - Return-top extension finalisation
 
 - Preserved enhanced repetition detection events while finalising extension
@@ -11,6 +23,18 @@
   `65.0` was selected as the lowest stable value above the largest observed
   correctly labelled depth value (`64.06` degrees). Baseline thresholds were
   not changed.
+
+- Froze the final development-stage scientific configuration before held-out
+  test evaluation. The primary event-matching tolerance is `0.50` seconds;
+  enhanced classification thresholds are `65.0` degrees for insufficient
+  depth, `150.0` degrees for incomplete extension, and `160.0` degrees for
+  alignment. Development sensitivity results and the no-test-retuning rule are
+  recorded in `docs/development_scientific_freeze.md`.
+
+- Pre-registered the held-out test collection protocol before final-test
+  recording or analysis. The planned six-clip self-recorded test set uses
+  neutral clip IDs, empty manifest/annotation schemas, frozen manual annotation
+  rules, and the scientific configuration frozen at commit `40a204c`.
 
 ## 12 August 2026 - Annotation viewer display sizing
 
@@ -398,15 +422,3 @@ The original multi-exercise scope was too broad for the remaining implementation
 ### Approval
 
 The revised one-exercise push-up scope was discussed with and approved by supervisor Nafi Ahmad before implementation resumed on 1 July 2026.
-
-- Froze the final development-stage scientific configuration before held-out
-  test evaluation. The primary event-matching tolerance is `0.50` seconds;
-  enhanced classification thresholds are `65.0` degrees for insufficient
-  depth, `150.0` degrees for incomplete extension, and `160.0` degrees for
-  alignment. Development sensitivity results and the no-test-retuning rule are
-  recorded in `docs/development_scientific_freeze.md`.
-
-- Pre-registered the held-out test collection protocol before final-test
-  recording or analysis. The planned six-clip self-recorded test set uses
-  neutral clip IDs, empty manifest/annotation schemas, frozen manual annotation
-  rules, and the scientific configuration frozen at commit `40a204c`.
