@@ -165,8 +165,9 @@ def match_repetition_events(
     If both events have recorded timestamps, tolerance and error are evaluated
     in seconds. Otherwise frame differences are used, with the supplied seconds
     converted to ``ceil(tolerance * source_fps)`` frames; returned timing errors
-    remain in seconds. The default is provisional rather than a permanently
-    fixed formal-evaluation value.
+    remain in seconds. The default is the frozen primary formal-evaluation
+    tolerance; callers may supply another non-negative value for explicitly
+    identified development sensitivity analysis.
     """
     try:
         fps = float(source_fps)

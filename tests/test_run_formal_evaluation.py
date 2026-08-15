@@ -1237,7 +1237,7 @@ def test_positive_non_default_tolerance_passes_through(tmp_path):
     assert metadata["event_tolerance_seconds"] == 0.25
 
 
-def test_provisional_default_tolerance_is_available_for_convenience(
+def test_frozen_primary_default_tolerance_is_available(
     tmp_path,
 ):
     inputs = create_fictional_inputs(tmp_path)
