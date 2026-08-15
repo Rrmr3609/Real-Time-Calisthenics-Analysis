@@ -248,23 +248,25 @@ def test_classification_summary_uses_supplied_identity_and_date(
     assert " ".join(("23", "July", "2026")) not in summary
 
 
-def test_historical_summary_dates_are_preserved():
+def test_historical_summary_content_is_preserved_across_line_endings():
     summaries = PROJECT_ROOT / "results" / "development" / "summaries"
     expected_sha256 = {
         "2026-07-21_enhanced_preprocessing_summary.txt": (
-            "ce6222063683c19cda71c351ecf39c2c8c51a52d3d97cc5551fe39bc4a8d06ec"
+            "670c3eca75906904cca13a7d955fd1d5e56d8dd37d2f85e3eab24570e54e7103"
         ),
         "2026-07-22_phase_detection_summary.txt": (
-            "18cf9bc9896db79ea00e6e7097f67e1dca66af0ba1f7ad1d40abc8bb79a87a43"
+            "c39e8e47b18a1ccf0bed8dbc50274e9e9b641452e51f5523470f171d58551c94"
         ),
         "2026-07-23_repetition_classification_summary.txt": (
-            "ec53442a1391e7954c5a2b37583069d001ba448d4a7c985c624c0d8e5b77eba7"
+            "d10430fb0475430a5c6629339399391fda3351e6cffca4e92b281c852d0809d5"
         ),
     }
 
     for filename, expected_hash in expected_sha256.items():
         content = (summaries / filename).read_bytes()
-        assert hashlib.sha256(content).hexdigest() == expected_hash
+        # Preserve historical text while tolerating Git/platform newline conversion.
+        canonical_content = content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        assert hashlib.sha256(canonical_content).hexdigest() == expected_hash
 
 
 def test_alignment_summary_separates_evidence_from_final_class():
