@@ -75,17 +75,56 @@ These values preserve the intentionally simple raw-threshold comparator.
 
 | Field | Default | Validation and use |
 | --- | ---: | --- |
-| `depth_threshold` | `100.0` | 0 to 180; insufficient-depth rule |
+| `depth_threshold` | `65.0` | 0 to 180; insufficient-depth rule |
 | `extension_threshold` | `150.0` | 0 to 180; incomplete-extension rule |
 | `alignment_minimum` | `160.0` | 0 to 180; alignment-deviation frame threshold |
 | `alignment_deviation_min_frames` | `3` | At least 1; required deviating valid-alignment frames |
 | `alignment_deviation_min_ratio` | `0.20` | 0 to 1; required deviating share of valid-alignment frames |
 | `minimum_alignment_valid_ratio` | `0.50` | 0 to 1; required alignment coverage for an alignment decision |
 
-These are provisional operational project values for the controlled
-recordings. They are not universal or medical definitions. This configuration
-milestone did not change any value, temporal rule, side-selector behavior or
-classifier priority.
+These are the frozen final project values for the controlled recordings. They
+are project-specific operational settings, not universal biomechanical,
+clinical or medical definitions.
+
+## Enhanced repetition measurement window
+
+Enhanced repetition detection and within-repetition aggregation use one closed,
+inclusive frame interval. The interval begins at the frame containing the
+maximum genuine top observation (`elbow_angle >= top_region_threshold`)
+available before the contiguous descent-confirmation sequence. That anchor is
+frozen when the candidate sequence begins. The interval ends on the final
+confirmation frame that completes the return to the top region.
+
+Within this interval:
+
+- `duration_frames` is `end_frame - start_frame + 1`;
+- only the contiguous descent-candidate frames that cause the transition are
+  retained, while an interrupted candidate sequence is discarded;
+- tolerated missing-elbow frames after descent confirmation remain inside the
+  interval;
+- minimum elbow angle and bottom frame use every valid elbow observation,
+  including the retained confirmation candidates;
+- `start_top_angle` comes from the genuine top anchor;
+- body-alignment observations use the same start and end frames without
+  fabricating values for missing observations;
+- alignment coverage is valid alignment observations divided by
+  `duration_frames`, so complete availability produces coverage `1.0`.
+
+The incomplete-extension feature is finalised causally after detection.
+`end_top_angle` is the maximum valid elbow angle from the confirmed
+return-to-top sequence and the continuing stable returned `top` phase. The
+phase ends when the state machine confirms the next descent or otherwise
+leaves `top`; a pending final repetition is flushed when the stream ends.
+`top_extension_angle` uses this return peak only, because extension before the
+descent does not describe the posture achieved after the repetition bottom.
+This post-completion observation does not alter `end_frame`, repetition count,
+duration, minimum elbow angle, alignment observations or alignment-coverage
+denominator. It uses the existing stable phase boundary, so no new configured
+observation length or tuned threshold is introduced.
+
+Hysteresis, consecutive-frame confirmation and missing-frame tolerance control
+the transitions. Attempts abandoned before completion do not contribute
+measurements to a later repetition.
 
 ## Output identity and metadata
 
@@ -105,6 +144,15 @@ The enhanced method writes:
 - `experiments/logs/<run-id>_enhanced_temporal.csv`;
 - `experiments/outputs/<run-id>_enhanced_repetitions.csv`;
 - `experiments/outputs/<run-id>_enhanced_metadata.json`.
+
+Enhanced temporal-CSV completion fields remain attached to the original
+return-confirmation frame and therefore retain the confirmation-time
+`completed_end_top_angle`. The repetition CSV is written after causal
+return-top finalisation and records the representative return peak in
+`end_top_angle` and `top_extension_angle`. The shared `rep_id` and unchanged
+`end_frame` preserve the link between those records. Temporal-CSV
+classification fields occur on the frame where that causal classification is
+finalised, which can be later than the detector-completion row.
 
 Metadata records run and clip identity, method, split, input and config paths,
 SHA256 hashes, file size, source properties, the fully resolved configuration,
@@ -126,8 +174,6 @@ does not claim that the full clip was processed.
 From the repository root in PowerShell:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" src\run_video.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `
@@ -137,8 +183,6 @@ $env:PYTHONPATH = "$PWD\src"
 ```
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" src\run_video_enhanced.py `
   --video "data\raw\development\example.mp4" `
   --clip-id "example" `

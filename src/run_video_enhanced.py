@@ -1,3 +1,11 @@
+"""Process one recorded video with the enhanced push-up pipeline.
+
+The runner combines visibility-aware feature extraction, stable side selection,
+smoothing, temporal segmentation, repetition aggregation and deterministic
+classification. It writes frame/temporal diagnostics, repetition-level results
+and completed/failed run metadata for later formal evaluation.
+"""
+
 import argparse
 import time
 from contextlib import ExitStack
@@ -13,6 +21,7 @@ from analysis.repetition_aggregator import (
 from analysis.repetition_classifier import (
     RepetitionClassifier,
 )
+from analysis.return_top_finalizer import ReturnTopPeakFinalizer
 from capture.video import VideoFileCapture
 from config.runtime import (
     ALLOWED_SPLITS,
@@ -37,23 +46,27 @@ from utils.run_provenance import (
     create_run_metadata,
 )
 
-
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "configs" / "default.yaml"
 
 PROCESSING_TIME_DEFINITION = (
     "Per-frame processing_time_ms starts immediately before image-size "
     "inspection and pose estimation, and ends after feature processing, "
-    "phase segmentation, repetition aggregation and classification. It "
-    "excludes CSV serialisation, optional display rendering, video decoding "
-    "and run setup."
+    "phase segmentation, repetition aggregation and any causal repetition "
+    "finalisation and classification performed for that frame. It excludes "
+    "CSV serialisation, optional display rendering, video decoding, run setup "
+    "and the final pending-repetition flush at stream end."
 )
 
 
 def parse_arguments(argv=None):
+    """Parse enhanced-run input, identity, config and output options.
+
+    The optional ``--alpha`` value is an explicit EMA configuration override
+    recorded in provenance. Split, run-ID defaulting, display and overwrite
+    behaviour otherwise follow the recorded baseline runner.
+    """
     parser = argparse.ArgumentParser(
-        description=(
-            "Run enhanced push-up analysis on a recorded video."
-        )
+        description=("Run enhanced push-up analysis on a recorded video.")
     )
 
     parser.add_argument(
@@ -77,29 +90,21 @@ def parse_arguments(argv=None):
 
     parser.add_argument(
         "--run-id",
-        help=(
-            "Unique output-run identifier. Defaults to --clip-id."
-        ),
+        help=("Unique output-run identifier. Defaults to --clip-id."),
     )
 
     parser.add_argument(
         "--config",
         type=Path,
         default=DEFAULT_CONFIG_PATH,
-        help=(
-            "Runtime YAML configuration "
-            "(default: configs/default.yaml)."
-        ),
+        help=("Runtime YAML configuration (default: configs/default.yaml)."),
     )
 
     parser.add_argument(
         "--alpha",
         type=float,
         default=None,
-        help=(
-            "Explicitly override features.ema_alpha from the "
-            "runtime configuration."
-        ),
+        help=("Explicitly override features.ema_alpha from the runtime configuration."),
     )
 
     parser.add_argument(
@@ -118,6 +123,7 @@ def parse_arguments(argv=None):
 
 
 def format_angle(value):
+    """Format an optional angle in degrees for the development display."""
     if value is None:
         return "N/A"
 
@@ -125,6 +131,7 @@ def format_angle(value):
 
 
 def draw_text(frame, text, position, scale=0.7):
+    """Draw one green status line onto the optional OpenCV display."""
     cv2.putText(
         frame,
         text,
@@ -137,7 +144,52 @@ def draw_text(frame, text, position, scale=0.7):
     )
 
 
+def _write_repetition_row(
+    repetition_logger,
+    *,
+    run_id,
+    clip_id,
+    repetition,
+    classification,
+):
+    """Write one causally finalised repetition outside per-frame timing."""
+    repetition_logger.write_row(
+        {
+            "run_id": run_id,
+            "clip_id": clip_id,
+            "rep_id": repetition.rep_id,
+            "start_frame": repetition.start_frame,
+            "bottom_frame": repetition.bottom_frame,
+            "end_frame": repetition.end_frame,
+            "duration_frames": repetition.duration_frames,
+            "start_top_angle": repetition.start_top_angle,
+            "minimum_elbow_angle": repetition.minimum_elbow_angle,
+            "end_top_angle": repetition.end_top_angle,
+            "top_extension_angle": classification.top_extension_angle,
+            "minimum_alignment_angle": classification.minimum_alignment_angle,
+            "alignment_valid_frames": classification.alignment_valid_frames,
+            "alignment_valid_ratio": classification.alignment_valid_ratio,
+            "alignment_deviation_frames": (classification.alignment_deviation_frames),
+            "alignment_deviation_ratio": (classification.alignment_deviation_ratio),
+            "insufficient_depth_triggered": (
+                classification.insufficient_depth_triggered
+            ),
+            "incomplete_extension_triggered": (
+                classification.incomplete_extension_triggered
+            ),
+            "alignment_deviation_triggered": (
+                classification.alignment_deviation_triggered
+            ),
+            "multiple_rules_triggered": classification.multiple_rules_triggered,
+            "triggered_rules": "|".join(classification.triggered_rules),
+            "predicted_class": classification.predicted_class,
+            "classification_reason": classification.classification_reason,
+        }
+    )
+
+
 def _capture_metadata(base_metadata, capture):
+    """Combine immutable input identity with OpenCV source metadata."""
     source_video = dict(base_metadata["input_video"])
     source_video.update(
         {
@@ -161,61 +213,42 @@ def _capture_metadata(base_metadata, capture):
 
 
 def _build_analysis_components(config):
+    """Construct enhanced stateful processors from validated configuration.
+
+    The feature processor, phase machine and classifier receive their existing
+    visibility, smoothing, temporal and classification values without adding
+    runner-owned scientific defaults.
+    """
     feature_processor = EnhancedFeatureProcessor(
         smoothing_alpha=config.features.ema_alpha,
-        minimum_visibility=(
-            config.features.minimum_landmark_visibility
-        ),
-        acquisition_frames=(
-            config.features.side_acquisition_frames
-        ),
+        minimum_visibility=(config.features.minimum_landmark_visibility),
+        acquisition_frames=(config.features.side_acquisition_frames),
         switch_frames=config.features.side_switch_frames,
         switch_margin=config.features.side_switch_margin,
-        missing_grace_frames=(
-            config.features.missing_side_grace_frames
-        ),
+        missing_grace_frames=(config.features.missing_side_grace_frames),
     )
 
     phase_machine = PushUpPhaseStateMachine(
-        top_region_threshold=(
-            config.segmentation.top_region_threshold
-        ),
-        bottom_region_threshold=(
-            config.segmentation.bottom_region_threshold
-        ),
+        top_region_threshold=(config.segmentation.top_region_threshold),
+        bottom_region_threshold=(config.segmentation.bottom_region_threshold),
         hysteresis=config.segmentation.hysteresis,
-        confirmation_frames=(
-            config.segmentation.phase_confirmation_frames
-        ),
-        missing_grace_frames=(
-            config.segmentation.missing_angle_grace_frames
-        ),
-        minimum_rep_frames=(
-            config.segmentation.minimum_repetition_frames
-        ),
+        confirmation_frames=(config.segmentation.phase_confirmation_frames),
+        missing_grace_frames=(config.segmentation.missing_angle_grace_frames),
+        minimum_rep_frames=(config.segmentation.minimum_repetition_frames),
     )
 
     repetition_classifier = RepetitionClassifier(
-        depth_threshold=(
-            config.classification.depth_threshold
-        ),
-        extension_threshold=(
-            config.classification.extension_threshold
-        ),
-        alignment_minimum=(
-            config.classification.alignment_minimum
-        ),
+        depth_threshold=(config.classification.depth_threshold),
+        extension_threshold=(config.classification.extension_threshold),
+        alignment_minimum=(config.classification.alignment_minimum),
         alignment_deviation_min_frames=(
-            config.classification
-            .alignment_deviation_min_frames
+            config.classification.alignment_deviation_min_frames
         ),
         alignment_deviation_min_ratio=(
-            config.classification
-            .alignment_deviation_min_ratio
+            config.classification.alignment_deviation_min_ratio
         ),
         minimum_alignment_valid_ratio=(
-            config.classification
-            .minimum_alignment_valid_ratio
+            config.classification.minimum_alignment_valid_ratio
         ),
     )
 
@@ -227,6 +260,35 @@ def _build_analysis_components(config):
 
 
 def main():
+    """Run enhanced video processing with complete output provenance.
+
+    All three output paths are preflighted together before capture or pose
+    estimation: the frame/temporal CSV records per-frame feature and phase
+    diagnostics, the repetition CSV records completed repetition measurements
+    and classifications, and metadata binds the run, resolved configuration and
+    lifecycle. The temporal CSV is written under ``experiments/logs``; the
+    repetition CSV and metadata are written under ``experiments/outputs`` using
+    the shared run ID. Existing outputs fail unless overwrite was requested.
+
+    ``processing_time_ms`` covers image inspection, pose estimation,
+    visibility-aware features, smoothing, phase segmentation, repetition
+    aggregation, causal return-top finalisation, classification and
+    feedback-state calculation performed on that frame. Timing is finalised
+    before output writing in that loop iteration. Detector completion fields
+    remain on the original completion frame, while the repetition CSV is
+    written once classification is finalised after the returned top phase. A
+    final pending repetition is flushed after the loop. CSV writes and that
+    end-of-stream lifecycle flush are outside per-frame timing. Loop wall time
+    is broader and may include decoding, both forms of row logging, display and
+    other loop/cleanup overhead. Source FPS remains input metadata rather than
+    measured throughput, and UTC lifecycle timestamps are separate from both
+    processing measures.
+
+    ``ExitStack`` owns capture, pose estimation, both CSV loggers and OpenCV
+    windows. A broad catch records failed-run metadata after cleanup and then
+    re-raises; success records source metadata, termination reason and full-clip
+    status. The runner processes video but does not perform formal evaluation.
+    """
     args = parse_arguments()
     create_project_directories()
 
@@ -237,15 +299,9 @@ def main():
     )
     run_id = args.run_id or args.clip_id
 
-    output_path = (
-        LOG_DIR / f"{run_id}_enhanced_temporal.csv"
-    )
-    repetition_output_path = (
-        OUTPUT_DIR / f"{run_id}_enhanced_repetitions.csv"
-    )
-    metadata_path = (
-        OUTPUT_DIR / f"{run_id}_enhanced_metadata.json"
-    )
+    output_path = LOG_DIR / f"{run_id}_enhanced_temporal.csv"
+    repetition_output_path = OUTPUT_DIR / f"{run_id}_enhanced_repetitions.csv"
+    metadata_path = OUTPUT_DIR / f"{run_id}_enhanced_metadata.json"
     output_paths = {
         "frame_csv": output_path,
         "repetition_csv": repetition_output_path,
@@ -267,9 +323,7 @@ def main():
         explicit_config_overrides=explicit_overrides,
         repository_root=PROJECT_ROOT,
         output_paths=output_paths,
-        processing_time_definition=(
-            PROCESSING_TIME_DEFINITION
-        ),
+        processing_time_definition=(PROCESSING_TIME_DEFINITION),
         display_enabled=args.display,
         overwrite_requested=args.overwrite,
     )
@@ -300,21 +354,16 @@ def main():
                 phase_machine,
                 repetition_classifier,
             ) = _build_analysis_components(config)
-            repetition_aggregator = (
-                RepetitionFeatureAggregator()
-            )
+            repetition_aggregator = RepetitionFeatureAggregator()
+            return_top_finalizer = ReturnTopPeakFinalizer()
 
             capture = VideoFileCapture(args.video)
             cleanup.callback(capture.release)
             capture.open()
 
             pose_estimator = PoseEstimator(
-                min_detection_confidence=(
-                    config.pose.minimum_detection_confidence
-                ),
-                min_tracking_confidence=(
-                    config.pose.minimum_tracking_confidence
-                ),
+                min_detection_confidence=(config.pose.minimum_detection_confidence),
+                min_tracking_confidence=(config.pose.minimum_tracking_confidence),
             )
             cleanup.callback(pose_estimator.close)
 
@@ -397,18 +446,10 @@ def main():
             print(f"Split: {args.split}")
             print(f"Config: {args.config}")
             print(f"Frames: {capture.frame_count}")
-            print(
-                f"Source FPS: {capture.source_fps:.2f}"
-            )
-            print(
-                "Smoothing alpha: "
-                f"{config.features.ema_alpha}"
-            )
+            print(f"Source FPS: {capture.source_fps:.2f}")
+            print(f"Smoothing alpha: {config.features.ema_alpha}")
             print(f"Output: {output_path}")
-            print(
-                f"Repetition output: "
-                f"{repetition_output_path}"
-            )
+            print(f"Repetition output: {repetition_output_path}")
             print(f"Metadata: {metadata_path}")
 
             loop_started = time.perf_counter()
@@ -434,159 +475,45 @@ def main():
                         image_height,
                     )
 
-                feature_result = feature_processor.update(
-                    landmarks
-                )
+                feature_result = feature_processor.update(landmarks)
 
                 phase_result = phase_machine.update(
-                    elbow_angle=feature_result[
-                        "smoothed_elbow_angle"
-                    ],
+                    elbow_angle=feature_result["smoothed_elbow_angle"],
                     frame_index=capture.frame_index,
                 )
 
-                completed_repetition = (
-                    repetition_aggregator.update(
-                        frame_index=capture.frame_index,
-                        repetition_window_start_frame=(
-                            phase_result[
-                                "repetition_window_start_frame"
-                            ]
-                        ),
-                        body_alignment_angle=(
-                            feature_result[
-                                "smoothed_alignment_angle"
-                            ]
-                        ),
-                        completed_repetition=(
-                            phase_result[
-                                "completed_repetition"
-                            ]
-                        ),
-                    )
+                detected_repetition = repetition_aggregator.update(
+                    frame_index=capture.frame_index,
+                    repetition_window_start_frame=(
+                        phase_result["repetition_window_start_frame"]
+                    ),
+                    body_alignment_angle=(feature_result["smoothed_alignment_angle"]),
+                    completed_repetition=(phase_result["completed_repetition"]),
+                )
+                completed_repetition = return_top_finalizer.update(
+                    detected_repetition=detected_repetition,
+                    elbow_angle=feature_result["smoothed_elbow_angle"],
+                    returned_top_phase_active=(phase_result["phase"] == "top"),
                 )
 
                 classification = None
 
                 if completed_repetition is not None:
-                    classification = (
-                        repetition_classifier.classify(
-                            completed_repetition
-                        )
-                    )
-                    repetition_logger.write_row(
-                        {
-                            "run_id": run_id,
-                            "clip_id": args.clip_id,
-                            "rep_id": (
-                                completed_repetition.rep_id
-                            ),
-                            "start_frame": (
-                                completed_repetition.start_frame
-                            ),
-                            "bottom_frame": (
-                                completed_repetition.bottom_frame
-                            ),
-                            "end_frame": (
-                                completed_repetition.end_frame
-                            ),
-                            "duration_frames": (
-                                completed_repetition
-                                .duration_frames
-                            ),
-                            "start_top_angle": (
-                                completed_repetition
-                                .start_top_angle
-                            ),
-                            "minimum_elbow_angle": (
-                                completed_repetition
-                                .minimum_elbow_angle
-                            ),
-                            "end_top_angle": (
-                                completed_repetition
-                                .end_top_angle
-                            ),
-                            "top_extension_angle": (
-                                classification
-                                .top_extension_angle
-                            ),
-                            "minimum_alignment_angle": (
-                                classification
-                                .minimum_alignment_angle
-                            ),
-                            "alignment_valid_frames": (
-                                classification
-                                .alignment_valid_frames
-                            ),
-                            "alignment_valid_ratio": (
-                                classification
-                                .alignment_valid_ratio
-                            ),
-                            "alignment_deviation_frames": (
-                                classification
-                                .alignment_deviation_frames
-                            ),
-                            "alignment_deviation_ratio": (
-                                classification
-                                .alignment_deviation_ratio
-                            ),
-                            "insufficient_depth_triggered": (
-                                classification
-                                .insufficient_depth_triggered
-                            ),
-                            "incomplete_extension_triggered": (
-                                classification
-                                .incomplete_extension_triggered
-                            ),
-                            "alignment_deviation_triggered": (
-                                classification
-                                .alignment_deviation_triggered
-                            ),
-                            "multiple_rules_triggered": (
-                                classification
-                                .multiple_rules_triggered
-                            ),
-                            "triggered_rules": "|".join(
-                                classification.triggered_rules
-                            ),
-                            "predicted_class": (
-                                classification
-                                .predicted_class
-                            ),
-                            "classification_reason": (
-                                classification
-                                .classification_reason
-                            ),
-                        }
+                    classification = repetition_classifier.classify(
+                        completed_repetition
                     )
                     feedback_messages = {
-                        "correct": (
-                            "Rep complete: no predefined "
-                            "deviation"
-                        ),
-                        "insufficient_depth": (
-                            "Rep complete: insufficient depth"
-                        ),
-                        "incomplete_extension": (
-                            "Rep complete: incomplete "
-                            "extension"
-                        ),
-                        "alignment_deviation": (
-                            "Rep complete: alignment deviation"
-                        ),
-                        "unscorable": (
-                            "Rep complete: unscorable"
-                        ),
+                        "correct": ("Rep complete: no predefined deviation"),
+                        "insufficient_depth": ("Rep complete: insufficient depth"),
+                        "incomplete_extension": ("Rep complete: incomplete extension"),
+                        "alignment_deviation": ("Rep complete: alignment deviation"),
+                        "unscorable": ("Rep complete: unscorable"),
                     }
 
-                    feedback_text = feedback_messages[
-                        classification.predicted_class
-                    ]
+                    feedback_text = feedback_messages[classification.predicted_class]
 
                     effective_fps = (
-                        capture.source_fps
-                        if capture.source_fps > 0
-                        else 30.0
+                        capture.source_fps if capture.source_fps > 0 else 30.0
                     )
 
                     feedback_frames_remaining = max(
@@ -600,18 +527,21 @@ def main():
                 else:
                     feedback_text = ""
 
-                processing_time_ms = (
-                    time.perf_counter() - start_time
-                ) * 1000.0
+                processing_time_ms = (time.perf_counter() - start_time) * 1000.0
                 processed_frames += 1
-                measured_processing_seconds += (
-                    processing_time_ms / 1000.0
-                )
+                measured_processing_seconds += processing_time_ms / 1000.0
+
+                if completed_repetition is not None:
+                    _write_repetition_row(
+                        repetition_logger,
+                        run_id=run_id,
+                        clip_id=args.clip_id,
+                        repetition=completed_repetition,
+                        classification=classification,
+                    )
 
                 completed_fields = {
-                    "completed_rep": (
-                        completed_repetition is not None
-                    ),
+                    "completed_rep": (detected_repetition is not None),
                     "completed_rep_id": None,
                     "completed_start_frame": None,
                     "completed_bottom_frame": None,
@@ -622,36 +552,26 @@ def main():
                     "completed_duration_frames": None,
                 }
 
-                if completed_repetition is not None:
+                if detected_repetition is not None:
                     completed_fields.update(
                         {
-                            "completed_rep_id": (
-                                completed_repetition.rep_id
-                            ),
-                            "completed_start_frame": (
-                                completed_repetition.start_frame
-                            ),
+                            "completed_rep_id": (detected_repetition.rep_id),
+                            "completed_start_frame": (detected_repetition.start_frame),
                             "completed_bottom_frame": (
-                                completed_repetition.bottom_frame
+                                detected_repetition.bottom_frame
                             ),
-                            "completed_end_frame": (
-                                completed_repetition.end_frame
-                            ),
+                            "completed_end_frame": (detected_repetition.end_frame),
                             "completed_start_top_angle": (
-                                completed_repetition
-                                .start_top_angle
+                                detected_repetition.start_top_angle
                             ),
                             "completed_minimum_elbow_angle": (
-                                completed_repetition
-                                .minimum_elbow_angle
+                                detected_repetition.minimum_elbow_angle
                             ),
                             "completed_end_top_angle": (
-                                completed_repetition
-                                .end_top_angle
+                                detected_repetition.end_top_angle
                             ),
                             "completed_duration_frames": (
-                                completed_repetition
-                                .duration_frames
+                                detected_repetition.duration_frames
                             ),
                         }
                     )
@@ -669,14 +589,10 @@ def main():
                                 classification.predicted_class
                             ),
                             "repetition_multiple_rules": (
-                                classification
-                                .multiple_rules_triggered
+                                classification.multiple_rules_triggered
                             ),
                             "repetition_triggered_rules": (
-                                "|".join(
-                                    classification
-                                    .triggered_rules
-                                )
+                                "|".join(classification.triggered_rules)
                             ),
                         }
                     )
@@ -686,27 +602,15 @@ def main():
                         "run_id": run_id,
                         "clip_id": args.clip_id,
                         "frame_index": capture.frame_index,
-                        "video_timestamp_ms": (
-                            capture.timestamp_ms()
-                        ),
+                        "video_timestamp_ms": (capture.timestamp_ms()),
                         "source_fps": capture.source_fps,
-                        "processing_time_ms": (
-                            processing_time_ms
-                        ),
+                        "processing_time_ms": (processing_time_ms),
                         "pose_detected": pose_detected,
                         **feature_result,
                         "phase": phase_result["phase"],
-                        "phase_changed": (
-                            phase_result["phase_changed"]
-                        ),
-                        "enhanced_rep_count": (
-                            phase_result["rep_count"]
-                        ),
-                        "missing_angle_frames": (
-                            phase_result[
-                                "missing_angle_frames"
-                            ]
-                        ),
+                        "phase_changed": (phase_result["phase_changed"]),
+                        "enhanced_rep_count": (phase_result["rep_count"]),
+                        "missing_angle_frames": (phase_result["missing_angle_frames"]),
                         **completed_fields,
                         **classification_fields,
                     }
@@ -720,10 +624,7 @@ def main():
 
                     draw_text(
                         frame,
-                        (
-                            "Stable side: "
-                            f"{feature_result['selected_side']}"
-                        ),
+                        (f"Stable side: {feature_result['selected_side']}"),
                         (20, 40),
                     )
 
@@ -758,7 +659,9 @@ def main():
                         frame,
                         (
                             "Smoothed alignment: "
-                            f"{format_angle(feature_result['smoothed_alignment_angle'])}"
+                            f"{
+                                format_angle(feature_result['smoothed_alignment_angle'])
+                            }"
                         ),
                         (20, 200),
                     )
@@ -771,10 +674,7 @@ def main():
 
                     draw_text(
                         frame,
-                        (
-                            "Enhanced repetitions: "
-                            f"{phase_result['rep_count']}"
-                        ),
+                        (f"Enhanced repetitions: {phase_result['rep_count']}"),
                         (20, 280),
                     )
 
@@ -791,14 +691,20 @@ def main():
                         frame,
                     )
 
-                    if (
-                        cv2.waitKey(1) & 0xFF
-                        == ord("q")
-                    ):
-                        termination_reason = (
-                            "user_requested"
-                        )
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        termination_reason = "user_requested"
                         break
+
+            completed_repetition = return_top_finalizer.flush()
+            if completed_repetition is not None:
+                classification = repetition_classifier.classify(completed_repetition)
+                _write_repetition_row(
+                    repetition_logger,
+                    run_id=run_id,
+                    clip_id=args.clip_id,
+                    repetition=completed_repetition,
+                    classification=classification,
+                )
 
             print(
                 "Final enhanced repetition count:",
@@ -816,18 +722,14 @@ def main():
             else base_metadata["input_video"]
         )
         wall_seconds = (
-            time.perf_counter() - loop_started
-            if loop_started is not None
-            else 0.0
+            time.perf_counter() - loop_started if loop_started is not None else 0.0
         )
         metadata_recorder.mark_failed(
             error,
             source_video=source_video,
             processing_summary={
                 "processed_frames": processed_frames,
-                "measured_processing_seconds": (
-                    measured_processing_seconds
-                ),
+                "measured_processing_seconds": (measured_processing_seconds),
                 "loop_wall_seconds": wall_seconds,
                 "termination_reason": "error",
             },
@@ -839,24 +741,19 @@ def main():
         capture,
     )
     wall_seconds = (
-        time.perf_counter() - loop_started
-        if loop_started is not None
-        else 0.0
+        time.perf_counter() - loop_started if loop_started is not None else 0.0
     )
     metadata_recorder.mark_completed(
         source_video=source_video,
         processing_summary={
             "processed_frames": processed_frames,
-            "measured_processing_seconds": (
-                measured_processing_seconds
-            ),
+            "measured_processing_seconds": (measured_processing_seconds),
             "loop_wall_seconds": wall_seconds,
             "termination_reason": termination_reason,
             "processed_full_clip": (
                 termination_reason == "end_of_stream"
                 and (
-                    capture.frame_count <= 0
-                    or processed_frames == capture.frame_count
+                    capture.frame_count <= 0 or processed_frames == capture.frame_count
                 )
             ),
         },

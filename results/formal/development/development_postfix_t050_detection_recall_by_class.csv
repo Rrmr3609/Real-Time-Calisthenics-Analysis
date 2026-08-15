@@ -1,0 +1,6 @@
+class_label,support,matched,missed,recall
+correct,14,13,1,0.9285714285714286
+insufficient_depth,9,9,0,1.0
+incomplete_extension,10,10,0,1.0
+alignment_deviation,10,7,3,0.7
+unscorable,0,0,0,

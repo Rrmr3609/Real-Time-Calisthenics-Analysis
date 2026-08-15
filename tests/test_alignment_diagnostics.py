@@ -1,10 +1,26 @@
+import argparse
+import hashlib
 import sys
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from evaluation import (
+    summarise_alignment_visibility,
+    summarise_phase_detection,
+    summarise_preprocessing,
+    summarise_repetition_classification,
+)
 from evaluation.summarise_alignment_visibility import build_summary
-from evaluation import summarise_repetition_classification
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SUMMARY_MODULES = (
+    summarise_preprocessing,
+    summarise_phase_detection,
+    summarise_repetition_classification,
+    summarise_alignment_visibility,
+)
 
 
 def make_frame_data():
@@ -78,31 +94,182 @@ def test_alignment_summary_reports_requested_metrics():
     )
 
     assert "Elbow-valid frames: 4 (0.800)" in summary
-    assert (
-        "Alignment-valid frames on elbow-selected side: 2 (0.400)"
-        in summary
-    )
+    assert "Alignment-valid frames on elbow-selected side: 2 (0.400)" in summary
     assert "Opposite-side rescue opportunities: 1 (0.500" in summary
     assert "Selected elbow-side change frames: 2" in summary
     assert "Direct left/right elbow-side switches: 1" in summary
     assert "- descending: frames=1" in summary
     assert "Mean repetition alignment coverage: 0.500" in summary
-    assert (
-        "Final predicted-class unscorable repetitions: 1"
-        in summary
+    assert "Final predicted-class unscorable repetitions: 1" in summary
+    assert "Alignment-evidence-unscorable repetitions (coverage < 0.500): 1" in summary
+    assert summary.startswith(
+        "Alignment visibility development diagnostic — 2026-07-28"
     )
-    assert (
-        "Alignment-evidence-unscorable repetitions "
-        "(coverage < 0.500): 1"
-        in summary
+
+
+@pytest.mark.parametrize("module", SUMMARY_MODULES)
+def test_summary_date_accepts_strict_iso_date(module):
+    assert module.iso_summary_date("2026-08-11") == "2026-08-11"
+
+
+@pytest.mark.parametrize("module", SUMMARY_MODULES)
+@pytest.mark.parametrize(
+    "invalid_date",
+    ["11 August 2026", "20260811", "2026-02-30"],
+)
+def test_summary_date_rejects_invalid_values(module, invalid_date):
+    with pytest.raises(
+        argparse.ArgumentTypeError,
+        match="ISO YYYY-MM-DD",
+    ):
+        module.iso_summary_date(invalid_date)
+
+
+def test_preprocessing_summary_uses_supplied_identity_and_date(
+    tmp_path,
+    monkeypatch,
+):
+    input_path = tmp_path / "frames.csv"
+    output_path = tmp_path / "preprocessing.txt"
+    pd.DataFrame(
+        {
+            "pose_detected": [True, True],
+            "elbow_feature_valid": [True, True],
+            "alignment_feature_valid": [True, False],
+            "selected_side": ["left", "left"],
+            "raw_elbow_angle": [160.0, 150.0],
+            "smoothed_elbow_angle": [160.0, 155.0],
+            "processing_time_ms": [10.0, 12.0],
+        }
+    ).to_csv(input_path, index=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "summarise_preprocessing.py",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--summary-date",
+            "2026-08-11",
+            "--development-id",
+            "development-run-001",
+        ],
     )
+
+    summarise_preprocessing.main()
+
+    summary = output_path.read_text(encoding="utf-8")
+    assert "development diagnostic — 2026-08-11" in summary
+    assert "Development ID: development-run-001" in summary
+    assert " ".join(("21", "July", "2026")) not in summary
+
+
+def test_phase_summary_uses_supplied_identity_and_date(
+    tmp_path,
+    monkeypatch,
+):
+    input_path = tmp_path / "temporal.csv"
+    output_path = tmp_path / "phase.txt"
+    pd.DataFrame(
+        {
+            "enhanced_rep_count": [0, 0],
+            "completed_rep": [False, False],
+            "phase": ["waiting", "top"],
+            "elbow_feature_valid": [False, True],
+            "processing_time_ms": [10.0, 12.0],
+        }
+    ).to_csv(input_path, index=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "summarise_phase_detection.py",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--summary-date",
+            "2026-08-11",
+            "--development-id",
+            "development-run-002",
+        ],
+    )
+
+    summarise_phase_detection.main()
+
+    summary = output_path.read_text(encoding="utf-8")
+    assert "development diagnostic — 2026-08-11" in summary
+    assert "Development ID: development-run-002" in summary
+    assert " ".join(("22", "July", "2026")) not in summary
+    assert "not human ground truth" in summary
+
+
+def test_classification_summary_uses_supplied_identity_and_date(
+    tmp_path,
+    monkeypatch,
+):
+    input_path = tmp_path / "repetitions.csv"
+    output_path = tmp_path / "classification.txt"
+    pd.DataFrame(
+        columns=[
+            "clip_id",
+            "rep_id",
+            "predicted_class",
+            "alignment_valid_ratio",
+            "multiple_rules_triggered",
+            "minimum_elbow_angle",
+            "top_extension_angle",
+            "triggered_rules",
+        ]
+    ).to_csv(input_path, index=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "summarise_repetition_classification.py",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--summary-date",
+            "2026-08-11",
+            "--development-id",
+            "development-run-003",
+        ],
+    )
+
+    summarise_repetition_classification.main()
+
+    summary = output_path.read_text(encoding="utf-8")
+    assert "development diagnostic — 2026-08-11" in summary
+    assert "Development ID: development-run-003" in summary
+    assert " ".join(("23", "July", "2026")) not in summary
+
+
+def test_historical_summary_dates_are_preserved():
+    summaries = PROJECT_ROOT / "results" / "development" / "summaries"
+    expected_sha256 = {
+        "2026-07-21_enhanced_preprocessing_summary.txt": (
+            "ce6222063683c19cda71c351ecf39c2c8c51a52d3d97cc5551fe39bc4a8d06ec"
+        ),
+        "2026-07-22_phase_detection_summary.txt": (
+            "18cf9bc9896db79ea00e6e7097f67e1dca66af0ba1f7ad1d40abc8bb79a87a43"
+        ),
+        "2026-07-23_repetition_classification_summary.txt": (
+            "ec53442a1391e7954c5a2b37583069d001ba448d4a7c985c624c0d8e5b77eba7"
+        ),
+    }
+
+    for filename, expected_hash in expected_sha256.items():
+        content = (summaries / filename).read_bytes()
+        assert hashlib.sha256(content).hexdigest() == expected_hash
 
 
 def test_alignment_summary_separates_evidence_from_final_class():
     repetitions = make_repetition_data()
-    repetitions.loc[0, "predicted_class"] = (
-        "incomplete_extension"
-    )
+    repetitions.loc[0, "predicted_class"] = "incomplete_extension"
 
     summary = build_summary(
         frame_data=make_frame_data(),
@@ -113,15 +280,8 @@ def test_alignment_summary_separates_evidence_from_final_class():
         minimum_alignment_valid_ratio=0.50,
     )
 
-    assert (
-        "Final predicted-class unscorable repetitions: 0"
-        in summary
-    )
-    assert (
-        "Alignment-evidence-unscorable repetitions "
-        "(coverage < 0.500): 1"
-        in summary
-    )
+    assert "Final predicted-class unscorable repetitions: 0" in summary
+    assert "Alignment-evidence-unscorable repetitions (coverage < 0.500): 1" in summary
 
 
 def test_alignment_summary_rejects_duplicate_repetitions():
@@ -174,6 +334,10 @@ def test_classification_summary_rejects_duplicate_repetitions(
             str(input_path),
             "--output",
             str(output_path),
+            "--summary-date",
+            "2026-08-11",
+            "--development-id",
+            "duplicate-repetition-test",
         ],
     )
 

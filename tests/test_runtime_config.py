@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import pytest
 import yaml
@@ -12,16 +11,11 @@ from config.runtime import (
 )
 from utils.paths import PROJECT_ROOT
 
-
-DEFAULT_CONFIG_PATH = (
-    PROJECT_ROOT / "configs" / "default.yaml"
-)
+DEFAULT_CONFIG_PATH = PROJECT_ROOT / "configs" / "default.yaml"
 
 
 def load_document():
-    return yaml.safe_load(
-        DEFAULT_CONFIG_PATH.read_text(encoding="utf-8")
-    )
+    return yaml.safe_load(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
 
 
 def write_document(tmp_path, document):
@@ -50,21 +44,12 @@ def test_default_config_loads_exact_current_values():
     assert config.segmentation.phase_confirmation_frames == 3
     assert config.segmentation.missing_angle_grace_frames == 5
     assert config.segmentation.minimum_repetition_frames == 8
-    assert config.classification.depth_threshold == 100.0
+    assert config.classification.depth_threshold == 65.0
     assert config.classification.extension_threshold == 150.0
     assert config.classification.alignment_minimum == 160.0
-    assert (
-        config.classification.alignment_deviation_min_frames
-        == 3
-    )
-    assert (
-        config.classification.alignment_deviation_min_ratio
-        == 0.20
-    )
-    assert (
-        config.classification.minimum_alignment_valid_ratio
-        == 0.50
-    )
+    assert config.classification.alignment_deviation_min_frames == 3
+    assert config.classification.alignment_deviation_min_ratio == 0.20
+    assert config.classification.minimum_alignment_valid_ratio == 0.50
 
 
 def test_missing_required_field_is_rejected(tmp_path):
@@ -75,9 +60,7 @@ def test_missing_required_field_is_rejected(tmp_path):
         ValueError,
         match="missing required fields.*ema_alpha",
     ):
-        load_runtime_config(
-            write_document(tmp_path, document)
-        )
+        load_runtime_config(write_document(tmp_path, document))
 
 
 @pytest.mark.parametrize(
@@ -114,9 +97,7 @@ def test_invalid_numeric_values_are_rejected(
     document[section][field] = invalid_value
 
     with pytest.raises(ValueError, match=message):
-        load_runtime_config(
-            write_document(tmp_path, document)
-        )
+        load_runtime_config(write_document(tmp_path, document))
 
 
 def test_unknown_field_is_rejected(tmp_path):
@@ -127,9 +108,7 @@ def test_unknown_field_is_rejected(tmp_path):
         ValueError,
         match="unknown fields.*hidden_default",
     ):
-        load_runtime_config(
-            write_document(tmp_path, document)
-        )
+        load_runtime_config(write_document(tmp_path, document))
 
 
 def test_malformed_yaml_is_rejected(tmp_path):
@@ -169,9 +148,7 @@ def test_config_serialises_to_plain_json_types():
     decoded = json.loads(encoded)
 
     assert decoded["config_schema_version"] == 1
-    assert decoded["segmentation"][
-        "minimum_repetition_frames"
-    ] == 8
+    assert decoded["segmentation"]["minimum_repetition_frames"] == 8
 
 
 @pytest.mark.parametrize(

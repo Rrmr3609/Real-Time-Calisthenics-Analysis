@@ -1,3 +1,5 @@
+"""Define the measurements exported for an enhanced completed repetition."""
+
 from dataclasses import asdict, dataclass
 from typing import Dict, Tuple
 
@@ -5,9 +7,17 @@ from typing import Dict, Tuple
 @dataclass(frozen=True)
 class CompletedRepetition:
     """
-    Measurements recorded for one temporally completed repetition.
+    Measurements recorded over one inclusive repetition interval.
 
-    Classification is performed separately by RepetitionClassifier.
+    Frame fields are integer video-frame identities, angle fields are degrees,
+    and ``duration_frames`` is ``end_frame - start_frame + 1``. Alignment
+    values contain only valid observations from that interval, so missing
+    evidence is represented by absence rather than a placeholder or stale
+    value. ``end_top_angle`` is finalised separately as the valid elbow-angle
+    peak observed across return confirmation and the continuing returned top
+    phase; observations after ``end_frame`` do not extend the detection or
+    alignment window. Classification is performed separately by
+    ``RepetitionClassifier``.
     """
 
     rep_id: int
@@ -27,4 +37,5 @@ class CompletedRepetition:
     alignment_angles: Tuple[float, ...] = ()
 
     def to_dict(self) -> Dict[str, object]:
+        """Return a dictionary suitable for repetition-level logging."""
         return asdict(self)

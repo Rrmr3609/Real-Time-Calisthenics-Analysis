@@ -1,0 +1,672 @@
+{
+  "evaluated_clip_count": 12,
+  "evaluation_run_id": "development_t050",
+  "event_tolerance_seconds": 0.5,
+  "formal_evidence": {
+    "annotation_review": {
+      "path": "data/annotations/development_repetition_annotations.review.json",
+      "sha256": "9778cbba66bcb65ca196d98423bd9323e9b6b77e86e00c6970a93608ca99e8fe",
+      "status": "complete"
+    },
+    "dataset_manifest": {
+      "path": "data/manifests/development_dataset_manifest.csv",
+      "sha256": "1e358543e07efee44cedf4d3d5e55568447002e15f6a90b86e4312c8b5f23a34"
+    },
+    "repetition_annotations": {
+      "frozen_sha256": "307c9a15b2604d838e453c540d370d13570c43e92f7c45fb798c6d58d3a2fdb7",
+      "path": "data/annotations/development_repetition_annotations.csv",
+      "sha256": "307c9a15b2604d838e453c540d370d13570c43e92f7c45fb798c6d58d3a2fdb7"
+    }
+  },
+  "git": {
+    "branch": "codex/repository-polish",
+    "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+    "dirty": false
+  },
+  "metadata_schema_version": 2,
+  "ordered_clip_ids": [
+    "dev01_correct",
+    "dev02_insufficient_depth",
+    "dev03_incomplete_extension",
+    "dev04_alignment_deviation",
+    "dev05_mixed_fast",
+    "dev06_mixed_diagonal",
+    "ext_kaggle_01",
+    "ext_kaggle_02",
+    "ext_kaggle_03",
+    "ext_kaggle_04",
+    "ext_kaggle_05",
+    "ext_kaggle_06"
+  ],
+  "outputs": {
+    "classification_confusion_matrix_csv": "results/formal/development/development_t050_classification_confusion_matrix.csv",
+    "classification_per_class_csv": "results/formal/development/development_t050_classification_per_class.csv",
+    "detection_recall_by_class_csv": "results/formal/development/development_t050_detection_recall_by_class.csv",
+    "evaluation_metadata_json": "results/formal/development/development_t050_evaluation_metadata.json",
+    "formal_evaluation_json": "results/formal/development/development_t050_formal_evaluation.json",
+    "per_clip_metrics_csv": "results/formal/development/development_t050_per_clip_metrics.csv"
+  },
+  "report_schema_version": 2,
+  "software": {
+    "packages": {
+      "mediapipe": "0.10.14",
+      "numpy": "2.5.1",
+      "opencv": "5.0.0.93",
+      "pandas": "3.0.3"
+    },
+    "python": "3.12.4",
+    "python_implementation": "CPython"
+  },
+  "source_runs": {
+    "baseline": [
+      {
+        "clip_id": "dev01_correct",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev01_correct_baseline.csv",
+          "sha256": "82736eb7656a0caea4b1dc2aa17d6a7e64dfc3d1f234d7e1d6f3d497e810f8c2"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev01_correct_baseline.csv",
+          "sha256": "82736eb7656a0caea4b1dc2aa17d6a7e64dfc3d1f234d7e1d6f3d497e810f8c2"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "0a346b13b7b3c68cf04bd0ab5c9cf76e0ebf86983eb369badf5380fd171ccbb8",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev01_correct_baseline_metadata.json",
+          "sha256": "03859a2c1476e160719b24568332586e43978166f6d39ae0ee18e012a47de789"
+        },
+        "source_run_id": "formal_dev_baseline_dev01_correct",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev02_insufficient_depth",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev02_insufficient_depth_baseline.csv",
+          "sha256": "ad48ff8317aff15765914c75a34ce9ec23c75fb2a956173e9bd6d68a73b90bc7"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev02_insufficient_depth_baseline.csv",
+          "sha256": "ad48ff8317aff15765914c75a34ce9ec23c75fb2a956173e9bd6d68a73b90bc7"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "bd5fd047267a54e3761fffdef08720afe15d2b98c010a977d08e633bd50e3537",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev02_insufficient_depth_baseline_metadata.json",
+          "sha256": "5daa8ef5069633473e5f021f134b8464d256dcf2b684f9ff672260806a734564"
+        },
+        "source_run_id": "formal_dev_baseline_dev02_insufficient_depth",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev03_incomplete_extension",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev03_incomplete_extension_baseline.csv",
+          "sha256": "0b4b5f6c9d321b00e383d59a6435e3682aa14dc30ef1e97d97283518443313c7"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev03_incomplete_extension_baseline.csv",
+          "sha256": "0b4b5f6c9d321b00e383d59a6435e3682aa14dc30ef1e97d97283518443313c7"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "2d7aee7f52b4397bedee787c7fa2f5d96f2561af06a5439793b6669f8b612b58",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev03_incomplete_extension_baseline_metadata.json",
+          "sha256": "4760b48fd9970747c51b1d58595fe1e7909c33be2cfdfee4eb594b06dea9548d"
+        },
+        "source_run_id": "formal_dev_baseline_dev03_incomplete_extension",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev04_alignment_deviation",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev04_alignment_deviation_baseline.csv",
+          "sha256": "ef9eb03ad5e21a30b95dac6b6d767b48e0cf1664250bf3c6eb9b4f683811a800"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev04_alignment_deviation_baseline.csv",
+          "sha256": "ef9eb03ad5e21a30b95dac6b6d767b48e0cf1664250bf3c6eb9b4f683811a800"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "56d27bcd3285120918b63d48975fbbe0991668e6f6b2365698901cc9da066153",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev04_alignment_deviation_baseline_metadata.json",
+          "sha256": "1d590930c59ce4d67c912f42772b5652c1ed0457ccefaf288f0161610a935b91"
+        },
+        "source_run_id": "formal_dev_baseline_dev04_alignment_deviation",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev05_mixed_fast",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev05_mixed_fast_baseline.csv",
+          "sha256": "e46036c2cc15d21f3fd649a59c9fde8b3b76c1642af63b15dd5daeee7210034c"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev05_mixed_fast_baseline.csv",
+          "sha256": "e46036c2cc15d21f3fd649a59c9fde8b3b76c1642af63b15dd5daeee7210034c"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "e29278659cc5740c78e6a65efdd13535c11895c6bc9d25e18ae5a9bc306e66c2",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev05_mixed_fast_baseline_metadata.json",
+          "sha256": "06d597ff0195b3965dced64e116cc2027b70c3644af70b0030a3fd961e4a755e"
+        },
+        "source_run_id": "formal_dev_baseline_dev05_mixed_fast",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev06_mixed_diagonal",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev06_mixed_diagonal_baseline.csv",
+          "sha256": "3ad43906f8422c739b9dc11dbc2feed792012447f297cb90b1f104000fc97a76"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev06_mixed_diagonal_baseline.csv",
+          "sha256": "3ad43906f8422c739b9dc11dbc2feed792012447f297cb90b1f104000fc97a76"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "419605b1ecef997792b6abef09bb9976fb089385339ee479901f7ae6c85d45c8",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev06_mixed_diagonal_baseline_metadata.json",
+          "sha256": "156d1a21d4c21781c06c88483813b02f33fba257cd038c01d5cf4dae06ea09bf"
+        },
+        "source_run_id": "formal_dev_baseline_dev06_mixed_diagonal",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_01",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_01_baseline.csv",
+          "sha256": "592424a959064131e4a4bbea0a6f34da0e2ab6da7753a21ff59a134585aad8d7"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_01_baseline.csv",
+          "sha256": "592424a959064131e4a4bbea0a6f34da0e2ab6da7753a21ff59a134585aad8d7"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "432d676b8fcd0e5d760421a1a3c57a684e5abc1117a69db8a4929160bedbc284",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_01_baseline_metadata.json",
+          "sha256": "793f9e7255813bb13bc663c0013edd194f06394643dbd4294a06e44a123c1c36"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_01",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_02",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_02_baseline.csv",
+          "sha256": "7f6c627667c90a7822792092a0124e1531c7a2b0ff4b1975e76ced47de197748"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_02_baseline.csv",
+          "sha256": "7f6c627667c90a7822792092a0124e1531c7a2b0ff4b1975e76ced47de197748"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "3c12c49fdbc75ac8145d121348a974cece6cf47de9794c0e43ca12e815409bfa",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_02_baseline_metadata.json",
+          "sha256": "46361f740bdca929031ec1b8b0d8e36e631a4958b2646dc22d6c830ed72f0f4a"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_02",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_03",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_03_baseline.csv",
+          "sha256": "4296fb01e7f26511219ea41a95d53d4bbc44c57e10568bff10a13fa0d98f7121"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_03_baseline.csv",
+          "sha256": "4296fb01e7f26511219ea41a95d53d4bbc44c57e10568bff10a13fa0d98f7121"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "0212fb967e95401e6d99471a814539d373a4b9dd4890c6936adae6753fcb6f46",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_03_baseline_metadata.json",
+          "sha256": "af3f8a720146ba3b381c76d938ea8d277bc775ac1cd0e20822689bdadeeabcc1"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_03",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_04",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_04_baseline.csv",
+          "sha256": "676434fa273e3cf4bcef804bf9452facaac74e34e1ce77faa51c8364936b8b2c"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_04_baseline.csv",
+          "sha256": "676434fa273e3cf4bcef804bf9452facaac74e34e1ce77faa51c8364936b8b2c"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "86e06da20f1cbd4bc9291e3ff3a309df5deaf87eeb2441717fe22eed975c7593",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_04_baseline_metadata.json",
+          "sha256": "fb625c4806f5ec53d8ffbba98787394a9fdfc3267b2e4a573220e3cefe5ace08"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_04",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_05",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_05_baseline.csv",
+          "sha256": "c4cdb7ee437e283ab4f2117d90935ceb11e3acab48a0ffd8feec985f715f00b6"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_05_baseline.csv",
+          "sha256": "c4cdb7ee437e283ab4f2117d90935ceb11e3acab48a0ffd8feec985f715f00b6"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "d31caa4a2b160554e8694543e685f5733e75fb5867d781c00bd2d172933a4107",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_05_baseline_metadata.json",
+          "sha256": "68ecca4e3a920bfefe797f4361e085a556f19ce5d89b227b653646fb0ae53318"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_05",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_06",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_06_baseline.csv",
+          "sha256": "2cc52c53bf7da9aff4c53d9e93c3da50a6bb0b5f7b029d69b18539b21ade7631"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_06_baseline.csv",
+          "sha256": "2cc52c53bf7da9aff4c53d9e93c3da50a6bb0b5f7b029d69b18539b21ade7631"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "67d5c4c422da284197ea68e0f0f00b64d1a764efaf24816b867ab80184f5fe70",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_06_baseline_metadata.json",
+          "sha256": "6ad58e2879d8e811946f080433faadef4cffad3b38a657b2ee814dce986290ea"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_06",
+        "split": "development"
+      }
+    ],
+    "enhanced": [
+      {
+        "clip_id": "dev01_correct",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_dev01_correct_enhanced_repetitions.csv",
+          "sha256": "a109d5d3d26eaf8d8a18bf2a679630dc8a7f840cd2dbfa4cefca8f5d669085f9"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_dev01_correct_enhanced_temporal.csv",
+          "sha256": "68e82650efb7c2c640d0d05beff7e9ecec0429705397dda5a46caae7b24af94b"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "0a346b13b7b3c68cf04bd0ab5c9cf76e0ebf86983eb369badf5380fd171ccbb8",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_dev01_correct_enhanced_metadata.json",
+          "sha256": "17230fbb4db9e50472d445f49ffab3c672e12d9ea6f161208b014fbffa0f9331"
+        },
+        "source_run_id": "formal_dev_enhanced_dev01_correct",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev02_insufficient_depth",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_dev02_insufficient_depth_enhanced_repetitions.csv",
+          "sha256": "0fbf4d362a6c0fb112915177d1e787152360cc13ca1270879cef32e989039dae"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_dev02_insufficient_depth_enhanced_temporal.csv",
+          "sha256": "652cda2764eb2336097c73ba801a729b1ccff6b5e81781c1e805389b33845b04"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "bd5fd047267a54e3761fffdef08720afe15d2b98c010a977d08e633bd50e3537",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_dev02_insufficient_depth_enhanced_metadata.json",
+          "sha256": "f67899348f6b9b0a4849fb10674a989804c1509e7ca8547089d441457abc2533"
+        },
+        "source_run_id": "formal_dev_enhanced_dev02_insufficient_depth",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev03_incomplete_extension",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_dev03_incomplete_extension_enhanced_repetitions.csv",
+          "sha256": "4546e14204d0839d2896d3c53d175c657c315db0b66700b3855e40cb25412d5b"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_dev03_incomplete_extension_enhanced_temporal.csv",
+          "sha256": "a750410684ab1bd15d75788d61eae429ba3741bef253cb4ecb0f706dd80f6d1f"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "2d7aee7f52b4397bedee787c7fa2f5d96f2561af06a5439793b6669f8b612b58",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_dev03_incomplete_extension_enhanced_metadata.json",
+          "sha256": "2ea532932e353adb6bed7ae012cbe65a217ce88285768e95b53b47a272662335"
+        },
+        "source_run_id": "formal_dev_enhanced_dev03_incomplete_extension",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev04_alignment_deviation",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_dev04_alignment_deviation_enhanced_repetitions.csv",
+          "sha256": "cfbb0b8aab677a1275f68a7329c9abe7baeec8b1d9fd79fe2b94db5d30457505"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_dev04_alignment_deviation_enhanced_temporal.csv",
+          "sha256": "e21b022e994a5f63228da1dde3c07b9db48f1b9057a1b6e1fdf3b4e988e92f23"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "56d27bcd3285120918b63d48975fbbe0991668e6f6b2365698901cc9da066153",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_dev04_alignment_deviation_enhanced_metadata.json",
+          "sha256": "137fe2a3a6b8c46d9c099038a4072a1e95aa9c2eec26eff0053f46259c2cbed4"
+        },
+        "source_run_id": "formal_dev_enhanced_dev04_alignment_deviation",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev05_mixed_fast",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_dev05_mixed_fast_enhanced_repetitions.csv",
+          "sha256": "506e0a234e25569c58622924a9ee315ee62d44c5821c5e23412ea509461432df"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_dev05_mixed_fast_enhanced_temporal.csv",
+          "sha256": "02f568deb87cc11756b94ad9efe91a158667b9e3a6704f1719e641022fb1969b"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "e29278659cc5740c78e6a65efdd13535c11895c6bc9d25e18ae5a9bc306e66c2",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_dev05_mixed_fast_enhanced_metadata.json",
+          "sha256": "a854fbf448095267bba23419f262225bb57c342b8709e9522866f85c860cbc1c"
+        },
+        "source_run_id": "formal_dev_enhanced_dev05_mixed_fast",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev06_mixed_diagonal",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_dev06_mixed_diagonal_enhanced_repetitions.csv",
+          "sha256": "b308116e947838bb2759a2b50ebd14c97847f633082a47ea65514d5a35701b29"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_dev06_mixed_diagonal_enhanced_temporal.csv",
+          "sha256": "090b23f35f717db2077496bfa830f41b09c4705d662e8ae43fe8b2b134caed9f"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "419605b1ecef997792b6abef09bb9976fb089385339ee479901f7ae6c85d45c8",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_dev06_mixed_diagonal_enhanced_metadata.json",
+          "sha256": "db04867519afa425a2a16269baf2bf38e79613beefd6e7e6b60238417c5a629a"
+        },
+        "source_run_id": "formal_dev_enhanced_dev06_mixed_diagonal",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_01",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_01_enhanced_repetitions.csv",
+          "sha256": "f7da63da6f4e80a2a47745e275200e610eb5cd41a3ed7dcecf9fe9e122b7a5f9"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_ext_kaggle_01_enhanced_temporal.csv",
+          "sha256": "7433baf9bb05d50a82e4ef173bc975c7fc0c9b62fb9ca925e70344accc93d836"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "432d676b8fcd0e5d760421a1a3c57a684e5abc1117a69db8a4929160bedbc284",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_01_enhanced_metadata.json",
+          "sha256": "b675e946aa139ff99cc8da7aa55fd11e7b01c798bdde20ad59f434e3f4d7193f"
+        },
+        "source_run_id": "formal_dev_enhanced_ext_kaggle_01",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_02",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_02_enhanced_repetitions.csv",
+          "sha256": "16ea8be141192e05e4f4a527d8f1a12fb9c3d5328556c909b021af8c8e8e3691"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_ext_kaggle_02_enhanced_temporal.csv",
+          "sha256": "4e4d446c02da461d0ee16a671826e11ea6b542a08e8a11a98c88b0c68c4bdea2"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "3c12c49fdbc75ac8145d121348a974cece6cf47de9794c0e43ca12e815409bfa",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_02_enhanced_metadata.json",
+          "sha256": "6aa3f25554927475064f31733d79738f3828882f99a17aaa9feef279e79727b9"
+        },
+        "source_run_id": "formal_dev_enhanced_ext_kaggle_02",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_03",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_03_enhanced_repetitions.csv",
+          "sha256": "e841aa9294a744aadbf9625ad8d0e6be57b81419ee18c4302a26fec542b111ae"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_ext_kaggle_03_enhanced_temporal.csv",
+          "sha256": "646c93cf82000aa79b33738ed6e9c0f094a8158b70d8b082388ff014fd55fa91"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "0212fb967e95401e6d99471a814539d373a4b9dd4890c6936adae6753fcb6f46",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_03_enhanced_metadata.json",
+          "sha256": "7cb15542fd5bf985d57b904d5e285da5c4ae43c9bd770267b3a20f1e6555144b"
+        },
+        "source_run_id": "formal_dev_enhanced_ext_kaggle_03",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_04",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_04_enhanced_repetitions.csv",
+          "sha256": "3162b91b52195634e2c6f8a31c0d6d25ac70afe4ce646ceb200c9e7051a8ba5f"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_ext_kaggle_04_enhanced_temporal.csv",
+          "sha256": "c49b2822cd5f0b62aa81cba77c184ae1d98ae68b18701c34b60cbdf56a53ea1a"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "86e06da20f1cbd4bc9291e3ff3a309df5deaf87eeb2441717fe22eed975c7593",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_04_enhanced_metadata.json",
+          "sha256": "1d1c8f8e18087c396b13b6f2eabd1c935d2cfc9dc9a0de2b3b59ff97cb3ba63a"
+        },
+        "source_run_id": "formal_dev_enhanced_ext_kaggle_04",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_05",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_05_enhanced_repetitions.csv",
+          "sha256": "89cd71404cd7400f4910f6b86b6568c6e9a0a17d466eed5319f924c12a25d588"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_ext_kaggle_05_enhanced_temporal.csv",
+          "sha256": "757d95784ad7208d040a7ab81365739b16fe11ed23ab50296bfe3f321c347f7c"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "d31caa4a2b160554e8694543e685f5733e75fb5867d781c00bd2d172933a4107",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_05_enhanced_metadata.json",
+          "sha256": "75ef17e4ef58b873a2e4b4dfe6b370b8cf8dd8a3233952b670ec86deb987623d"
+        },
+        "source_run_id": "formal_dev_enhanced_ext_kaggle_05",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_06",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_06_enhanced_repetitions.csv",
+          "sha256": "f9aa38feca5f36010c13c09a7464d244cf351b82c2a76c44650f44916cebaf61"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_enhanced_ext_kaggle_06_enhanced_temporal.csv",
+          "sha256": "f78e729885ab4f6991891a631ec74adfe41d11c21e371d13ecaf8b2743fda9fc"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "67d5c4c422da284197ea68e0f0f00b64d1a764efaf24816b867ab80184f5fe70",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_enhanced_ext_kaggle_06_enhanced_metadata.json",
+          "sha256": "fd21dddf4d315fc3f065f6870b4b259253f0fab5e189a3ed103d9a7451c18cf2"
+        },
+        "source_run_id": "formal_dev_enhanced_ext_kaggle_06",
+        "split": "development"
+      }
+    ]
+  },
+  "split": "development",
+  "status": "completed",
+  "timestamps": {
+    "completed_utc": "2026-08-13T22:26:04.957005+00:00",
+    "started_utc": "2026-08-13T22:26:04.704907+00:00"
+  }
+}

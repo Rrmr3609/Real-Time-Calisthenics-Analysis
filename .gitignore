@@ -6,7 +6,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
+*.egg-info/
+build/
+dist/
 
 # Virtual environments
 .venv/
@@ -34,14 +39,11 @@ data/raw/*
 !data/raw/.gitkeep
 
 data/processed/*
-!data/processed/.gitkeep
 
 # Generated experiment files
 experiments/logs/*
-!experiments/logs/.gitkeep
 
 experiments/outputs/*
-!experiments/outputs/.gitkeep
 
 # Large video files
 *.mp4
@@ -62,3 +64,6 @@ experiments/outputs/*
 
 # Local pytest temporary directory
 .pytest_tmp/
+
+# In-progress manual-annotation viewer checkpoint
+data/annotations/*.resume.json

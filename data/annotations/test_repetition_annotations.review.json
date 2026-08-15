@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "annotation_file": "data/annotations/test_repetition_annotations.csv",
+  "annotator": "ANN01",
+  "annotation_date": "2026-08-14",
+  "review_status": "complete",
+  "reviewed_by": "REVIEWER01",
+  "review_date": "2026-08-15",
+  "repeat_review_status": "not_performed",
+  "repeat_reviewed_by": null,
+  "notes": "",
+  "adjudication_notes": "",
+  "frozen_annotation_sha256": "ca8f93ac28095d70ce207b0bfa27b33b628f3966b90510ad78826eb32fd8e27c",
+  "finalised_at_utc": "2026-08-15T01:46:08.846195Z"
+}

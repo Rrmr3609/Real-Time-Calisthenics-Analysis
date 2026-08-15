@@ -1,5 +1,6 @@
-from typing import Dict, Optional, Tuple, Sequence
+"""Extract pose coordinates and visibility evidence for required features."""
 
+from typing import Dict, Optional, Tuple
 
 Point2D = Tuple[float, float]
 
@@ -20,11 +21,17 @@ LANDMARK_NAMES = {
 }
 
 
-def extract_landmarks(results, image_width: int, image_height: int) -> Dict[str, dict]:
+def extract_landmarks(
+    results,
+    image_width: int,
+    image_height: int,
+) -> Dict[str, dict]:
     """
-    Extract selected MediaPipe landmarks into pixel coordinates.
+    Extract selected MediaPipe landmarks into image-pixel coordinates.
 
-    Returns a dictionary containing x, y and visibility values.
+    MediaPipe's normalized x/y values are scaled using the supplied image
+    dimensions. Visibility values are forwarded unchanged as MediaPipe-style
+    confidence evidence. An unavailable pose produces an empty dictionary.
     """
     if not results.pose_landmarks:
         return {}
@@ -43,6 +50,7 @@ def extract_landmarks(results, image_width: int, image_height: int) -> Dict[str,
 
 
 def get_point(landmarks: Dict[str, dict], name: str) -> Optional[Point2D]:
+    """Return a landmark's image-pixel coordinates, or ``None`` if absent."""
     if name not in landmarks:
         return None
 
@@ -50,13 +58,11 @@ def get_point(landmarks: Dict[str, dict], name: str) -> Optional[Point2D]:
 
 
 def get_visibility(landmarks: Dict[str, dict], name: str) -> Optional[float]:
+    """Return a landmark's visibility value, or ``None`` if absent."""
     if name not in landmarks:
         return None
 
     return landmarks[name]["visibility"]
-
-
-Point2D = Tuple[float, float]
 
 
 FEATURE_LANDMARKS = {
@@ -71,9 +77,11 @@ def feature_visibility_values(
     feature: str,
 ) -> Optional[list[float]]:
     """
-    Return the visibility values required for one feature.
+    Return MediaPipe-style visibility values required for one feature.
 
-    Returns None when the feature or a required landmark is unavailable.
+    ``None`` indicates that a required landmark is unavailable. An unknown
+    feature name raises ``ValueError`` rather than silently changing the
+    feature definition.
     """
     if feature not in FEATURE_LANDMARKS:
         raise ValueError(f"Unknown feature: {feature}")
@@ -98,9 +106,7 @@ def feature_landmarks_available(
     feature: str,
     minimum_visibility: float = 0.5,
 ) -> bool:
-    """
-    Check only the landmarks required for the requested feature.
-    """
+    """Return whether every required landmark meets the visibility threshold."""
     values = feature_visibility_values(landmarks, side, feature)
 
     if values is None:
@@ -135,7 +141,10 @@ def select_best_elbow_side(
     """
     Select the side with the stronger shoulder-elbow-wrist visibility.
 
-    Returns 'none' if neither side reaches the minimum threshold.
+    This function is deliberately stateless and selects independently for each
+    call, as required by the simple baseline. The enhanced processor instead
+    uses ``StableSideSelector`` for temporal stability. ``"none"`` is returned
+    if neither side reaches the minimum threshold.
     """
     scores = {}
 

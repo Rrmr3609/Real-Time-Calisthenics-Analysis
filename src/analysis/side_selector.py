@@ -1,3 +1,5 @@
+"""Provide temporally stable left/right feature-side selection."""
+
 from typing import Optional
 
 
@@ -5,8 +7,14 @@ class StableSideSelector:
     """
     Select and retain one body side using visibility scores.
 
-    A side must remain the best candidate for multiple frames before it
-    is initially selected or replaces the currently selected side.
+    Acquisition and switching both require stable evidence across consecutive
+    frames. Once acquired, the selected side remains sticky unless the other
+    side is sufficiently stronger for long enough, or the current side remains
+    unavailable beyond its grace period. This deliberate stability prevents
+    frame-to-frame side jitter from contaminating temporal measurements.
+
+    Thresholds and confirmation lengths are configurable; the selector makes
+    no assumptions about the feature represented by its left/right scores.
     """
 
     def __init__(
@@ -90,8 +98,10 @@ class StableSideSelector:
         left_score: Optional[float],
         right_score: Optional[float],
     ) -> str:
-        """
-        Update the selector using current left/right arm scores.
+        """Update selection from the current frame's visibility evidence.
+
+        Scores below the minimum are treated as unavailable. The returned value
+        is ``"left"``, ``"right"`` or ``"none"`` and is retained across calls.
         """
         left_score = self._valid_score(left_score)
         right_score = self._valid_score(right_score)
@@ -166,6 +176,7 @@ class StableSideSelector:
         return self.selected_side
 
     def reset(self) -> None:
+        """Return to the unacquired state and clear candidate history."""
         self.selected_side = "none"
         self._candidate_side = "none"
         self._candidate_count = 0

@@ -1,0 +1,672 @@
+{
+  "evaluated_clip_count": 12,
+  "evaluation_run_id": "development_calibrated65_t050",
+  "event_tolerance_seconds": 0.5,
+  "formal_evidence": {
+    "annotation_review": {
+      "path": "data/annotations/development_repetition_annotations.review.json",
+      "sha256": "9778cbba66bcb65ca196d98423bd9323e9b6b77e86e00c6970a93608ca99e8fe",
+      "status": "complete"
+    },
+    "dataset_manifest": {
+      "path": "data/manifests/development_dataset_manifest.csv",
+      "sha256": "1e358543e07efee44cedf4d3d5e55568447002e15f6a90b86e4312c8b5f23a34"
+    },
+    "repetition_annotations": {
+      "frozen_sha256": "307c9a15b2604d838e453c540d370d13570c43e92f7c45fb798c6d58d3a2fdb7",
+      "path": "data/annotations/development_repetition_annotations.csv",
+      "sha256": "307c9a15b2604d838e453c540d370d13570c43e92f7c45fb798c6d58d3a2fdb7"
+    }
+  },
+  "git": {
+    "branch": "codex/repository-polish",
+    "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+    "dirty": true
+  },
+  "metadata_schema_version": 2,
+  "ordered_clip_ids": [
+    "dev01_correct",
+    "dev02_insufficient_depth",
+    "dev03_incomplete_extension",
+    "dev04_alignment_deviation",
+    "dev05_mixed_fast",
+    "dev06_mixed_diagonal",
+    "ext_kaggle_01",
+    "ext_kaggle_02",
+    "ext_kaggle_03",
+    "ext_kaggle_04",
+    "ext_kaggle_05",
+    "ext_kaggle_06"
+  ],
+  "outputs": {
+    "classification_confusion_matrix_csv": "results/formal/development/development_calibrated65_t050_classification_confusion_matrix.csv",
+    "classification_per_class_csv": "results/formal/development/development_calibrated65_t050_classification_per_class.csv",
+    "detection_recall_by_class_csv": "results/formal/development/development_calibrated65_t050_detection_recall_by_class.csv",
+    "evaluation_metadata_json": "results/formal/development/development_calibrated65_t050_evaluation_metadata.json",
+    "formal_evaluation_json": "results/formal/development/development_calibrated65_t050_formal_evaluation.json",
+    "per_clip_metrics_csv": "results/formal/development/development_calibrated65_t050_per_clip_metrics.csv"
+  },
+  "report_schema_version": 2,
+  "software": {
+    "packages": {
+      "mediapipe": "0.10.14",
+      "numpy": "2.5.1",
+      "opencv": "5.0.0.93",
+      "pandas": "3.0.3"
+    },
+    "python": "3.12.4",
+    "python_implementation": "CPython"
+  },
+  "source_runs": {
+    "baseline": [
+      {
+        "clip_id": "dev01_correct",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev01_correct_baseline.csv",
+          "sha256": "82736eb7656a0caea4b1dc2aa17d6a7e64dfc3d1f234d7e1d6f3d497e810f8c2"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev01_correct_baseline.csv",
+          "sha256": "82736eb7656a0caea4b1dc2aa17d6a7e64dfc3d1f234d7e1d6f3d497e810f8c2"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "0a346b13b7b3c68cf04bd0ab5c9cf76e0ebf86983eb369badf5380fd171ccbb8",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev01_correct_baseline_metadata.json",
+          "sha256": "03859a2c1476e160719b24568332586e43978166f6d39ae0ee18e012a47de789"
+        },
+        "source_run_id": "formal_dev_baseline_dev01_correct",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev02_insufficient_depth",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev02_insufficient_depth_baseline.csv",
+          "sha256": "ad48ff8317aff15765914c75a34ce9ec23c75fb2a956173e9bd6d68a73b90bc7"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev02_insufficient_depth_baseline.csv",
+          "sha256": "ad48ff8317aff15765914c75a34ce9ec23c75fb2a956173e9bd6d68a73b90bc7"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "bd5fd047267a54e3761fffdef08720afe15d2b98c010a977d08e633bd50e3537",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev02_insufficient_depth_baseline_metadata.json",
+          "sha256": "5daa8ef5069633473e5f021f134b8464d256dcf2b684f9ff672260806a734564"
+        },
+        "source_run_id": "formal_dev_baseline_dev02_insufficient_depth",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev03_incomplete_extension",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev03_incomplete_extension_baseline.csv",
+          "sha256": "0b4b5f6c9d321b00e383d59a6435e3682aa14dc30ef1e97d97283518443313c7"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev03_incomplete_extension_baseline.csv",
+          "sha256": "0b4b5f6c9d321b00e383d59a6435e3682aa14dc30ef1e97d97283518443313c7"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "2d7aee7f52b4397bedee787c7fa2f5d96f2561af06a5439793b6669f8b612b58",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev03_incomplete_extension_baseline_metadata.json",
+          "sha256": "4760b48fd9970747c51b1d58595fe1e7909c33be2cfdfee4eb594b06dea9548d"
+        },
+        "source_run_id": "formal_dev_baseline_dev03_incomplete_extension",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev04_alignment_deviation",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev04_alignment_deviation_baseline.csv",
+          "sha256": "ef9eb03ad5e21a30b95dac6b6d767b48e0cf1664250bf3c6eb9b4f683811a800"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev04_alignment_deviation_baseline.csv",
+          "sha256": "ef9eb03ad5e21a30b95dac6b6d767b48e0cf1664250bf3c6eb9b4f683811a800"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "56d27bcd3285120918b63d48975fbbe0991668e6f6b2365698901cc9da066153",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev04_alignment_deviation_baseline_metadata.json",
+          "sha256": "1d590930c59ce4d67c912f42772b5652c1ed0457ccefaf288f0161610a935b91"
+        },
+        "source_run_id": "formal_dev_baseline_dev04_alignment_deviation",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev05_mixed_fast",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev05_mixed_fast_baseline.csv",
+          "sha256": "e46036c2cc15d21f3fd649a59c9fde8b3b76c1642af63b15dd5daeee7210034c"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev05_mixed_fast_baseline.csv",
+          "sha256": "e46036c2cc15d21f3fd649a59c9fde8b3b76c1642af63b15dd5daeee7210034c"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "e29278659cc5740c78e6a65efdd13535c11895c6bc9d25e18ae5a9bc306e66c2",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev05_mixed_fast_baseline_metadata.json",
+          "sha256": "06d597ff0195b3965dced64e116cc2027b70c3644af70b0030a3fd961e4a755e"
+        },
+        "source_run_id": "formal_dev_baseline_dev05_mixed_fast",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev06_mixed_diagonal",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_dev06_mixed_diagonal_baseline.csv",
+          "sha256": "3ad43906f8422c739b9dc11dbc2feed792012447f297cb90b1f104000fc97a76"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_dev06_mixed_diagonal_baseline.csv",
+          "sha256": "3ad43906f8422c739b9dc11dbc2feed792012447f297cb90b1f104000fc97a76"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "419605b1ecef997792b6abef09bb9976fb089385339ee479901f7ae6c85d45c8",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_dev06_mixed_diagonal_baseline_metadata.json",
+          "sha256": "156d1a21d4c21781c06c88483813b02f33fba257cd038c01d5cf4dae06ea09bf"
+        },
+        "source_run_id": "formal_dev_baseline_dev06_mixed_diagonal",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_01",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_01_baseline.csv",
+          "sha256": "592424a959064131e4a4bbea0a6f34da0e2ab6da7753a21ff59a134585aad8d7"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_01_baseline.csv",
+          "sha256": "592424a959064131e4a4bbea0a6f34da0e2ab6da7753a21ff59a134585aad8d7"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "432d676b8fcd0e5d760421a1a3c57a684e5abc1117a69db8a4929160bedbc284",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_01_baseline_metadata.json",
+          "sha256": "793f9e7255813bb13bc663c0013edd194f06394643dbd4294a06e44a123c1c36"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_01",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_02",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_02_baseline.csv",
+          "sha256": "7f6c627667c90a7822792092a0124e1531c7a2b0ff4b1975e76ced47de197748"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_02_baseline.csv",
+          "sha256": "7f6c627667c90a7822792092a0124e1531c7a2b0ff4b1975e76ced47de197748"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "3c12c49fdbc75ac8145d121348a974cece6cf47de9794c0e43ca12e815409bfa",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_02_baseline_metadata.json",
+          "sha256": "46361f740bdca929031ec1b8b0d8e36e631a4958b2646dc22d6c830ed72f0f4a"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_02",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_03",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_03_baseline.csv",
+          "sha256": "4296fb01e7f26511219ea41a95d53d4bbc44c57e10568bff10a13fa0d98f7121"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_03_baseline.csv",
+          "sha256": "4296fb01e7f26511219ea41a95d53d4bbc44c57e10568bff10a13fa0d98f7121"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "0212fb967e95401e6d99471a814539d373a4b9dd4890c6936adae6753fcb6f46",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_03_baseline_metadata.json",
+          "sha256": "af3f8a720146ba3b381c76d938ea8d277bc775ac1cd0e20822689bdadeeabcc1"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_03",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_04",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_04_baseline.csv",
+          "sha256": "676434fa273e3cf4bcef804bf9452facaac74e34e1ce77faa51c8364936b8b2c"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_04_baseline.csv",
+          "sha256": "676434fa273e3cf4bcef804bf9452facaac74e34e1ce77faa51c8364936b8b2c"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "86e06da20f1cbd4bc9291e3ff3a309df5deaf87eeb2441717fe22eed975c7593",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_04_baseline_metadata.json",
+          "sha256": "fb625c4806f5ec53d8ffbba98787394a9fdfc3267b2e4a573220e3cefe5ace08"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_04",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_05",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_05_baseline.csv",
+          "sha256": "c4cdb7ee437e283ab4f2117d90935ceb11e3acab48a0ffd8feec985f715f00b6"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_05_baseline.csv",
+          "sha256": "c4cdb7ee437e283ab4f2117d90935ceb11e3acab48a0ffd8feec985f715f00b6"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "d31caa4a2b160554e8694543e685f5733e75fb5867d781c00bd2d172933a4107",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_05_baseline_metadata.json",
+          "sha256": "68ecca4e3a920bfefe797f4361e085a556f19ce5d89b227b653646fb0ae53318"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_05",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_06",
+        "consumed_output_csv": {
+          "output_name": "frame_csv",
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_06_baseline.csv",
+          "sha256": "2cc52c53bf7da9aff4c53d9e93c3da50a6bb0b5f7b029d69b18539b21ade7631"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_06_baseline.csv",
+          "sha256": "2cc52c53bf7da9aff4c53d9e93c3da50a6bb0b5f7b029d69b18539b21ade7631"
+        },
+        "method": "baseline",
+        "resolved_configuration_sha256": "568b034f187edbbf90de9658a40fcedaed8162d51c2653950dcda050c40fd273",
+        "source_git": {
+          "commit": "494544385d88620a89de313dbabe2c2b6464cbeb",
+          "dirty": false
+        },
+        "source_input_video_sha256": "67d5c4c422da284197ea68e0f0f00b64d1a764efaf24816b867ab80184f5fe70",
+        "source_metadata_file": {
+          "path": "experiments/logs/formal_dev_baseline_ext_kaggle_06_baseline_metadata.json",
+          "sha256": "6ad58e2879d8e811946f080433faadef4cffad3b38a657b2ee814dce986290ea"
+        },
+        "source_run_id": "formal_dev_baseline_ext_kaggle_06",
+        "split": "development"
+      }
+    ],
+    "enhanced": [
+      {
+        "clip_id": "dev01_correct",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_dev01_correct_enhanced_repetitions.csv",
+          "sha256": "4c3f36eb8e7f8d11ee078270fc654c78ad1612bb0c7fc0fddf25efbba88a59a1"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_dev01_correct_enhanced_temporal.csv",
+          "sha256": "6810c3f3ddc816c0100a3008194e9fd937d5c05cd3c3ea79932b3d3e2ab33298"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "0a346b13b7b3c68cf04bd0ab5c9cf76e0ebf86983eb369badf5380fd171ccbb8",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_dev01_correct_enhanced_metadata.json",
+          "sha256": "e208499a72709b2408799bd5d56b7c405482b2883c454cc9032de4361510aa77"
+        },
+        "source_run_id": "formal_dev_calibrated65_dev01_correct",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev02_insufficient_depth",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_dev02_insufficient_depth_enhanced_repetitions.csv",
+          "sha256": "48b490788db9b03dafa03fd2869a21edac1e649f82b17f96e06c0fc6d09b4243"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_dev02_insufficient_depth_enhanced_temporal.csv",
+          "sha256": "331f5e581223729c4fa43ccaaef19b2e754dc28cfbaa33b52e0ffa970c7d3bfd"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "bd5fd047267a54e3761fffdef08720afe15d2b98c010a977d08e633bd50e3537",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_dev02_insufficient_depth_enhanced_metadata.json",
+          "sha256": "e521ea6943fb93be104e7d99f9d5cef57809453004d3b573115cace019d273e3"
+        },
+        "source_run_id": "formal_dev_calibrated65_dev02_insufficient_depth",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev03_incomplete_extension",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_dev03_incomplete_extension_enhanced_repetitions.csv",
+          "sha256": "4bdd452b92079396248ec04f5affcdbc630a630fcd1662418603a6a74e02dcd9"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_dev03_incomplete_extension_enhanced_temporal.csv",
+          "sha256": "783ca2c603138d70b918500981b97000fc19266e33ba3cd9e7ddfc2a402dfa77"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "2d7aee7f52b4397bedee787c7fa2f5d96f2561af06a5439793b6669f8b612b58",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_dev03_incomplete_extension_enhanced_metadata.json",
+          "sha256": "7803f127569e46c6d7705c2efc641321622bee475540a33f1e097d0513534ca2"
+        },
+        "source_run_id": "formal_dev_calibrated65_dev03_incomplete_extension",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev04_alignment_deviation",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_dev04_alignment_deviation_enhanced_repetitions.csv",
+          "sha256": "eccdd7f90bb8d82660fd89cc34d411f6904829ae23b0648f58adc8167c29842a"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_dev04_alignment_deviation_enhanced_temporal.csv",
+          "sha256": "9387889305a9a58fed712cd95c44d5fb874431a8ed6f1dfec8e3361dd5ce3230"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "56d27bcd3285120918b63d48975fbbe0991668e6f6b2365698901cc9da066153",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_dev04_alignment_deviation_enhanced_metadata.json",
+          "sha256": "954237b4d26e0bb735190824b805dc14902003b7e480b43bfb5713d9bd524447"
+        },
+        "source_run_id": "formal_dev_calibrated65_dev04_alignment_deviation",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev05_mixed_fast",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_dev05_mixed_fast_enhanced_repetitions.csv",
+          "sha256": "4973938c129b75fe0f67cb4c3aae2b3872ac94f23adf9ff199f67081bf6af37f"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_dev05_mixed_fast_enhanced_temporal.csv",
+          "sha256": "0b27a387e2c46f338bbff732012106884e406cbcb0cccdcccdc19f7204d339ad"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "e29278659cc5740c78e6a65efdd13535c11895c6bc9d25e18ae5a9bc306e66c2",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_dev05_mixed_fast_enhanced_metadata.json",
+          "sha256": "16673c4c63e6147372174a45786850904a6c17c184d3b821a83a157f40e3439e"
+        },
+        "source_run_id": "formal_dev_calibrated65_dev05_mixed_fast",
+        "split": "development"
+      },
+      {
+        "clip_id": "dev06_mixed_diagonal",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_dev06_mixed_diagonal_enhanced_repetitions.csv",
+          "sha256": "07f40930192745428fb549b64d62232c002e6a5430bdc79ae2ae93f8e4948fcb"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_dev06_mixed_diagonal_enhanced_temporal.csv",
+          "sha256": "1a34212d0275f8fce9239e3a3c3b94772438de49c72dcb6940191affb6019eeb"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "419605b1ecef997792b6abef09bb9976fb089385339ee479901f7ae6c85d45c8",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_dev06_mixed_diagonal_enhanced_metadata.json",
+          "sha256": "eaf871c1d4e175ef6e74735c55000e10b44e7db1c8693b6efdda2d29a9ca425e"
+        },
+        "source_run_id": "formal_dev_calibrated65_dev06_mixed_diagonal",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_01",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_01_enhanced_repetitions.csv",
+          "sha256": "c283be7d28c60acea23d1764fe3626df2a475002da5f3e3e74ac8a8379987a6f"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_ext_kaggle_01_enhanced_temporal.csv",
+          "sha256": "f6dbe89ba2817aa83166861178102a6dbcaab0557a71a0c052b1d6a82ebdcb0d"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "432d676b8fcd0e5d760421a1a3c57a684e5abc1117a69db8a4929160bedbc284",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_01_enhanced_metadata.json",
+          "sha256": "770c5c26cbd673553e4570d9207db48a7c2d5355a8371929c267bcce6f6b47c3"
+        },
+        "source_run_id": "formal_dev_calibrated65_ext_kaggle_01",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_02",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_02_enhanced_repetitions.csv",
+          "sha256": "bf7ca43400c1bda2c2465f0811919e9a010f28509ed0fae99d501157c302db2b"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_ext_kaggle_02_enhanced_temporal.csv",
+          "sha256": "f8ab2137f67bd43fbccc891b04bb95b5a8ddb26af6b3a48e03f4cecb3bc907e3"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "3c12c49fdbc75ac8145d121348a974cece6cf47de9794c0e43ca12e815409bfa",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_02_enhanced_metadata.json",
+          "sha256": "a365327737b7a8df4a5e654cb3888a53ceafaaf701f997de4692cfb4c1e12521"
+        },
+        "source_run_id": "formal_dev_calibrated65_ext_kaggle_02",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_03",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_03_enhanced_repetitions.csv",
+          "sha256": "f588649c4dfc8b5dbb7e297147e0b55b234aa5ffadf524d7a37d6a85323404d0"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_ext_kaggle_03_enhanced_temporal.csv",
+          "sha256": "0e18ff53a96cf06d12a632a6d7d7c826b94e250f9f1a42ac52f5b9f68c428f07"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "0212fb967e95401e6d99471a814539d373a4b9dd4890c6936adae6753fcb6f46",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_03_enhanced_metadata.json",
+          "sha256": "3f14a40e249bc6121634aeb4ccbcba94716852424c62f44edcb7fa316aad6e58"
+        },
+        "source_run_id": "formal_dev_calibrated65_ext_kaggle_03",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_04",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_04_enhanced_repetitions.csv",
+          "sha256": "e2ffa12a598e4eb07a6444be008459f07f08bdfa6d2e19c007862da1cbd8220a"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_ext_kaggle_04_enhanced_temporal.csv",
+          "sha256": "7cb345bd3b21c71809cfddda82304703474f92a2ea06b1c5fefea82800683dbc"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "86e06da20f1cbd4bc9291e3ff3a309df5deaf87eeb2441717fe22eed975c7593",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_04_enhanced_metadata.json",
+          "sha256": "00e589478e9f66ca9b908109bda107eac1c79079346486969e1cd21fe278dbe8"
+        },
+        "source_run_id": "formal_dev_calibrated65_ext_kaggle_04",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_05",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_05_enhanced_repetitions.csv",
+          "sha256": "fdb2d76c2394029cba5a9e3eb6d744273c5c9932c008c221c277356ca9aad2c0"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_ext_kaggle_05_enhanced_temporal.csv",
+          "sha256": "06fc7cc743d25ded68512ddcff7ed84908a0282425450dd883b47f070248bead"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "d31caa4a2b160554e8694543e685f5733e75fb5867d781c00bd2d172933a4107",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_05_enhanced_metadata.json",
+          "sha256": "2a97c5626684ee8cd712a1b4c5b968b57bc7d940bdb8e4dd068fb9e7dca1b9d3"
+        },
+        "source_run_id": "formal_dev_calibrated65_ext_kaggle_05",
+        "split": "development"
+      },
+      {
+        "clip_id": "ext_kaggle_06",
+        "consumed_output_csv": {
+          "output_name": "repetition_csv",
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_06_enhanced_repetitions.csv",
+          "sha256": "8b8f8faeeda50171e69af0dd4aa65a8fba1792348a7a727a12e61cee2a08d1c0"
+        },
+        "descriptive_frame_csv": {
+          "path": "experiments/logs/formal_dev_calibrated65_ext_kaggle_06_enhanced_temporal.csv",
+          "sha256": "d9edee7b4c73e15d866831f8d3da06e50213070c79e5ea7b8468c5191ff3b17a"
+        },
+        "method": "enhanced",
+        "resolved_configuration_sha256": "3564278ceb16c872c902362be77d35c70bded5a023da8997487e94b1e7a5d2f8",
+        "source_git": {
+          "commit": "2ed7d751cfd9918295f1b102365d348b33ea96fd",
+          "dirty": true
+        },
+        "source_input_video_sha256": "67d5c4c422da284197ea68e0f0f00b64d1a764efaf24816b867ab80184f5fe70",
+        "source_metadata_file": {
+          "path": "experiments/outputs/formal_dev_calibrated65_ext_kaggle_06_enhanced_metadata.json",
+          "sha256": "859bc06bea6afd3d6ac6cd54c1fc2907de07b7a89fff45bfbb0183be19e67688"
+        },
+        "source_run_id": "formal_dev_calibrated65_ext_kaggle_06",
+        "split": "development"
+      }
+    ]
+  },
+  "split": "development",
+  "status": "completed",
+  "timestamps": {
+    "completed_utc": "2026-08-14T14:51:08.066052+00:00",
+    "started_utc": "2026-08-14T14:51:07.754977+00:00"
+  }
+}

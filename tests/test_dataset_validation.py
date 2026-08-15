@@ -9,7 +9,6 @@ from evaluation.dataset_validation import (
     validate_repetition_annotations,
 )
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -19,18 +18,15 @@ def make_manifest():
             {
                 "clip_id": "fictional_clip",
                 "split": "development",
-                "video_path": (
-                    "data/raw/fictional/fictional_clip.mp4"
-                ),
+                "video_path": ("data/raw/fictional/fictional_clip.mp4"),
+                "video_sha256": "a" * 64,
                 "participant_id": "P_FICTIONAL",
                 "camera_view": "side",
                 "source_fps": 30.0,
                 "frame_count": 500,
                 "width_px": 1280,
                 "height_px": 720,
-                "recording_condition": (
-                    "controlled_indoor_even_lighting"
-                ),
+                "recording_condition": ("controlled_indoor_even_lighting"),
                 "notes": "Fictional test row.",
             }
         ]
@@ -64,12 +60,14 @@ def test_fictional_example_files_pass_validation():
         manifest_path=(
             PROJECT_ROOT
             / "data"
+            / "examples"
             / "manifests"
             / "example_dataset_manifest.csv"
         ),
         annotations_path=(
             PROJECT_ROOT
             / "data"
+            / "examples"
             / "annotations"
             / "example_repetition_annotations.csv"
         ),
@@ -84,6 +82,22 @@ def test_manifest_rejects_invalid_split():
     manifest.loc[0, "split"] = "validation"
 
     with pytest.raises(ValueError, match="invalid values"):
+        validate_dataset_manifest(manifest)
+
+
+def test_manifest_rejects_infinite_source_fps():
+    manifest = make_manifest()
+    manifest.loc[0, "source_fps"] = float("inf")
+
+    with pytest.raises(ValueError, match="positive numbers"):
+        validate_dataset_manifest(manifest)
+
+
+def test_manifest_rejects_invalid_video_sha256():
+    manifest = make_manifest()
+    manifest.loc[0, "video_sha256"] = "not-a-sha256"
+
+    with pytest.raises(ValueError, match="64 hexadecimal"):
         validate_dataset_manifest(manifest)
 
 
@@ -169,12 +183,8 @@ def test_ambiguous_fragment_is_distinct_from_evaluable_attempt():
     annotations.loc[0, "ambiguity_flag"] = True
     annotations.loc[0, "bottom_turnaround_frame"] = None
     annotations.loc[0, "ground_truth_class"] = "unscorable"
-    annotations.loc[0, "source_video_visibility_status"] = (
-        "partially_obscured"
-    )
-    annotations.loc[0, "annotator_notes"] = (
-        "Fictional ambiguous movement fragment."
-    )
+    annotations.loc[0, "source_video_visibility_status"] = "partially_obscured"
+    annotations.loc[0, "annotator_notes"] = "Fictional ambiguous movement fragment."
 
     validate_repetition_annotations(
         annotations,
@@ -208,9 +218,7 @@ def test_single_label_must_follow_deviation_priority():
     annotations = make_annotations()
     annotations.loc[0, "insufficient_depth_flag"] = True
     annotations.loc[0, "incomplete_extension_flag"] = True
-    annotations.loc[0, "ground_truth_class"] = (
-        "incomplete_extension"
-    )
+    annotations.loc[0, "ground_truth_class"] = "incomplete_extension"
 
     with pytest.raises(
         ValueError,
@@ -226,9 +234,7 @@ def test_unscorable_attempt_cannot_assert_deviation_flag():
     annotations = make_annotations()
     annotations.loc[0, "ground_truth_class"] = "unscorable"
     annotations.loc[0, "insufficient_depth_flag"] = True
-    annotations.loc[0, "source_video_visibility_status"] = (
-        "insufficient"
-    )
+    annotations.loc[0, "source_video_visibility_status"] = "insufficient"
     annotations.loc[0, "annotator_notes"] = (
         "Fictional row with insufficient source evidence."
     )

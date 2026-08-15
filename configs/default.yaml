@@ -28,7 +28,7 @@ segmentation:
   minimum_repetition_frames: 8
 
 classification:
-  depth_threshold: 100.0
+  depth_threshold: 65.0
   extension_threshold: 150.0
   alignment_minimum: 160.0
   alignment_deviation_min_frames: 3

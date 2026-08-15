@@ -1,0 +1,30 @@
+* text=auto
+
+# Repository text and code use LF on every platform.
+*.py text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+*.txt text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.ps1 text eol=lf
+
+# Generated media and model artefacts are binary.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.mkv binary
+*.webm binary
+*.tflite binary
+*.onnx binary
+*.pt binary
+*.pth binary

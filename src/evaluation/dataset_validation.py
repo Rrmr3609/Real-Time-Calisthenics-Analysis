@@ -1,17 +1,26 @@
+"""Validate dataset manifests and manual repetition annotations.
+
+The same schemas support fictional examples and real evaluation inputs. This
+module owns row/schema semantics, not complete-split review evidence or binding
+to recorded source runs; formal execution performs those checks separately.
+"""
+
 import argparse
+import math
 import re
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 
+from config.runtime import ALLOWED_SPLITS as _RUNTIME_ALLOWED_SPLITS
 from evaluation.validation import require_columns
-
 
 MANIFEST_COLUMNS = (
     "clip_id",
     "split",
     "video_path",
+    "video_sha256",
     "participant_id",
     "camera_view",
     "source_fps",
@@ -38,7 +47,7 @@ ANNOTATION_COLUMNS = (
     "annotator_notes",
 )
 
-ALLOWED_SPLITS = frozenset({"development", "test"})
+ALLOWED_SPLITS = frozenset(_RUNTIME_ALLOWED_SPLITS)
 ALLOWED_CAMERA_VIEWS = frozenset({"side", "side_diagonal"})
 ALLOWED_GROUND_TRUTH_CLASSES = frozenset(
     {
@@ -78,12 +87,7 @@ def _normalised_text(
     data: pd.DataFrame,
     column: str,
 ) -> pd.Series:
-    return (
-        data[column]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
+    return data[column].fillna("").astype(str).str.strip()
 
 
 def _require_nonempty_text(
@@ -97,8 +101,7 @@ def _require_nonempty_text(
         if empty_mask.any():
             rows = list(data.index[empty_mask])
             raise ValueError(
-                f"{source_name} column {column!r} contains empty "
-                f"values at rows {rows}"
+                f"{source_name} column {column!r} contains empty values at rows {rows}"
             )
 
 
@@ -107,19 +110,11 @@ def _boolean_series(
     column: str,
     source_name: str,
 ) -> pd.Series:
-    normalised = (
-        data[column]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-        .str.lower()
-    )
+    normalised = data[column].fillna("").astype(str).str.strip().str.lower()
     invalid_mask = ~normalised.isin({"true", "false"})
 
     if invalid_mask.any():
-        invalid_values = sorted(
-            set(normalised[invalid_mask])
-        )
+        invalid_values = sorted(set(normalised[invalid_mask]))
         raise ValueError(
             f"{source_name} column {column!r} must contain only "
             f"true or false; found {invalid_values}"
@@ -138,7 +133,10 @@ def _positive_numeric_series(
         data[column],
         errors="coerce",
     )
-    invalid_mask = numeric.isna() | numeric.le(0)
+    finite = numeric.map(
+        lambda value: math.isfinite(value) if pd.notna(value) else False
+    )
+    invalid_mask = numeric.isna() | ~finite | numeric.le(0)
 
     if integer:
         invalid_mask |= numeric.mod(1).ne(0)
@@ -165,13 +163,8 @@ def _optional_frame_series(
         data[column].where(~missing_mask),
         errors="coerce",
     )
-    invalid_mask = (
-        ~missing_mask
-        & (
-            numeric.isna()
-            | numeric.lt(0)
-            | numeric.mod(1).ne(0)
-        )
+    invalid_mask = ~missing_mask & (
+        numeric.isna() | numeric.lt(0) | numeric.mod(1).ne(0)
     )
 
     if invalid_mask.any():
@@ -191,10 +184,7 @@ def _reject_duplicate_keys(
     source_name: str,
 ) -> None:
     keys = pd.DataFrame(
-        {
-            column: _normalised_text(data, column)
-            for column in key_columns
-        }
+        {column: _normalised_text(data, column) for column in key_columns}
     )
     duplicate_mask = keys.duplicated(
         subset=list(key_columns),
@@ -209,10 +199,7 @@ def _reject_duplicate_keys(
         .drop_duplicates()
         .to_dict(orient="records")
     )
-    raise ValueError(
-        f"{source_name} contains duplicate identifiers: "
-        f"{duplicate_keys}"
-    )
+    raise ValueError(f"{source_name} contains duplicate identifiers: {duplicate_keys}")
 
 
 def _validate_allowed_values(
@@ -221,9 +208,7 @@ def _validate_allowed_values(
     column: str,
     source_name: str,
 ) -> None:
-    invalid_values = sorted(
-        set(values) - allowed_values
-    )
+    invalid_values = sorted(set(values) - allowed_values)
 
     if invalid_values:
         raise ValueError(
@@ -237,6 +222,15 @@ def validate_dataset_manifest(
     manifest: pd.DataFrame,
     source_name: str = "Dataset manifest",
 ) -> None:
+    """Validate clip identity, split, source metadata and local path fields.
+
+    Clip IDs must be unique, split values must use the configured development
+    or test vocabulary, camera views must be allowed, and video paths must be
+    project-relative and each row carries the exact source-video SHA-256. FPS
+    must be positive and finite; frame counts and pixel dimensions must be
+    positive integers. Validation does not assert that the referenced video
+    exists or change a clip's assigned split.
+    """
     require_columns(
         manifest,
         MANIFEST_COLUMNS,
@@ -244,9 +238,7 @@ def validate_dataset_manifest(
     )
 
     if manifest.empty:
-        raise ValueError(
-            f"{source_name} must contain at least one clip"
-        )
+        raise ValueError(f"{source_name} must contain at least one clip")
 
     _require_nonempty_text(
         manifest,
@@ -254,6 +246,7 @@ def validate_dataset_manifest(
             "clip_id",
             "split",
             "video_path",
+            "video_sha256",
             "participant_id",
             "camera_view",
             "recording_condition",
@@ -289,16 +282,25 @@ def validate_dataset_manifest(
         manifest,
         "video_path",
     )
-    absolute_path_mask = (
-        video_paths.str.startswith(("/", "\\"))
-        | video_paths.str.match(WINDOWS_ABSOLUTE_PATH)
-    )
+    absolute_path_mask = video_paths.str.startswith(
+        ("/", "\\")
+    ) | video_paths.str.match(WINDOWS_ABSOLUTE_PATH)
 
     if absolute_path_mask.any():
         rows = list(manifest.index[absolute_path_mask])
         raise ValueError(
             f"{source_name} video_path values must be "
             f"project-relative; absolute paths found at rows {rows}"
+        )
+
+    hashes = _normalised_text(manifest, "video_sha256").str.lower()
+    invalid_hash_mask = ~hashes.str.fullmatch(r"[0-9a-f]{64}")
+
+    if invalid_hash_mask.any():
+        rows = list(manifest.index[invalid_hash_mask])
+        raise ValueError(
+            f"{source_name} video_sha256 values must be 64 hexadecimal "
+            f"characters; invalid rows {rows}"
         )
 
     _positive_numeric_series(
@@ -332,6 +334,7 @@ def _expected_single_label(
     incomplete_extension: bool,
     alignment_deviation: bool,
 ) -> str:
+    """Apply the annotation protocol's deterministic deviation priority."""
     if insufficient_depth:
         return "insufficient_depth"
 
@@ -350,6 +353,16 @@ def validate_repetition_annotations(
     source_name: str = "Repetition annotations",
     manifest_source_name: str = "Dataset manifest",
 ) -> None:
+    """Validate annotation identity, frames, ambiguity and class semantics.
+
+    Each ``(clip_id, ground_truth_attempt_id)`` pair is unique and must refer to
+    a manifest clip. Evaluable attempts require ordered start, turnaround and
+    completion frame indices. Ambiguous fragments are explicitly non-evaluable,
+    retain at least one locating frame, use the ``unscorable`` class, assert no
+    deviation flags and include annotator notes. Evaluable rows follow the
+    documented single-label priority, while insufficient source visibility
+    requires ``unscorable`` and notes.
+    """
     validate_dataset_manifest(
         manifest,
         source_name=manifest_source_name,
@@ -379,17 +392,12 @@ def validate_repetition_annotations(
         annotations,
         "clip_id",
     )
-    manifest_clip_ids = set(
-        _normalised_text(manifest, "clip_id")
-    )
-    unknown_clip_ids = sorted(
-        set(annotation_clip_ids) - manifest_clip_ids
-    )
+    manifest_clip_ids = set(_normalised_text(manifest, "clip_id"))
+    unknown_clip_ids = sorted(set(annotation_clip_ids) - manifest_clip_ids)
 
     if unknown_clip_ids:
         raise ValueError(
-            f"{source_name} refers to unknown clip IDs: "
-            f"{unknown_clip_ids}"
+            f"{source_name} refers to unknown clip IDs: {unknown_clip_ids}"
         )
 
     ground_truth_classes = _normalised_text(
@@ -446,29 +454,19 @@ def validate_repetition_annotations(
     bottom_frames = frame_values["bottom_turnaround_frame"]
     end_frames = frame_values["completion_end_top_frame"]
 
-    missing_evaluable_frames = (
-        evaluable
-        & (
-            start_frames.isna()
-            | bottom_frames.isna()
-            | end_frames.isna()
-        )
+    missing_evaluable_frames = evaluable & (
+        start_frames.isna() | bottom_frames.isna() | end_frames.isna()
     )
 
     if missing_evaluable_frames.any():
-        rows = list(
-            annotations.index[missing_evaluable_frames]
-        )
+        rows = list(annotations.index[missing_evaluable_frames])
         raise ValueError(
             f"{source_name} evaluable attempts require all three "
             f"frame indices; invalid rows {rows}"
         )
 
     fragment_has_no_frame = (
-        ambiguous
-        & start_frames.isna()
-        & bottom_frames.isna()
-        & end_frames.isna()
+        ambiguous & start_frames.isna() & bottom_frames.isna() & end_frames.isna()
     )
 
     if fragment_has_no_frame.any():
@@ -479,21 +477,9 @@ def validate_repetition_annotations(
         )
 
     ordering_invalid = (
-        (
-            start_frames.notna()
-            & bottom_frames.notna()
-            & start_frames.gt(bottom_frames)
-        )
-        | (
-            bottom_frames.notna()
-            & end_frames.notna()
-            & bottom_frames.gt(end_frames)
-        )
-        | (
-            start_frames.notna()
-            & end_frames.notna()
-            & start_frames.gt(end_frames)
-        )
+        (start_frames.notna() & bottom_frames.notna() & start_frames.gt(bottom_frames))
+        | (bottom_frames.notna() & end_frames.notna() & bottom_frames.gt(end_frames))
+        | (start_frames.notna() & end_frames.notna() & start_frames.gt(end_frames))
     )
 
     if ordering_invalid.any():
@@ -517,93 +503,54 @@ def validate_repetition_annotations(
         for column, values in frame_values.items():
             frame_value = values.loc[row_index]
 
-            if (
-                pd.notna(frame_value)
-                and frame_value >= frame_count
-            ):
+            if pd.notna(frame_value) and frame_value >= frame_count:
                 raise ValueError(
                     f"{source_name} row {row_index} column "
                     f"{column!r} is outside clip {clip_id!r}, "
                     f"which has {int(frame_count)} frames"
                 )
 
-    depth_flags = boolean_values[
-        "insufficient_depth_flag"
-    ]
-    extension_flags = boolean_values[
-        "incomplete_extension_flag"
-    ]
-    alignment_flags = boolean_values[
-        "alignment_deviation_flag"
-    ]
-    any_deviation = (
-        depth_flags
-        | extension_flags
-        | alignment_flags
-    )
+    depth_flags = boolean_values["insufficient_depth_flag"]
+    extension_flags = boolean_values["incomplete_extension_flag"]
+    alignment_flags = boolean_values["alignment_deviation_flag"]
+    any_deviation = depth_flags | extension_flags | alignment_flags
 
-    ambiguous_rule_invalid = (
-        ambiguous
-        & (
-            ground_truth_classes.ne("unscorable")
-            | any_deviation
-        )
+    ambiguous_rule_invalid = ambiguous & (
+        ground_truth_classes.ne("unscorable") | any_deviation
     )
 
     if ambiguous_rule_invalid.any():
-        rows = list(
-            annotations.index[ambiguous_rule_invalid]
-        )
+        rows = list(annotations.index[ambiguous_rule_invalid])
         raise ValueError(
             f"{source_name} ambiguous fragments must use class "
             f"'unscorable' and false deviation flags; "
             f"invalid rows {rows}"
         )
 
-    unscorable_deviation_invalid = (
-        ground_truth_classes.eq("unscorable")
-        & any_deviation
-    )
+    unscorable_deviation_invalid = ground_truth_classes.eq("unscorable") & any_deviation
 
     if unscorable_deviation_invalid.any():
-        rows = list(
-            annotations.index[
-                unscorable_deviation_invalid
-            ]
-        )
+        rows = list(annotations.index[unscorable_deviation_invalid])
         raise ValueError(
             f"{source_name} unscorable rows cannot assert "
             f"deviation flags; invalid rows {rows}"
         )
 
-    insufficient_visibility = visibility_statuses.eq(
-        "insufficient"
-    )
-    evaluable_unscorable = (
-        evaluable
-        & ground_truth_classes.eq("unscorable")
-    )
-    visibility_rule_invalid = (
-        evaluable
-        & (
-            insufficient_visibility
-            != ground_truth_classes.eq("unscorable")
-        )
+    insufficient_visibility = visibility_statuses.eq("insufficient")
+    evaluable_unscorable = evaluable & ground_truth_classes.eq("unscorable")
+    visibility_rule_invalid = evaluable & (
+        insufficient_visibility != ground_truth_classes.eq("unscorable")
     )
 
     if visibility_rule_invalid.any():
-        rows = list(
-            annotations.index[visibility_rule_invalid]
-        )
+        rows = list(annotations.index[visibility_rule_invalid])
         raise ValueError(
             f"{source_name} evaluable attempts must use class "
             f"'unscorable' exactly when source visibility is "
             f"insufficient; invalid rows {rows}"
         )
 
-    for row_index in annotations.index[
-        evaluable & ~evaluable_unscorable
-    ]:
+    for row_index in annotations.index[evaluable & ~evaluable_unscorable]:
         expected_class = _expected_single_label(
             bool(depth_flags.loc[row_index]),
             bool(extension_flags.loc[row_index]),
@@ -627,9 +574,7 @@ def validate_repetition_annotations(
     missing_required_notes = notes_required & notes.eq("")
 
     if missing_required_notes.any():
-        rows = list(
-            annotations.index[missing_required_notes]
-        )
+        rows = list(annotations.index[missing_required_notes])
         raise ValueError(
             f"{source_name} ambiguous or unscorable rows require "
             f"annotator notes; invalid rows {rows}"
@@ -640,6 +585,7 @@ def load_and_validate_evaluation_data(
     manifest_path: Path,
     annotations_path: Path,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load both CSVs and validate annotations against manifest identities."""
     manifest = pd.read_csv(manifest_path)
     annotations = pd.read_csv(annotations_path)
 
@@ -654,6 +600,7 @@ def load_and_validate_evaluation_data(
 
 
 def parse_arguments() -> argparse.Namespace:
+    """Parse paths for the standalone dataset-validation command."""
     parser = argparse.ArgumentParser(
         description=(
             "Validate a formal-evaluation dataset manifest and "
@@ -674,6 +621,7 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Validate both CSVs and print their accepted row counts."""
     args = parse_arguments()
     manifest, annotations = load_and_validate_evaluation_data(
         manifest_path=Path(args.manifest),

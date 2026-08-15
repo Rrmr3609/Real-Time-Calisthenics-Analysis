@@ -9,8 +9,8 @@ must be used for both methods.
 
 The example files are fictional:
 
-- `data/manifests/example_dataset_manifest.csv`
-- `data/annotations/example_repetition_annotations.csv`
+- `data/examples/manifests/example_dataset_manifest.csv`
+- `data/examples/annotations/example_repetition_annotations.csv`
 
 They demonstrate the schema only and do not describe existing recordings or
 participants.
@@ -24,9 +24,10 @@ Each manifest row represents one recorded clip.
 | `clip_id` | text | Required and unique |
 | `split` | enum | `development` or `test` |
 | `video_path` | text | Required project-relative local path |
+| `video_sha256` | text | Exact 64-character hexadecimal source-video SHA-256 |
 | `participant_id` | text | Required anonymised identifier |
 | `camera_view` | enum | `side` or `side_diagonal` |
-| `source_fps` | number | Greater than zero |
+| `source_fps` | number | Finite and greater than zero |
 | `frame_count` | integer | Greater than zero |
 | `width_px` | integer | Greater than zero |
 | `height_px` | integer | Greater than zero |
@@ -36,6 +37,10 @@ Each manifest row represents one recorded clip.
 Assign the development/test split before formal analysis. Development clips may
 support calibration and protocol refinement. Test clips must not be used to
 tune thresholds, matching tolerances, or decision rules.
+
+Formal execution requires both methods to cover every manifest clip in the
+chosen split. It checks manifest source path, source SHA-256, FPS, frame count,
+width and height independently against both completed-run provenance records.
 
 ## Repetition annotation schema
 
@@ -121,6 +126,13 @@ confidently be identified as a complete attempt. Set all deviation flags to
 Ambiguous fragments are retained for auditability but are not ground-truth
 repetitions for count or event evaluation.
 
+For formal execution, every selected manifest clip must have at least one
+annotation row to prove that it was manually reviewed. An ambiguous row counts
+as this review evidence while remaining excluded from event metrics. Do not
+invent an annotation for a genuine zero-attempt clip: the current annotation
+workflow has no explicit review-complete representation for such clips, so
+zero-attempt formal clips are not currently supported.
+
 ## Visibility and unscorable attempts
 
 - `sufficient`: the source video clearly supports the temporal and form labels.
@@ -164,25 +176,163 @@ medical or universal form judgements.
 7. Add notes for ambiguity, insufficient visibility, or difficult decisions.
 8. Run schema validation.
 9. Resolve validation errors before freezing the annotations.
-10. Preserve the frozen annotation file unchanged during formal evaluation.
+10. Confirm every clip in the formal split has at least one annotation row.
+11. Preserve the frozen annotation file unchanged during formal evaluation.
+
+## Development annotation viewer
+
+The active real-development inputs are:
+
+- `data/manifests/development_dataset_manifest.csv`;
+- `data/annotations/development_repetition_annotations.csv`;
+- `data/annotations/development_repetition_annotations.review.json`.
+
+The annotation CSV initially contains only the established schema header. Do
+not add recalled attempt counts or derive labels from filenames or external
+source folders. Start the source-only viewer for one manifest clip with:
+
+```powershell
+& ".\.venv\Scripts\python.exe" `
+  src\annotate_repetitions.py `
+  --manifest "data\manifests\development_dataset_manifest.csv" `
+  --annotations "data\annotations\development_repetition_annotations.csv" `
+  --clip-id "dev01_correct" `
+  --annotator "ANN01"
+```
+
+`ANN01` is an example anonymised annotator identifier. The manifest resolves
+the project-relative raw-video path; no personal absolute path is stored. The
+viewer displays source frames only. It does not import or show pose landmarks,
+angles, predicted phases, predicted repetitions, predicted classes, baseline
+outputs or enhanced outputs. The complete source frame is aspect-fitted without
+cropping on the left. A fixed-pixel control panel is rendered afterward in a
+separate area on the right, so window presentation never shrinks panel text as
+part of a source-sized composite and no control covers source pixels.
+
+Ground truth is independent of algorithm predictions, but the annotator is not
+blinded to the intended recording condition of the self-recorded controlled
+clips. IDs such as `dev01_correct` describe recording intent, not an accepted
+label. Annotation must record what is visibly present rather than accepting the
+ID or filename. The Kaggle `Correct sequence` and `Wrong sequence` groupings
+likewise must not determine project ground truth.
+
+### Viewer controls
+
+| Key | Action |
+| --- | --- |
+| Space | Play or pause |
+| `,` / `.` or Left / Right | Step backward or forward one frame |
+| `[` / `]` | Jump backward or forward ten frames |
+| `A` | Mark the representative start/top frame immediately before descent |
+| `B` | Mark the lowest point or descent-to-ascent turnaround frame |
+| `E` | Mark the completion/end-top frame |
+| `1` | Select no visible deviation (`correct`) and clear deviation flags |
+| `2` | Toggle insufficient-depth evidence |
+| `3` | Toggle incomplete-extension evidence |
+| `4` | Toggle alignment-deviation evidence |
+| `5` | Select insufficient source visibility (`unscorable`) |
+| `V` | Cycle source visibility: sufficient, partially obscured, insufficient |
+| `M` | Toggle ambiguous-fragment status |
+| `N` | Enter or clear an optional note in the terminal |
+| `R` | Reset the unsaved draft |
+| `S` | Validate and atomically save the current row |
+| `Q` or Esc | Close the viewer, retaining saved rows and the resume checkpoint |
+
+The completion mark remains the first frame after ascent where the attempt has
+visibly returned to its ending/top posture. It is a visual source-video
+decision, never an application of the baseline or enhanced top thresholds.
+
+Keys `2`, `3` and `4` may be combined. The viewer stores every selected
+deviation flag and derives the canonical single class using the frozen
+priority: insufficient depth, incomplete extension, alignment deviation, then
+correct. It never infers a class from the clip ID, filename, rough performed
+count or Kaggle source grouping.
+
+An ambiguous fragment may retain any identifiable start, turnaround or end
+frame, but requires at least one locating frame and an explanatory note. It is
+saved as non-evaluable and unscorable with false deviation flags, exactly as
+required by the schema. An evaluable unscorable attempt requires all three
+event frames, insufficient source visibility and a note.
+
+### Resume and output safety
+
+Each explicit save appends a new unique `(clip_id, ground_truth_attempt_id)`
+row, validates the complete CSV and atomically replaces the file. Existing
+identities are never overwritten. Rows are ordered by manifest clip order,
+locating frame and stable attempt ID. A single ignored adjacent `.resume.json`
+checkpoint retains the current frame and unsaved draft; it prevents unfinished
+work for one clip from being silently replaced by another clip. The annotation
+CSV remains one shared file rather than a collection of per-video files.
+
+### Correcting a saved row before freeze
+
+Do not correct ground truth by casually editing the CSV in a spreadsheet. While
+the adjacent review record remains `not_started` or `in_progress`, reopen the
+exact saved identity with `--correct-attempt-id`:
+
+```powershell
+& ".\.venv\Scripts\python.exe" `
+  src\annotate_repetitions.py `
+  --manifest "data\manifests\development_dataset_manifest.csv" `
+  --annotations "data\annotations\development_repetition_annotations.csv" `
+  --clip-id "dev01_correct" `
+  --annotator "ANN01" `
+  --correct-attempt-id "A001"
+```
+
+The viewer loads that row's existing frames, flags, visibility and note. Adjust
+the draft using the normal controls and press `S` once to replace only that
+identity. The complete CSV is schema-validated, deterministically sorted and
+atomically replaced. A missing or duplicate identity is rejected. An unfinished
+new-row draft must first be saved or reset, so correction cannot silently
+discard it. Closing correction mode without `S` leaves the saved CSV unchanged.
+
+Once review status is `complete`, both normal viewer startup and explicit
+correction are rejected. A post-freeze change therefore requires a separately
+documented decision to reopen annotation; it must never occur silently through
+normal viewer operation.
+
+### Review and freeze record
+
+Opening the viewer changes the adjacent review record from `not_started` to
+`in_progress` and records the anonymised annotator and annotation date. It does
+not mark review complete. After every manifest clip has at least one retained
+evaluable-attempt or ambiguous-fragment row and human review is complete,
+explicitly freeze the validated CSV with:
+
+```powershell
+& ".\.venv\Scripts\python.exe" `
+  src\annotate_repetitions.py `
+  --manifest "data\manifests\development_dataset_manifest.csv" `
+  --annotations "data\annotations\development_repetition_annotations.csv" `
+  --finalise-review `
+  --reviewer "REVIEWER01" `
+  --repeat-review-status "not_performed"
+```
+
+Finalisation refuses incomplete manifest coverage, revalidates the established
+schema, records reviewer/repeat-review/adjudication fields and stores the exact
+SHA-256 of the frozen annotation CSV. Once complete, the viewer refuses to
+resume that frozen annotation file. A repeat review is optional; when marked
+`complete`, its reviewer identifier is required.
 
 ## Validation command
 
 From PowerShell:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
 & ".\.venv\Scripts\python.exe" `
-  src\evaluation\dataset_validation.py `
-  --manifest "data\manifests\example_dataset_manifest.csv" `
-  --annotations "data\annotations\example_repetition_annotations.csv"
+  src\validate_dataset.py `
+  --manifest "data\examples\manifests\example_dataset_manifest.csv" `
+  --annotations "data\examples\annotations\example_repetition_annotations.csv"
 ```
 
 The validator checks required columns, allowed labels and splits, numeric
 metadata, duplicate identifiers, unknown clips, frame ordering, clip bounds,
 attempt/fragment status, visibility rules, deviation flags, and single-label
-priority. It does not perform event matching or calculate evaluation metrics.
+priority. Formal orchestration additionally checks complete split coverage,
+per-clip annotation presence and manifest/run provenance agreement. It does not
+change ambiguity handling, perform new event matching or alter metrics.
 
 ## Quality control
 

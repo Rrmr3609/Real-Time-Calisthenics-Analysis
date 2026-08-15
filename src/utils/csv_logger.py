@@ -1,3 +1,5 @@
+"""Create caller-schema CSV outputs without silently mixing complete runs."""
+
 import csv
 from pathlib import Path
 from typing import Iterable, Mapping
@@ -11,23 +13,21 @@ def ensure_output_paths_available(
     Fail before a run starts if any requested output already exists.
 
     Callers that manage more than one output should pass the complete set so
-    one stale file cannot be combined with a newly created file.
+    one stale file cannot be combined with a newly created file. This check
+    does not remove anything; explicit overwrite handling belongs to
+    ``prepare_output_paths``.
     """
     if overwrite:
         return
 
     existing_paths = [
-        Path(output_path)
-        for output_path in output_paths
-        if Path(output_path).exists()
+        Path(output_path) for output_path in output_paths if Path(output_path).exists()
     ]
 
     if not existing_paths:
         return
 
-    formatted_paths = "\n".join(
-        f"- {path}" for path in existing_paths
-    )
+    formatted_paths = "\n".join(f"- {path}" for path in existing_paths)
     raise FileExistsError(
         "Output file already exists. Refusing to append or replace it:\n"
         f"{formatted_paths}\n"
@@ -48,9 +48,7 @@ def prepare_output_paths(
     paths = [Path(output_path) for output_path in output_paths]
 
     if len(paths) != len(set(paths)):
-        raise ValueError(
-            "Output paths for one run must be unique"
-        )
+        raise ValueError("Output paths for one run must be unique")
 
     ensure_output_paths_available(
         paths,
@@ -60,19 +58,12 @@ def prepare_output_paths(
     if not overwrite:
         return
 
-    non_files = [
-        path
-        for path in paths
-        if path.exists() and not path.is_file()
-    ]
+    non_files = [path for path in paths if path.exists() and not path.is_file()]
 
     if non_files:
-        formatted_paths = "\n".join(
-            f"- {path}" for path in non_files
-        )
+        formatted_paths = "\n".join(f"- {path}" for path in non_files)
         raise IsADirectoryError(
-            "Cannot overwrite non-file output paths:\n"
-            f"{formatted_paths}"
+            f"Cannot overwrite non-file output paths:\n{formatted_paths}"
         )
 
     for path in paths:
@@ -81,6 +72,15 @@ def prepare_output_paths(
 
 
 class CSVLogger:
+    """Own one flushed CSV file with a caller-supplied column schema.
+
+    ``fieldnames`` defines the header and accepted row shape. Construction
+    creates parent directories, opens a new file exclusively by default and
+    writes the header immediately, including for an otherwise empty output.
+    Existing output is replaced only when ``overwrite=True``. Callers must
+    close the logger to release its file handle.
+    """
+
     def __init__(
         self,
         output_path: str,
@@ -123,9 +123,11 @@ class CSVLogger:
             raise
 
     def write_row(self, row: Mapping[str, object]) -> None:
+        """Write and flush one mapping compatible with the configured schema."""
         self.writer.writerow(row)
         self.file.flush()
 
     def close(self) -> None:
+        """Close the owned file handle if it is still open."""
         if self.file is not None and not self.file.closed:
             self.file.close()

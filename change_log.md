@@ -1,5 +1,249 @@
 # Project Change Log
 
+## 14 August 2026 - Return-top extension finalisation
+
+- Preserved enhanced repetition detection events while finalising extension
+  classification from the causal peak of the returned top phase in recorded
+  and live processing, including end-of-stream/session flush handling.
+- Calibrated the enhanced insufficient-depth threshold from `100.0` to `65.0`
+  degrees using frozen development annotations only. A threshold sweep showed
+  a broad stable performance plateau from approximately 65 to 70 degrees;
+  `65.0` was selected as the lowest stable value above the largest observed
+  correctly labelled depth value (`64.06` degrees). Baseline thresholds were
+  not changed.
+
+## 12 August 2026 - Annotation viewer display sizing
+
+- Separated aspect-fitted source-video scaling from fixed-pixel panel rendering
+  so high- and low-resolution clips retain complete unobscured evidence and
+  readable controls without changing annotation semantics.
+
+## 12 August 2026 - Final CLI and provenance consistency
+
+- Added repository-root-invocable evaluation wrappers that need no manual
+  `PYTHONPATH`, completed verified external dataset provenance and corrected
+  stale output, scope and evaluation documentation.
+
+## 12 August 2026 - Formal evidence binding and complete reporting
+
+- Required frozen annotation review evidence and bound formal outputs to exact
+  manifest, annotation, review and per-method source-run identities/hashes.
+- Added frame-weighted processing/availability reporting, method-specific side
+  stability, enhanced unscorable/alignment coverage and independent human
+  evidence-adequacy summaries without changing scientific algorithms.
+
+## 12 August 2026 - Annotation evidence presentation and correction safety
+
+- Moved source-only annotation controls into a bounded right-side panel so the
+  complete video frame remains unobscured at both low and high resolutions.
+- Added explicit schema-validated, deterministic atomic correction of one saved
+  annotation identity while review remains open, with frozen-review rejection.
+- Documented recording-intent non-blinding without treating filenames or
+  external source groupings as ground truth.
+
+## 12 August 2026 - Real development annotation preparation
+
+- Inventoried and manifested the six controlled self-recorded and six selected
+  external development clips without running pose or push-up analysis.
+- Documented external Kaggle source provenance while keeping source groupings
+  separate from independently assigned project ground truth.
+- Added a source-only frame annotation viewer with schema-valid atomic output,
+  deterministic resume, ambiguity/multi-deviation support and explicit review
+  freeze metadata.
+
+## 12 August 2026 - Enhanced live hardware and presentation completion
+
+- Preferred DirectShow for Windows webcams with a released one-step fallback,
+  verified first-frame buffering and source-sized resizable presentation.
+- Added responsive summary spacing and pagination plus more concise long-session
+  text reports that show optional evidence only when relevant.
+
+## 11 August 2026 - Enhanced real-time feedback interface
+
+- Added a webcam entry point that reuses the enhanced temporal and
+  classification pipeline while presenting persistent, non-medical
+  completed-repetition feedback and clear tracking guidance.
+- Added robust keyboard/window shutdown, a compact responsive overlay, a
+  post-session summary and collision-safe local human-readable reports.
+- Added friendly expected camera-unavailable handling while preserving
+  tracebacks for unexpected failures.
+
+## 11 August 2026 - Repository presentation and navigation
+
+- Reworked the landing page and documentation navigation, made the `src`
+  import model explicit for tests and editors, standardised Python formatting
+  and removed placeholder-only generated-output directories.
+
+## 11 August 2026 - Repository tooling and hygiene policy
+
+- Established minimal Ruff and pytest configuration, separated development
+  dependencies, removed an unused runtime dependency, completed generated-file
+  ignore coverage and defined an LF repository line-ending policy without
+  renormalising historical files.
+
+## 11 August 2026 - Reusable development analysis utilities
+
+- Removed historical date and setup-run assumptions from development summary
+  utilities by requiring reproducible caller-supplied dates and identities,
+  and clarified development-only diagnostic labelling.
+
+## 9 August 2026 - Runtime result-path policy cleanup
+
+- Removed obsolete result-directory creation so operational runner setup
+  follows the current development/formal results layout.
+
+## 9 August 2026 - Operational runner documentation polish
+
+- Documented runner, CLI, runtime-configuration and operational-path semantics
+  without changing executable, lifecycle or scientific behaviour.
+
+## 9 August 2026 - Evaluation and provenance documentation polish
+
+- Documented evaluation, validation, reporting and provenance responsibilities,
+  invariants and units without changing executable or scientific behaviour.
+
+## 9 August 2026 - Core scientific documentation polish
+
+- Documented the responsibilities, units, state, missing-data behaviour and
+  scientific invariants of the core analysis, feature, pose and capture
+  modules, with no runtime or scientific behaviour changes.
+
+## 9 August 2026 - Internal code consolidation
+
+- Consolidated duplicate split and repository-root constants, removed a
+  duplicate type alias and cleaned demonstrably unused imports without
+  changing runtime or scientific behaviour.
+
+## 9 August 2026 - Historical evidence encoding normalised
+
+- Converted legacy tracked development text evidence to UTF-8 without a BOM
+  for repository portability and readability while preserving its historical
+  decoded content exactly.
+
+## 9 August 2026 - Development evidence separated
+
+- Relocated historical development evidence and setup metadata into explicit
+  development paths, reserved `results/formal/` for future formal evidence and
+  preserved every historical evidence file byte-for-byte.
+
+## 9 August 2026 - Fictional evaluation examples isolated
+
+- Moved the fictional manifest and repetition-annotation examples under
+  `data/examples/` to prevent confusion with real experimental inputs.
+
+## 9 August 2026 - High-confidence dead-file cleanup
+
+- Removed empty obsolete Python/test placeholders, redundant `.gitkeep` files
+  from directories with tracked content and the exact duplicate
+  `features/smoothing.py` implementation.
+- Retained `analysis/smoothing.py` as the canonical EMA implementation and
+  confirmed all tracked callers already use it.
+
+No functionality or scientific behaviour was changed.
+
+## 9 August 2026 - Formal source-run provenance linkage
+
+- Bound evaluation metadata to every consumed baseline and enhanced source run
+  using source run IDs, source metadata hashes, consumed CSV hashes, inherited
+  input-video hashes, source Git state and canonical resolved-config hashes.
+- Reused streaming file hashing and added stable canonical-JSON hashing for
+  resolved configuration identity.
+- Stored repository-contained source paths relatively and reduced external
+  source paths to basenames to avoid publishing machine-specific locations.
+- Reverified source metadata and consumed CSV identities before report writing
+  while keeping provenance out of deterministic metric content.
+- Added fictional focused tests for ordering, exact hashes, privacy,
+  determinism, optional values, mutation/disappearance and lifecycle safety.
+
+No metric, event-matching, tolerance, annotation, threshold, segmentation,
+classifier, side-selection or runner analysis behaviour was changed.
+
+## 8 August 2026 - Formal input integrity
+
+- Required baseline and enhanced metadata to cover the complete selected
+  manifest split, with missing and extra clip IDs rejected explicitly.
+- Required evidence of manual review through at least one annotation row per
+  formal clip while preserving the exclusion of ambiguous fragments from
+  ground-truth event metrics.
+- Added whole-file baseline frame CSV header, run/clip identity, frame sequence
+  and completed frame-count validation before event extraction.
+- Bound manifest FPS, frame count and resolution to both completed-run metadata
+  records and rejected non-finite manifest FPS values.
+- Added focused fictional-data regression coverage for the new safeguards.
+
+No event matching, metric, tolerance, threshold, segmentation, classifier,
+side-selection or runner analysis behaviour was changed.
+
+## 8 August 2026 - Enhanced processing timing boundary
+
+- Finalized enhanced per-frame processing time before repetition-level CSV
+  serialization so recorded timing matches the existing provenance definition
+  and the baseline runner's CSV-exclusion convention.
+- Added a fake-clock regression test proving a delayed repetition write does
+  not increase frame processing time while the repetition row is still written.
+
+No threshold, state machine, repetition value, classifier, selector, output
+schema, baseline behavior or event-matching behavior was changed.
+
+## 8 August 2026 - Formal-evaluation execution orchestration
+
+- Added a thin callable API and CLI that composes the existing dataset
+  validation, event loading, per-clip evaluation, cross-clip aggregation and
+  formal report writer over explicit completed-run provenance metadata.
+- Added strict full-clip, run method/split/clip-set, input-hash, source-FPS,
+  referenced-output and loaded-event identity validation without silent clip
+  skipping or result discovery.
+- Kept the supplied positive finite event tolerance unchanged through every
+  clip and method; the `0.5`-second default remains provisional and is not
+  selected or tuned by orchestration.
+- Added an explicit final-test safeguard that refuses the test split unless
+  development decisions have been frozen and `--allow-final-test` is supplied.
+- Documented the development-first execution workflow and added focused tests
+  using only fictional temporary manifests, annotations, metadata and CSVs.
+
+No video processing, file crawler, baseline classification, metric formula,
+event matcher, threshold, state machine, classifier, selector, runner or real
+evaluation result was added or changed.
+
+## 7 August 2026 - Cross-clip formal-evaluation reporting
+
+- Added validated cross-clip aggregation over native baseline detection and
+  enhanced per-clip formal-evaluation results.
+- Added pooled detection metrics, per-clip count-error summaries and
+  match-weighted completion-timing means without averaging per-clip F1.
+- Pooled raw enhanced confusion-matrix counts and recomputed classification
+  metrics through the shared classification implementation.
+- Added enhanced detection recall aggregated by ground-truth form class.
+- Added deterministic JSON/CSV report files, complete-set collision handling,
+  explicit overwrite, staged metric writes and atomic lifecycle provenance.
+- Retained `0.5` seconds as the provisional convenience default while allowing
+  any supplied positive finite event tolerance and enforcing report-wide
+  consistency against each clip's source FPS.
+- Added focused fictional-data tests for aggregation formulas, validation,
+  exact schemas, deterministic output and completed/failed metadata states.
+
+No video processing, result discovery CLI, baseline classification, plot,
+confidence interval, runtime metric, feature-availability metric, threshold,
+matching rule, runner, annotation or final-test evaluation was added or changed.
+
+## 6 August 2026 - Per-clip enhanced formal-evaluation integration
+
+- Added a pure per-clip enhanced evaluation API that composes the existing
+  chronological event matcher, detection summary and matched-repetition
+  classification metrics.
+- Added auditable matched-pair records while keeping unmatched annotations and
+  predictions exclusively as detection misses and extras.
+- Added detection recall stratified by ground-truth form class, including
+  deterministic zero-support rows with undefined recall.
+- Added integration-level label, event-type, matched-reference and metric-total
+  validation with deterministic JSON-compatible output.
+- Added focused tests for chronological matching, classification inclusion,
+  misses, extras, class-stratified recall, empty inputs and serialization.
+
+No CSV loading, CLI, cross-clip aggregation, plot, confidence interval,
+runtime evaluation or final-test execution was added. No matching tolerance,
+threshold, segmentation, classification priority, runner or schema changed.
+
 ## 30 July 2026 - Repetition-event detection evaluation
 
 - Added validated baseline completion-event extraction from cumulative-count
@@ -154,3 +398,15 @@ The original multi-exercise scope was too broad for the remaining implementation
 ### Approval
 
 The revised one-exercise push-up scope was discussed with and approved by supervisor Nafi Ahmad before implementation resumed on 1 July 2026.
+
+- Froze the final development-stage scientific configuration before held-out
+  test evaluation. The primary event-matching tolerance is `0.50` seconds;
+  enhanced classification thresholds are `65.0` degrees for insufficient
+  depth, `150.0` degrees for incomplete extension, and `160.0` degrees for
+  alignment. Development sensitivity results and the no-test-retuning rule are
+  recorded in `docs/development_scientific_freeze.md`.
+
+- Pre-registered the held-out test collection protocol before final-test
+  recording or analysis. The planned six-clip self-recorded test set uses
+  neutral clip IDs, empty manifest/annotation schemas, frozen manual annotation
+  rules, and the scientific configuration frozen at commit `40a204c`.

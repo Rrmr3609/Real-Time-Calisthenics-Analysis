@@ -1,10 +1,13 @@
+"""Centralise repository-relative locations used by operational runners.
+
+Runner startup creates only the experiment directories that receive runtime
+outputs. Result paths are selected by the relevant evaluation command rather
+than created globally by operational runners.
+"""
+
 from pathlib import Path
 
-
-# paths.py is inside: repository/src/utils/paths.py
-# parents[0] = utils
-# parents[1] = src
-# parents[2] = repository root
+# Resolve the root from this tracked module, independently of the shell CWD.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DATA_DIR = PROJECT_ROOT / "data"
@@ -16,18 +19,12 @@ LOG_DIR = EXPERIMENTS_DIR / "logs"
 OUTPUT_DIR = EXPERIMENTS_DIR / "outputs"
 
 RESULTS_DIR = PROJECT_ROOT / "results"
-FIGURE_DIR = RESULTS_DIR / "figures"
-TABLE_DIR = RESULTS_DIR / "tables"
 
 
 def create_project_directories() -> None:
-    """Create generated-output directories when they do not exist."""
+    """Create the experiment directories used by operational runners."""
     for directory in [
-        RAW_DATA_DIR,
-        ANNOTATION_DIR,
         LOG_DIR,
         OUTPUT_DIR,
-        FIGURE_DIR,
-        TABLE_DIR,
     ]:
         directory.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,649 @@
+import ast
+import hashlib
+from datetime import datetime, timezone
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from evaluation import annotate_repetitions
+from evaluation.dataset_validation import (
+    ANNOTATION_COLUMNS,
+    MANIFEST_COLUMNS,
+    validate_dataset_manifest,
+    validate_repetition_annotations,
+)
+
+
+def make_manifest(*, second_clip=False):
+    rows = [
+        {
+            "clip_id": "fictional_dev_01",
+            "split": "development",
+            "video_path": "data/raw/fictional/fictional_dev_01.mp4",
+            "video_sha256": "a" * 64,
+            "participant_id": "P_FICTIONAL_01",
+            "camera_view": "side",
+            "source_fps": 30.0,
+            "frame_count": 500,
+            "width_px": 1280,
+            "height_px": 720,
+            "recording_condition": "fictional_controlled_condition",
+            "notes": "Fictional test row.",
+        }
+    ]
+    if second_clip:
+        rows.append(
+            {
+                **rows[0],
+                "clip_id": "fictional_dev_02",
+                "video_path": "data/raw/fictional/fictional_dev_02.mp4",
+                "participant_id": "P_FICTIONAL_02",
+            }
+        )
+    return pd.DataFrame(rows, columns=MANIFEST_COLUMNS)
+
+
+def make_draft(**overrides):
+    values = {
+        "start_top_frame": 10,
+        "bottom_turnaround_frame": 20,
+        "completion_end_top_frame": 30,
+    }
+    values.update(overrides)
+    return annotate_repetitions.AnnotationDraft(**values)
+
+
+def make_row(*, clip_id="fictional_dev_01", attempt_id="A001", **draft_values):
+    return annotate_repetitions.build_annotation_row(
+        clip_id=clip_id,
+        attempt_id=attempt_id,
+        draft=make_draft(**draft_values),
+    )
+
+
+def write_manifest(path, manifest):
+    manifest.to_csv(path, index=False)
+
+
+def test_manifest_technical_metadata_mapping_uses_established_schema():
+    metadata = annotate_repetitions.VideoTechnicalMetadata(
+        video_path="data/raw/fictional/source.mp4",
+        sha256="a" * 64,
+        source_fps=29.97,
+        frame_count=900,
+        width_px=1920,
+        height_px=1080,
+        duration_seconds=900 / 29.97,
+        frame_decodable=True,
+    )
+
+    row = annotate_repetitions.build_manifest_row(
+        metadata,
+        clip_id="fictional_dev_01",
+        participant_id="P_FICTIONAL_01",
+        camera_view="side",
+        recording_condition="fictional_controlled_condition",
+        notes="Fictional mapping test.",
+    )
+
+    assert tuple(row) == MANIFEST_COLUMNS
+    assert row["split"] == "development"
+    assert row["video_path"] == metadata.video_path
+    assert row["video_sha256"] == metadata.sha256
+    validate_dataset_manifest(pd.DataFrame([row]))
+
+
+@pytest.mark.parametrize(
+    ("depth", "extension", "alignment", "expected"),
+    [
+        (False, False, False, "correct"),
+        (True, False, False, "insufficient_depth"),
+        (False, True, False, "incomplete_extension"),
+        (False, False, True, "alignment_deviation"),
+        (True, True, True, "insufficient_depth"),
+        (False, True, True, "incomplete_extension"),
+    ],
+)
+def test_class_and_deviation_selection_uses_frozen_priority(
+    depth,
+    extension,
+    alignment,
+    expected,
+):
+    assert (
+        annotate_repetitions.canonical_class_for_selection(
+            insufficient_depth=depth,
+            incomplete_extension=extension,
+            alignment_deviation=alignment,
+            ambiguity=False,
+            visibility_status="sufficient",
+        )
+        == expected
+    )
+
+
+def test_canonical_annotation_row_retains_multiple_deviation_flags():
+    row = make_row(
+        insufficient_depth_flag=True,
+        incomplete_extension_flag=True,
+        alignment_deviation_flag=True,
+    )
+
+    assert row["ground_truth_class"] == "insufficient_depth"
+    assert row["insufficient_depth_flag"] == "true"
+    assert row["incomplete_extension_flag"] == "true"
+    assert row["alignment_deviation_flag"] == "true"
+    validate_repetition_annotations(pd.DataFrame([row]), make_manifest())
+
+
+def test_ambiguous_fragment_retains_location_and_protocol_state():
+    draft = annotate_repetitions.AnnotationDraft(
+        start_top_frame=45,
+        ambiguity_flag=True,
+        source_video_visibility_status="partially_obscured",
+        annotator_notes="Fictional clip-boundary fragment.",
+    )
+
+    row = annotate_repetitions.build_annotation_row(
+        clip_id="fictional_dev_01",
+        attempt_id="F001",
+        draft=draft,
+    )
+
+    assert row["is_evaluable_attempt"] == "false"
+    assert row["ambiguity_flag"] == "true"
+    assert row["ground_truth_class"] == "unscorable"
+    assert row["start_top_frame"] == 45
+    assert row["bottom_turnaround_frame"] == ""
+    validate_repetition_annotations(pd.DataFrame([row]), make_manifest())
+
+
+def test_duplicate_prevention_does_not_replace_existing_row(tmp_path):
+    annotations_path = tmp_path / "annotations.csv"
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+    manifest = make_manifest()
+    original = make_row()
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        original,
+        manifest,
+    )
+    before = annotations_path.read_bytes()
+
+    with pytest.raises(ValueError, match="Duplicate annotation identity"):
+        annotate_repetitions.append_annotation_row(
+            annotations_path,
+            {**original, "annotator_notes": "Would replace existing work."},
+            manifest,
+        )
+
+    assert annotations_path.read_bytes() == before
+
+
+@pytest.mark.parametrize(("width", "height"), [(640, 360), (1920, 1080)])
+def test_annotation_canvas_preserves_complete_unobscured_source_frame(
+    width,
+    height,
+):
+    panel_width = (
+        annotate_repetitions.MIN_PANEL_WIDTH
+        if width == 640
+        else annotate_repetitions.PANEL_WIDTH
+    )
+    display_width = width + panel_width
+    source = np.arange(height * width * 3, dtype=np.uint8).reshape(
+        height,
+        width,
+        3,
+    )
+
+    canvas = annotate_repetitions._build_annotation_canvas(
+        source,
+        clip_id="fictional_dev_01",
+        frame_index=10,
+        frame_count=500,
+        fps=30.0,
+        playing=False,
+        draft=make_draft(),
+        saved_rows=2,
+        status_message="Source video only; fictional test.",
+        display_width=display_width,
+        display_height=height,
+    )
+
+    layout = annotate_repetitions._annotation_layout(
+        source_width=width,
+        source_height=height,
+        display_width=display_width,
+        display_height=height,
+    )
+    video_x, video_y, video_width, video_height = layout["video"]
+    panel_x, _, _, _ = layout["panel"]
+
+    assert canvas.shape == (height, display_width, 3)
+    assert (video_width, video_height) == (width, height)
+    assert video_x + video_width <= panel_x
+    assert np.array_equal(
+        canvas[
+            video_y : video_y + video_height,
+            video_x : video_x + video_width,
+        ],
+        source,
+    )
+    assert not np.shares_memory(canvas, source)
+
+
+@pytest.mark.parametrize(("source_width", "source_height"), [(1920, 1080), (640, 360)])
+def test_source_resolution_does_not_change_panel_geometry(
+    source_width,
+    source_height,
+):
+    layout = annotate_repetitions._annotation_layout(
+        source_width=source_width,
+        source_height=source_height,
+        display_width=annotate_repetitions.INITIAL_WINDOW_WIDTH,
+        display_height=annotate_repetitions.INITIAL_WINDOW_HEIGHT,
+    )
+    video_x, video_y, video_width, video_height = layout["video"]
+    panel_x, panel_y, panel_width, panel_height = layout["panel"]
+
+    assert panel_width == annotate_repetitions.PANEL_WIDTH
+    assert (panel_x, panel_y, panel_height) == (1100, 0, 900)
+    assert video_x >= 0
+    assert video_y >= 0
+    assert video_x + video_width <= panel_x
+    assert video_y + video_height <= panel_height
+    assert video_width / video_height == pytest.approx(
+        source_width / source_height,
+        rel=0.002,
+    )
+
+
+def test_panel_font_and_initial_window_use_readable_fixed_display_units():
+    low_resolution_panel = annotate_repetitions._annotation_panel_width(1000)
+    large_window_panel = annotate_repetitions._annotation_panel_width(
+        annotate_repetitions.INITIAL_WINDOW_WIDTH
+    )
+
+    assert low_resolution_panel == 400
+    assert large_window_panel == 500
+    assert annotate_repetitions.INITIAL_WINDOW_WIDTH >= 1500
+    assert annotate_repetitions.INITIAL_WINDOW_HEIGHT >= 850
+    assert annotate_repetitions.PANEL_FONT_SCALE >= 0.55
+    assert annotate_repetitions.PANEL_LINE_HEIGHT >= 28
+
+
+@pytest.mark.parametrize(
+    ("key_code", "expected"),
+    [
+        (32, ("toggle_play", None)),
+        (ord("q"), ("quit", None)),
+        (27, ("quit", None)),
+        (ord(","), ("move", -1)),
+        (ord("."), ("move", 1)),
+        (ord("["), ("move", -10)),
+        (ord("]"), ("move", 10)),
+        (ord("a"), ("mark_start", None)),
+        (ord("b"), ("mark_bottom", None)),
+        (ord("e"), ("mark_end", None)),
+        (ord("1"), ("select_correct", None)),
+        (ord("2"), ("toggle_depth", None)),
+        (ord("3"), ("toggle_extension", None)),
+        (ord("4"), ("toggle_alignment", None)),
+        (ord("5"), ("select_unscorable", None)),
+        (ord("v"), ("cycle_visibility", None)),
+        (ord("m"), ("toggle_ambiguous", None)),
+        (ord("n"), ("edit_note", None)),
+        (ord("r"), ("reset", None)),
+        (ord("s"), ("save", None)),
+    ],
+)
+def test_annotation_key_actions_preserve_established_controls(key_code, expected):
+    assert annotate_repetitions.annotation_key_action(key_code) == expected
+
+
+def test_saved_annotation_can_be_atomically_corrected_while_review_is_open(tmp_path):
+    annotations_path = tmp_path / "annotations.csv"
+    metadata_path = tmp_path / "annotations.review.json"
+    manifest = make_manifest()
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+    annotate_repetitions.start_review_metadata(
+        metadata_path,
+        annotations_path=annotations_path,
+        annotator="ANN_FICTIONAL_01",
+    )
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        make_row(
+            attempt_id="A002",
+            start_top_frame=100,
+            bottom_turnaround_frame=110,
+            completion_end_top_frame=120,
+        ),
+        manifest,
+    )
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        make_row(attempt_id="A001", start_top_frame=10),
+        manifest,
+    )
+
+    corrected = make_row(
+        attempt_id="A001",
+        start_top_frame=12,
+        bottom_turnaround_frame=22,
+        completion_end_top_frame=32,
+        alignment_deviation_flag=True,
+        annotator_notes="Fictional reviewed correction.",
+    )
+    rows = annotate_repetitions.replace_annotation_row(
+        annotations_path,
+        corrected,
+        manifest,
+        metadata_path=metadata_path,
+    )
+
+    assert len(rows) == 2
+    assert [row["ground_truth_attempt_id"] for row in rows] == ["A001", "A002"]
+    assert rows[0]["start_top_frame"] == 12
+    assert rows[0]["ground_truth_class"] == "alignment_deviation"
+    assert not list(tmp_path.glob(".annotations.csv.*.tmp"))
+    validate_repetition_annotations(
+        pd.read_csv(annotations_path),
+        manifest,
+    )
+
+
+def test_annotation_correction_is_rejected_after_review_freeze(tmp_path):
+    manifest_path = tmp_path / "manifest.csv"
+    annotations_path = tmp_path / "annotations.csv"
+    metadata_path = tmp_path / "annotations.review.json"
+    manifest = make_manifest()
+    write_manifest(manifest_path, manifest)
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+    annotate_repetitions.start_review_metadata(
+        metadata_path,
+        annotations_path=annotations_path,
+        annotator="ANN_FICTIONAL_01",
+    )
+    original = make_row()
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        original,
+        manifest,
+    )
+    annotate_repetitions.finalise_review_metadata(
+        metadata_path,
+        manifest_path=manifest_path,
+        annotations_path=annotations_path,
+        reviewer="REVIEWER_FICTIONAL_01",
+    )
+    before = annotations_path.read_bytes()
+
+    with pytest.raises(ValueError, match="frozen"):
+        annotate_repetitions.replace_annotation_row(
+            annotations_path,
+            {**original, "annotator_notes": "Must not replace frozen GT."},
+            manifest,
+            metadata_path=metadata_path,
+        )
+
+    assert annotations_path.read_bytes() == before
+
+
+def test_correction_cli_selects_one_existing_identity():
+    arguments = annotate_repetitions.parse_arguments(
+        [
+            "--manifest",
+            "fictional_manifest.csv",
+            "--annotations",
+            "fictional_annotations.csv",
+            "--clip-id",
+            "fictional_dev_01",
+            "--annotator",
+            "ANN_FICTIONAL_01",
+            "--correct-attempt-id",
+            "A001",
+        ]
+    )
+
+    assert arguments.correct_attempt_id == "A001"
+
+
+def test_protocol_discloses_non_blinding_without_changing_stored_semantics():
+    protocol_path = (
+        Path(__file__).resolve().parents[1] / "docs" / "manual_annotation_protocol.md"
+    )
+    protocol = protocol_path.read_text(encoding="utf-8")
+    normalised_protocol = " ".join(protocol.split())
+
+    assert "not blinded to the intended recording condition" in normalised_protocol
+    assert "what is visibly present" in normalised_protocol
+    assert "must not determine project ground truth" in normalised_protocol
+    assert make_row()["ground_truth_class"] == "correct"
+
+
+def test_safe_resume_restores_unsaved_draft_and_protects_other_clip(tmp_path):
+    checkpoint_path = tmp_path / "annotations.resume.json"
+    draft = make_draft(
+        incomplete_extension_flag=True,
+        annotator_notes="Fictional in-progress note.",
+    )
+    annotate_repetitions.save_resume_checkpoint(
+        checkpoint_path,
+        clip_id="fictional_dev_01",
+        current_frame=27,
+        draft=draft,
+    )
+
+    restored = annotate_repetitions.load_resume_checkpoint(
+        checkpoint_path,
+        clip_id="fictional_dev_01",
+    )
+
+    assert restored is not None
+    assert restored[0] == 27
+    assert restored[1] == draft
+    with pytest.raises(ValueError, match="unfinished draft"):
+        annotate_repetitions.load_resume_checkpoint(
+            checkpoint_path,
+            clip_id="fictional_dev_02",
+        )
+
+
+def test_annotation_rows_use_manifest_and_chronological_order(tmp_path):
+    annotations_path = tmp_path / "annotations.csv"
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+    manifest = make_manifest(second_clip=True)
+
+    for row in [
+        make_row(clip_id="fictional_dev_02", attempt_id="A001"),
+        make_row(
+            attempt_id="A002",
+            start_top_frame=100,
+            bottom_turnaround_frame=110,
+            completion_end_top_frame=120,
+        ),
+        make_row(
+            attempt_id="A001",
+            start_top_frame=10,
+            bottom_turnaround_frame=20,
+            completion_end_top_frame=30,
+        ),
+    ]:
+        annotate_repetitions.append_annotation_row(
+            annotations_path,
+            row,
+            manifest,
+        )
+
+    identities = [
+        (row["clip_id"], row["ground_truth_attempt_id"])
+        for row in annotate_repetitions.load_annotation_rows(annotations_path)
+    ]
+    assert identities == [
+        ("fictional_dev_01", "A001"),
+        ("fictional_dev_01", "A002"),
+        ("fictional_dev_02", "A001"),
+    ]
+
+
+def test_review_metadata_starts_pending_without_freeze_hash(tmp_path):
+    annotations_path = tmp_path / "annotations.csv"
+    metadata_path = tmp_path / "annotations.review.json"
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+
+    document = annotate_repetitions.start_review_metadata(
+        metadata_path,
+        annotations_path=annotations_path,
+        annotator="ANN_FICTIONAL_01",
+        now=datetime(2026, 8, 12, 10, 0, tzinfo=timezone.utc),
+    )
+
+    assert document["annotator"] == "ANN_FICTIONAL_01"
+    assert document["annotation_date"] == "2026-08-12"
+    assert document["review_status"] == "in_progress"
+    assert document["frozen_annotation_sha256"] is None
+
+
+def test_review_finalisation_requires_coverage_and_records_exact_hash(tmp_path):
+    manifest_path = tmp_path / "manifest.csv"
+    annotations_path = tmp_path / "annotations.csv"
+    metadata_path = tmp_path / "annotations.review.json"
+    manifest = make_manifest()
+    write_manifest(manifest_path, manifest)
+    annotate_repetitions.ensure_annotation_file(annotations_path)
+    annotate_repetitions.start_review_metadata(
+        metadata_path,
+        annotations_path=annotations_path,
+        annotator="ANN_FICTIONAL_01",
+    )
+
+    with pytest.raises(ValueError, match="missing"):
+        annotate_repetitions.finalise_review_metadata(
+            metadata_path,
+            manifest_path=manifest_path,
+            annotations_path=annotations_path,
+            reviewer="REVIEWER_FICTIONAL_01",
+        )
+
+    annotate_repetitions.append_annotation_row(
+        annotations_path,
+        make_row(),
+        manifest,
+    )
+    expected_hash = hashlib.sha256(annotations_path.read_bytes()).hexdigest()
+    document = annotate_repetitions.finalise_review_metadata(
+        metadata_path,
+        manifest_path=manifest_path,
+        annotations_path=annotations_path,
+        reviewer="REVIEWER_FICTIONAL_01",
+        repeat_review_status="complete",
+        repeat_reviewer="REVIEWER_FICTIONAL_02",
+        notes="Fictional completed review.",
+        now=datetime(2026, 8, 13, 9, 30, tzinfo=timezone.utc),
+    )
+
+    assert document["review_status"] == "complete"
+    assert document["reviewed_by"] == "REVIEWER_FICTIONAL_01"
+    assert document["repeat_review_status"] == "complete"
+    assert document["frozen_annotation_sha256"] == expected_hash
+    assert document["finalised_at_utc"] == "2026-08-13T09:30:00Z"
+    with pytest.raises(ValueError, match="frozen"):
+        annotate_repetitions.start_review_metadata(
+            metadata_path,
+            annotations_path=annotations_path,
+            annotator="ANN_FICTIONAL_01",
+        )
+
+
+def test_annotation_module_has_no_prediction_pipeline_imports_or_symbols():
+    source_path = Path(annotate_repetitions.__file__)
+    source = source_path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    imported_modules = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported_modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported_modules.add(node.module)
+
+    prohibited_modules = {
+        "analysis.baseline",
+        "analysis.enhanced_features",
+        "analysis.phase_state_machine",
+        "analysis.repetition_classifier",
+        "pose.estimator",
+        "evaluation.repetition_events",
+    }
+    prohibited_symbols = {
+        "EnhancedFeatureProcessor",
+        "PushUpPhaseStateMachine",
+        "RepetitionClassifier",
+        "PoseEstimator",
+    }
+    assert imported_modules.isdisjoint(prohibited_modules)
+    assert all(symbol not in source for symbol in prohibited_symbols)
+
+
+def test_real_development_manifest_and_frozen_annotations_validate():
+    project_root = Path(__file__).resolve().parents[1]
+    manifest = pd.read_csv(
+        project_root / "data" / "manifests" / "development_dataset_manifest.csv"
+    )
+    annotations = pd.read_csv(
+        project_root / "data" / "annotations" / "development_repetition_annotations.csv"
+    )
+
+    assert len(manifest) == 12
+    assert manifest["clip_id"].tolist() == [
+        "dev01_correct",
+        "dev02_insufficient_depth",
+        "dev03_incomplete_extension",
+        "dev04_alignment_deviation",
+        "dev05_mixed_fast",
+        "dev06_mixed_diagonal",
+        "ext_kaggle_01",
+        "ext_kaggle_02",
+        "ext_kaggle_03",
+        "ext_kaggle_04",
+        "ext_kaggle_05",
+        "ext_kaggle_06",
+    ]
+    assert manifest["video_path"].tolist() == [
+        "data/raw/development/dev01_correct.mp4",
+        "data/raw/development/dev02_insufficient_depth.mp4",
+        "data/raw/development/dev03_incomplete_extension.mp4",
+        "data/raw/development/dev04_alignment_deviation.mp4",
+        "data/raw/development/dev05_mixed_fast.mp4",
+        "data/raw/development/dev06_mixed_diagonal.mp4",
+        ("data/raw/external/kaggle_pushup/Correct sequence/Copy of push up 47.mp4"),
+        ("data/raw/external/kaggle_pushup/Correct sequence/Copy of push up 80.mp4"),
+        ("data/raw/external/kaggle_pushup/Correct sequence/Copy of push up 164.mp4"),
+        "data/raw/external/kaggle_pushup/Wrong sequence/8.mp4",
+        ("data/raw/external/kaggle_pushup/Wrong sequence/Copy of push up 42.mp4"),
+        ("data/raw/external/kaggle_pushup/Wrong sequence/Copy of push up 81.mp4"),
+    ]
+    assert set(manifest["split"]) == {"development"}
+    assert not manifest["video_path"].str.contains("setup_test").any()
+    assert len(annotations) == 44
+    assert tuple(annotations.columns) == ANNOTATION_COLUMNS
+    assert annotations["is_evaluable_attempt"].value_counts().to_dict() == {
+        True: 43,
+        False: 1,
+    }
+    assert annotations["ambiguity_flag"].value_counts().to_dict() == {
+        False: 43,
+        True: 1,
+    }
+    assert annotations["ground_truth_class"].value_counts().to_dict() == {
+        "correct": 14,
+        "incomplete_extension": 10,
+        "alignment_deviation": 10,
+        "insufficient_depth": 9,
+        "unscorable": 1,
+    }
+    assert set(annotations["source_video_visibility_status"]) == {"sufficient"}
+    validate_repetition_annotations(annotations, manifest)

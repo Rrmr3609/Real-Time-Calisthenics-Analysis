@@ -11,7 +11,6 @@ from evaluation.repetition_events import (
     GroundTruthRepetitionEvent,
 )
 
-
 CLIP_ID = "fictional-clip"
 METHOD = "baseline"
 
@@ -69,11 +68,7 @@ def test_exact_event_match():
     )
 
     assert len(result.matched_pairs) == 1
-    assert (
-        result.matched_pairs[0]
-        .signed_timing_error_seconds
-        == 0.0
-    )
+    assert result.matched_pairs[0].signed_timing_error_seconds == 0.0
     assert result.unmatched_predictions == ()
     assert result.unmatched_annotations == ()
 
@@ -86,11 +81,7 @@ def test_tolerance_boundary_is_inclusive():
 
     assert result.tolerance_frames == 5
     assert len(result.matched_pairs) == 1
-    assert (
-        result.matched_pairs[0]
-        .absolute_timing_error_seconds
-        == 0.5
-    )
+    assert result.matched_pairs[0].absolute_timing_error_seconds == 0.5
 
 
 def test_prediction_just_outside_tolerance_is_unmatched():
@@ -111,15 +102,8 @@ def test_one_annotation_near_multiple_predictions_uses_minimum_error():
     )
 
     assert len(result.matched_pairs) == 1
-    assert (
-        result.matched_pairs[0]
-        .prediction.predicted_rep_id
-        == 2
-    )
-    assert [
-        event.predicted_rep_id
-        for event in result.unmatched_predictions
-    ] == [1]
+    assert result.matched_pairs[0].prediction.predicted_rep_id == 2
+    assert [event.predicted_rep_id for event in result.unmatched_predictions] == [1]
 
 
 def test_multiple_annotations_near_one_prediction_use_minimum_error():
@@ -132,14 +116,9 @@ def test_multiple_annotations_near_one_prediction_use_minimum_error():
     )
 
     assert len(result.matched_pairs) == 1
-    assert (
-        result.matched_pairs[0]
-        .annotation.ground_truth_attempt_id
-        == "A001"
-    )
+    assert result.matched_pairs[0].annotation.ground_truth_attempt_id == "A001"
     assert [
-        event.ground_truth_attempt_id
-        for event in result.unmatched_annotations
+        event.ground_truth_attempt_id for event in result.unmatched_annotations
     ] == ["A002"]
 
 
@@ -176,11 +155,7 @@ def test_deterministic_tie_uses_earliest_prediction():
         [annotation("A001", 10)],
     )
 
-    assert (
-        result.matched_pairs[0]
-        .prediction.predicted_rep_id
-        == 1
-    )
+    assert result.matched_pairs[0].prediction.predicted_rep_id == 1
     assert result == repeated
 
 
@@ -258,10 +233,7 @@ def test_empty_predictions_report_all_annotations_missed():
     assert summary.event_precision == 0.0
     assert summary.event_recall == 0.0
     assert summary.event_f1 == 0.0
-    assert (
-        summary.mean_signed_completion_timing_error_seconds
-        is None
-    )
+    assert summary.mean_signed_completion_timing_error_seconds is None
 
 
 def test_empty_annotations_report_all_predictions_extra():
@@ -289,9 +261,5 @@ def test_timestamp_errors_are_signed_prediction_minus_annotation():
     pair = result.matched_pairs[0]
     assert pair.matching_basis == "timestamp"
     assert pair.signed_frame_error == 1
-    assert pair.signed_timing_error_seconds == pytest.approx(
-        0.2
-    )
-    assert pair.absolute_timing_error_seconds == pytest.approx(
-        0.2
-    )
+    assert pair.signed_timing_error_seconds == pytest.approx(0.2)
+    assert pair.absolute_timing_error_seconds == pytest.approx(0.2)

@@ -1,3 +1,12 @@
+"""Run the interactive webcam demonstration of the simple baseline.
+
+The demo processes raw frame measurements, displays an annotated OpenCV window
+until ``q`` or capture failure, and writes ``experiments/logs/live_feature.csv``.
+Its warnings are frame-level diagnostics rather than formal repetition
+classifications; enhanced recorded-video analysis and formal evaluation are
+separate workflows.
+"""
+
 import argparse
 import time
 from contextlib import ExitStack
@@ -6,21 +15,20 @@ import cv2
 
 from analysis.baseline import BaselinePushUpAnalyser
 from capture.webcam import WebcamCapture
-from utils.paths import LOG_DIR, create_project_directories
 from features.angles import calculate_angle
 from pose.estimator import PoseEstimator
 from pose.landmarks import (
     extract_landmarks,
     get_point,
     get_visibility,
-    feature_landmarks_available,
-    feature_visibility_score,
     select_best_elbow_side,
 )
 from utils.csv_logger import CSVLogger, ensure_output_paths_available
+from utils.paths import LOG_DIR, create_project_directories
 
 
 def parse_arguments():
+    """Parse the live demo's explicit output-overwrite option."""
     parser = argparse.ArgumentParser(
         description="Run the live webcam baseline analyser."
     )
@@ -35,6 +43,7 @@ def parse_arguments():
 
 
 def draw_text(frame, text, position, scale=0.8):
+    """Draw one green status line onto the displayed OpenCV frame."""
     cv2.putText(
         frame,
         text,
@@ -48,6 +57,13 @@ def draw_text(frame, text, position, scale=0.8):
 
 
 def main():
+    """Run live baseline capture while owning all operational resources.
+
+    The camera, MediaPipe estimator, CSV logger and OpenCV windows are registered
+    for cleanup even when setup or capture fails. The deliberately simple
+    baseline uses raw angles and instantaneous side selection; it does not run
+    enhanced smoothing, temporal segmentation or formal classification.
+    """
     args = parse_arguments()
     create_project_directories()
 
@@ -168,9 +184,7 @@ def main():
                         ),
                     }
 
-            # IMPORTANT:
-            # The baseline analyser must be updated AFTER elbow_angle and
-            # body_alignment_angle have been calculated.
+            # Keep baseline state aligned with the measurements logged here.
             baseline_result = baseline_analyser.update(
                 elbow_angle=elbow_angle,
                 body_alignment_angle=body_alignment_angle,
@@ -211,7 +225,10 @@ def main():
 
             draw_text(
                 frame,
-                f"Position: {baseline_result['position']} | Reps: {baseline_result['rep_count']}",
+                (
+                    f"Position: {baseline_result['position']} | "
+                    f"Reps: {baseline_result['rep_count']}"
+                ),
                 (20, 200),
             )
 
@@ -220,7 +237,7 @@ def main():
                 f"Baseline frame warning: {warning_text}",
                 (20, 240),
             )
-            #the baseline warning are raw frame level outputs. they are not treated as completed repetition classifications.
+            # Frame warnings are diagnostics, not repetition classifications.
             cv2.imshow("Real-Time Calisthenics Analysis - Baseline Prototype", frame)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):

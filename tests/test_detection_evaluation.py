@@ -20,18 +20,15 @@ def test_detection_cli_reports_only_detection_metrics(
             {
                 "clip_id": "fictional-clip",
                 "split": "development",
-                "video_path": (
-                    "data/raw/fictional/clip.mp4"
-                ),
+                "video_path": ("data/raw/fictional/clip.mp4"),
+                "video_sha256": "a" * 64,
                 "participant_id": "P_FICTIONAL",
                 "camera_view": "side",
                 "source_fps": 20.0,
                 "frame_count": 100,
                 "width_px": 1280,
                 "height_px": 720,
-                "recording_condition": (
-                    "controlled_fictional"
-                ),
+                "recording_condition": ("controlled_fictional"),
                 "notes": "",
             }
         ]
@@ -50,9 +47,7 @@ def test_detection_cli_reports_only_detection_metrics(
                 "insufficient_depth_flag": False,
                 "incomplete_extension_flag": False,
                 "alignment_deviation_flag": False,
-                "source_video_visibility_status": (
-                    "sufficient"
-                ),
+                "source_video_visibility_status": ("sufficient"),
                 "annotator_notes": "",
             }
         ]

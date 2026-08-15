@@ -1,0 +1,12 @@
+Recorded-video smoke test - 20 July 2026
+
+Total frames: 497
+Pose-detected frame rate: 0.815
+Elbow-angle availability rate: 0.815
+Alignment-angle availability rate: 0.563
+No-side frame rate: 0.185
+Observed side changes: 18
+Final baseline repetition count: 3
+Mean processing time per frame: 48.503 ms
+Median processing time per frame: 46.388 ms
+

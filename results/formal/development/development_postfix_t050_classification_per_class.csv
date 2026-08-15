@@ -1,0 +1,6 @@
+class_label,true_positives,false_positives,false_negatives,support,precision,recall,f1
+correct,13,12,0,13,0.52,1.0,0.6842105263157895
+insufficient_depth,0,1,9,9,0.0,0.0,0.0
+incomplete_extension,8,0,2,10,1.0,0.8,0.888888888888889
+alignment_deviation,5,0,2,7,1.0,0.7142857142857143,0.8333333333333333
+unscorable,0,0,0,0,0.0,0.0,0.0

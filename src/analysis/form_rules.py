@@ -1,3 +1,6 @@
+"""Generate diagnostic frame-level warnings for the simple baseline."""
+
+
 def baseline_form_warnings(
     elbow_angle,
     body_alignment_angle,
@@ -7,10 +10,12 @@ def baseline_form_warnings(
     body_alignment_minimum: float = 160.0,
 ):
     """
-    Direct frame-level baseline form warnings.
+    Return direct frame-level warnings from raw angles in degrees.
 
     These are provisional operational thresholds for development.
     They are not universal definitions of correct push-up form.
+    The messages are diagnostics and must not be interpreted as formal
+    repetition-level classifications.
     """
     warnings = []
 
@@ -24,7 +29,10 @@ def baseline_form_warnings(
     if position == "bottom" and elbow_angle > depth_threshold:
         warnings.append("Insufficient depth")
 
-    if body_alignment_angle is not None and body_alignment_angle < body_alignment_minimum:
+    if (
+        body_alignment_angle is not None
+        and body_alignment_angle < body_alignment_minimum
+    ):
         warnings.append("Body alignment deviation")
 
     return warnings
