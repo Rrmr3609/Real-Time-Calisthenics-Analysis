@@ -311,6 +311,18 @@ The repository configures pytest and Ruff in `pyproject.toml`; manual
 & ".\.venv\Scripts\python.exe" -m ruff format --check src tests
 ```
 
+On Windows, if pytest reports `PermissionError` or `WinError 5` while accessing
+the user `TEMP` pytest directory, rerun with a repository-local temporary
+directory:
+
+```powershell
+& ".\.venv\Scripts\python.exe" -m pytest -q --basetemp=".pytest_tmp"
+```
+
+`.pytest_tmp` is ignored by Git. Continue to use the virtual-environment
+interpreter shown above rather than bare `python`, which may select a different
+system interpreter.
+
 ## Limitations
 
 - the implemented exercise scope is push-ups only;
