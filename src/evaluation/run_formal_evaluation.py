@@ -1136,7 +1136,8 @@ def parse_arguments(
         type=float,
         default=DEFAULT_EVENT_TOLERANCE_SECONDS,
         help=(
-            "Positive event-matching tolerance. The default 0.5 seconds is provisional."
+            "Positive event-matching tolerance. "
+            "The frozen primary value is 0.5 seconds."
         ),
     )
     parser.add_argument(

@@ -82,10 +82,9 @@ These values preserve the intentionally simple raw-threshold comparator.
 | `alignment_deviation_min_ratio` | `0.20` | 0 to 1; required deviating share of valid-alignment frames |
 | `minimum_alignment_valid_ratio` | `0.50` | 0 to 1; required alignment coverage for an alignment decision |
 
-These are provisional operational project values for the controlled
-recordings. They are not universal or medical definitions. This configuration
-milestone did not change any value, temporal rule, side-selector behavior or
-classifier priority.
+These are the frozen final project values for the controlled recordings. They
+are project-specific operational settings, not universal biomechanical,
+clinical or medical definitions.
 
 ## Enhanced repetition measurement window
 

@@ -41,7 +41,8 @@ Prioritise these paths:
 - `src/evaluation/`: diagnostic and summary scripts.
 - `tests/`: unit tests.
 - `README.md` and `change_log.md`: current documentation.
-- `data/annotations/` and `data/manifests/`: future evaluation ground truth.
+- `data/annotations/` and `data/manifests/`: frozen development and held-out
+  evaluation ground truth and dataset metadata.
 - `experiments/logs/` and `experiments/outputs/`: generated outputs.
 - `results/`: final tables, figures, summaries, and failure cases.
 
@@ -69,7 +70,7 @@ to create or replace it.
 ## Scientific and engineering guardrails
 
 1. Preserve the approved scope.
-2. Treat thresholds as provisional operational project thresholds, not
+2. Treat thresholds as frozen, project-specific operational thresholds, not
    universal definitions of correct push-up form.
 3. Do not make medical, injury-prevention, rehabilitation, or clinical claims.
 4. Keep baseline and enhanced methods clearly separated.
@@ -125,8 +126,8 @@ to trace them to the input clip, configuration, and method.
 
 ## Current evaluation cautions
 
-- The `0.5`-second event tolerance remains provisional until justified and
-  frozen from development evidence.
+- The primary `0.5`-second event tolerance is frozen from development evidence
+  and must not be retuned from held-out results.
 - Alignment availability is a reported evidence limitation. Do not hide it by
   lowering `minimum_alignment_valid_ratio` or introduce feature-specific side
   selection without new approved development evidence.
@@ -135,12 +136,12 @@ to trace them to the input clip, configuration, and method.
 
 ## Evaluation expectations
 
-The eventual formal evaluation should use the same manually annotated test
-clips for baseline and enhanced methods.
+The completed formal evaluation used the same manually annotated test clips
+for baseline and enhanced methods.
 
 Keep development/calibration data separate from final test data.
 
-Expected outputs should include, where supported by the annotations:
+The committed formal outputs include, where supported by the annotations:
 
 - ground-truth repetition count per clip;
 - predicted repetition count per method;

@@ -16,9 +16,9 @@ so would combine event detection and form classification into one ambiguous
 measure. This separation also prevents a missed attempt from being silently
 treated as a form-label error.
 
-The module is in-memory and writes no files. It is a foundation for a later
-cross-clip reporting layer; it does not load matches, orchestrate datasets or
-produce final evaluation reports.
+The module is in-memory and writes no files. The implemented cross-clip
+reporting layer consumes its results separately; this module itself does not
+load matches, orchestrate datasets or produce final evaluation reports.
 
 ## Supported classes and reporting order
 

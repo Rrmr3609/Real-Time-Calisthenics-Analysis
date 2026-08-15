@@ -88,3 +88,17 @@ Each formal run contains:
 
 Development results must not be presented as held-out generalisation
 performance. The final held-out test results must not be used for retuning.
+
+## Git dirty-state provenance
+
+Some preserved formal evaluation metadata and source-run records contain
+`git.dirty: true`. That flag is retained exactly as captured; the formal result
+files have not been rewritten to hide it. A recorded commit hash therefore may
+not reconstruct every contemporaneous uncommitted repository file.
+
+Where provided by the pipeline, annotations, manifests, resolved
+configurations, input-video identities, source-run metadata, consumed CSVs and
+formal result files are separately hashed and/or recorded. The repository does
+not establish the historical cause of each dirty state, so none is inferred
+here. Evaluation must not be rerun merely to produce a cleaner-looking Git
+flag.

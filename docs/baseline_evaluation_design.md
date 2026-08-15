@@ -16,7 +16,7 @@ confirmation, missing-frame tolerance, or explicit movement phases.
 
 The baseline is therefore a strict repetition detector. It is not a general
 attempt segmenter and does not perform repetition-level form classification.
-Its 150-degree top and 100-degree bottom thresholds are provisional operational
+Its 150-degree top and 100-degree bottom thresholds are frozen operational
 project rules, not universal definitions of correct push-up form.
 
 ## B. Baseline outputs
@@ -168,15 +168,16 @@ annotator judges that the attempt has returned to its end/top position. This
 must be based on the visible movement rather than either method's numeric
 threshold.
 
-The provisional matching tolerance is plus or minus 0.5 seconds. Timestamps
-should be used where possible. If matching by frame index:
+The primary matching tolerance is frozen at plus or minus 0.5 seconds.
+Timestamps should be used where possible. If matching by frame index:
 
 ```text
 tolerance_frames = ceil(0.5 * source_fps)
 ```
 
-The tolerance must be frozen using development data and annotation
-repeatability before final test results are examined.
+This value was retained using development-only sensitivity evidence and frozen
+before final-test evaluation. Other evaluated tolerances are sensitivity
+evidence only and do not replace the primary value.
 
 Matching must be chronological and one-to-one:
 
@@ -215,25 +216,30 @@ ambiguous movements are recorded separately and handled by a preregistered
 inclusion rule. The same annotations and inclusion decisions apply to both
 methods.
 
-## I. Recommended minimal code changes
+## I. Implementation status
 
-### Required after approval
+### Implemented
 
-- Add an evaluation annotation schema and validator.
-- Add a baseline event extractor based on count-increment rows without changing
-  the counter.
-- Add an enhanced event loader based on `end_frame`.
-- Implement the frozen one-to-one event matcher and count/event metrics.
-- Implement enhanced-only repetition classification metrics.
-- Add detection recall stratified by annotated form class for both methods.
-- Add common runtime and feature-availability summaries.
-- Validate identifiers, monotonic baseline counts, and duplicate events.
-- Add focused tests for matching tolerances, ambiguous matches, missed events,
-  extra events, and delayed baseline completions.
-- Record evaluation configuration, source FPS, method/version identifier, and
-  tolerance with every result.
+The required evaluation foundation from this design has been implemented:
 
-### Optional
+- an evaluation annotation schema and validator;
+- a baseline event extractor based on count-increment rows without changing
+  the counter;
+- an enhanced event loader based on `end_frame`;
+- the frozen one-to-one event matcher and count/event metrics;
+- enhanced-only repetition classification metrics;
+- detection recall stratified by annotated form class for both methods;
+- common runtime and feature-availability summaries;
+- identifier, monotonic-count and duplicate-event validation;
+- focused tests for matching tolerances, ambiguous matches, missed events,
+  extra events, and delayed baseline completions;
+- recorded evaluation configuration, source FPS, method/version identity and
+  tolerance provenance.
+
+### Optional, not required
+
+The following items were deliberately optional and are not required to
+interpret the completed primary evaluation:
 
 - Export a derived baseline event CSV with completion frame and timestamp.
 - Include the preceding bottom-transition frame as baseline-specific metadata.

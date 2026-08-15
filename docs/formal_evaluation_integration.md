@@ -27,11 +27,11 @@ For one clip, `evaluate_enhanced_clip` performs these steps:
 There is no second match for classification and no pairing by repetition ID or
 input-list position. The event matcher remains the single source of truth.
 
-The current event-tolerance default is the provisional `0.5` seconds. A caller
-may supply another positive finite value; cross-clip reporting verifies that
-every baseline and enhanced result uses the same supplied value and matching
-frame tolerance. Development evidence must justify and freeze the final value
-before final-test evaluation begins.
+The primary event tolerance is frozen at `0.5` seconds. A caller may supply
+another positive finite value; cross-clip reporting verifies that every
+baseline and enhanced result uses the same supplied value and matching frame
+tolerance. Alternative values are development sensitivity evidence only, and
+the completed final-test evaluation used the frozen primary value.
 
 ## Misses and extras
 

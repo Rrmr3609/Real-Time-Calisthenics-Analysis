@@ -1,16 +1,40 @@
-# Local dataset sources and development inventory
+# Local dataset sources and evaluation inventory
 
 Raw recordings under `data/raw/` are Git-ignored local inputs and are not
-redistributed by this repository. The active development manifest is
+redistributed by this repository.
+
+## Development dataset
+
+The frozen development manifest is
 `data/manifests/development_dataset_manifest.csv`. Its annotation CSV is
-`data/annotations/development_repetition_annotations.csv`.
+`data/annotations/development_repetition_annotations.csv`, with review and
+freeze metadata in
+`data/annotations/development_repetition_annotations.review.json`.
 
 The six self-recorded filenames describe recording intent only. Recalled
 attempt counts are deliberately excluded from ground truth. The historical
 `setup_test_2026-07-20.mp4` remains engineering/smoke evidence and is not in the
 development manifest.
 
-## External source
+## Held-out test dataset
+
+The held-out set consists of `test01`, `test02`, `test03` and `test04` in
+`data/manifests/test_dataset_manifest.csv`. Their frozen ground truth is in
+`data/annotations/test_repetition_annotations.csv`, with review and freeze
+metadata in `data/annotations/test_repetition_annotations.review.json`. The
+collection and no-retuning rules are recorded in
+`docs/held_out_test_collection_protocol.md`.
+
+The review record has status `complete` and binds the frozen annotation
+SHA-256 `ca8f93ac28095d70ce207b0bfa27b33b628f3966b90510ad78826eb32fd8e27c`.
+
+These are fresh recordings collected after the development scientific freeze.
+All four use the anonymised participant identifier `P_TEST_01`; they therefore
+provide held-out evidence across clips, not participant-independent
+generalisation evidence. Their raw videos remain excluded from Git under the
+same `data/raw/` policy as the development recordings.
+
+## External development source
 
 Six selected local videos came from the Kaggle dataset **LSTM Exercise
 Classification: Push Up Videos**:
@@ -47,7 +71,7 @@ Selected original source identities:
 - `Wrong sequence/Copy of push up 42.mp4`
 - `Wrong sequence/Copy of push up 81.mp4`
 
-## Technical inventory
+## Development technical inventory
 
 Metadata was read with OpenCV without pose estimation or push-up analysis.
 Duration is deterministically `frame_count / source_fps`. `decodes` records
