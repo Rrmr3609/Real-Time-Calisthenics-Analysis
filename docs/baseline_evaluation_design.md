@@ -236,6 +236,12 @@ The required evaluation foundation from this design has been implemented:
 - recorded evaluation configuration, source FPS, method/version identity and
   tolerance provenance.
 
+The completed formal evaluation retained mean and median per-frame processing
+time and measured analysis throughput. Processing-time IQR, repeated-run
+variability and full-loop wall time were not captured and are therefore not
+reconstructed retrospectively.
+
+
 ### Optional, not required
 
 The following items were deliberately optional and are not required to
