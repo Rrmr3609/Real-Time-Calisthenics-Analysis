@@ -1,4 +1,4 @@
-"""Provide explicit lifecycle management for recorded-video capture."""
+"""Provide explicit lifecycle management for recorded video capture."""
 
 from pathlib import Path
 from typing import Optional
@@ -7,7 +7,7 @@ import cv2
 
 
 class VideoFileCapture:
-    """Own an OpenCV video-file capture and its source metadata.
+    """Own an OpenCV video file capture and its source metadata.
 
     Call :meth:`open` before reading and :meth:`release` when processing ends.
     FPS, frame count and pixel dimensions are populated from OpenCV metadata

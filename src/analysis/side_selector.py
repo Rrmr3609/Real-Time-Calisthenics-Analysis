@@ -1,4 +1,4 @@
-"""Provide temporally stable left/right feature-side selection."""
+"""Provide temporally stable left/right feature side selection."""
 
 from typing import Optional
 
@@ -111,7 +111,7 @@ class StableSideSelector:
             "right": right_score,
         }
 
-        # No side has been acquired yet.
+        #no side has been acquired yet
         if self.selected_side == "none":
             best_side = self._best_side(left_score, right_score)
 
@@ -134,11 +134,11 @@ class StableSideSelector:
         current_score = scores[current_side]
         other_score = scores[other_side]
 
-        # The current side remains usable.
+        #the current side remains usable
         if current_score is not None:
             self._missing_count = 0
 
-            # Switch only if the other side is clearly stronger.
+            #switch only if the other side is clearly stronger
             if (
                 other_score is not None
                 and other_score >= current_score + self.switch_margin
@@ -153,7 +153,7 @@ class StableSideSelector:
 
             return self.selected_side
 
-        # The current side is temporarily missing.
+        #the current side is temporarily missing
         self._missing_count += 1
 
         if other_score is not None:
@@ -168,7 +168,7 @@ class StableSideSelector:
 
         self._clear_candidate()
 
-        # Keep the identity briefly during missing-landmark frames.
+        #keep the identity briefly during missing-landmark frames
         if self._missing_count > self.missing_grace_frames:
             self.selected_side = "none"
             self._missing_count = 0

@@ -1,4 +1,4 @@
-"""Extract visibility-aware, smoothed features for enhanced processing."""
+"""Extract visibility aware, smoothed features for enhanced processing."""
 
 from typing import Dict
 
@@ -14,7 +14,7 @@ from pose.landmarks import (
 
 class EnhancedFeatureProcessor:
     """
-    Extract confidence-aware angles while retaining temporal feature state.
+    Extract confidence aware angles while retaining temporal feature state.
 
     A sticky selector uses elbow-landmark visibility to choose one body side.
     Elbow and alignment angles are smoothed independently, and both smoothers
@@ -52,7 +52,7 @@ class EnhancedFeatureProcessor:
     def update(self, landmarks: Dict[str, dict]) -> dict:
         """Process one frame of extracted pose landmarks.
 
-        Visibility scores retain MediaPipe-style visibility units. Returned
+        Visibility scores retain MediaPipe style visibility units. Returned
         raw and smoothed angles are in degrees, or ``None`` when the selected
         side lacks the landmarks required for that feature.
         """
@@ -87,7 +87,7 @@ class EnhancedFeatureProcessor:
 
         side_changed = selected_side != self.previous_selected_side
 
-        # Do not mix historical angles from different body sides.
+        #do not mix historical angles from different body sides
         if side_changed:
             self.elbow_smoother.reset()
             self.alignment_smoother.reset()
@@ -165,7 +165,7 @@ class EnhancedFeatureProcessor:
                     ankle,
                 )
 
-        # Do not output stale smoothed values on missing-feature frames.
+        #do not output stale smoothed values on missing feature frames
         smoothed_elbow_angle = None
         smoothed_alignment_angle = None
 

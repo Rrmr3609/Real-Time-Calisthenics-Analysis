@@ -29,7 +29,7 @@ class PoseConfig:
 
 @dataclass(frozen=True)
 class BaselineConfig:
-    """Raw baseline counting thresholds and frame-warning limits in degrees."""
+    """Raw baseline counting thresholds and frame warning limits in degrees."""
 
     top_elbow_angle: float
     bottom_elbow_angle: float

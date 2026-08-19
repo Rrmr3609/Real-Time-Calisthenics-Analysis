@@ -1,4 +1,4 @@
-"""Generate diagnostic frame-level warnings for the simple baseline."""
+"""Generate diagnostic frame level warnings for the simple baseline."""
 
 
 def baseline_form_warnings(
@@ -10,12 +10,12 @@ def baseline_form_warnings(
     body_alignment_minimum: float = 160.0,
 ):
     """
-    Return direct frame-level warnings from raw angles in degrees.
+    Return direct frame level warnings from raw angles in degrees.
 
-    These are project-specific operational thresholds for the baseline.
+    These are project specific operational thresholds for the baseline.
     They are not universal definitions of correct push-up form.
     The messages are diagnostics and must not be interpreted as formal
-    repetition-level classifications.
+    repetition level classifications.
     """
     warnings = []
 

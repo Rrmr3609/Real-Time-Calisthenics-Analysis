@@ -46,7 +46,7 @@ Classification: Push Up Videos**:
   https://creativecommons.org/licenses/by-nc-sa/4.0/
 - Local access/download date: 2026-08-11.
 
-Suggested reference: Ashraf, M. (n.d.) *LSTM Exercise Classification: Push Up
+Reference: Ashraf, M. (n.d.) *LSTM Exercise Classification: Push Up
 Videos*. Kaggle. Available at:
 https://www.kaggle.com/datasets/mohamadashrafsalama/pushup (Accessed: 11 August
 2026).

@@ -8,7 +8,7 @@ from analysis.repetition_result import CompletedRepetition
 
 
 class RepetitionClass(str, Enum):
-    """Single-label outcomes supported by enhanced evaluation."""
+    """Single label outcomes supported by enhanced evaluation."""
 
     CORRECT = "correct"
     INSUFFICIENT_DEPTH = "insufficient_depth"
@@ -57,7 +57,7 @@ class RepetitionClassifier:
     Classify one completed repetition using transparent operational
     thresholds.
 
-    These are project-defined categories for the controlled evaluation.
+    These are project defined categories for the controlled evaluation.
     They are not universal or clinical definitions of push-up form.
 
     Formal repetition classes apply to enhanced completed repetitions; the
@@ -65,7 +65,7 @@ class RepetitionClassifier:
     the single label follows the fixed priority: insufficient depth, incomplete
     extension, inadequate alignment evidence (unscorable), alignment deviation
     and then correct. Every triggered deviation rule remains available in the
-    result even when a higher-priority label is selected.
+    result even when a higher priority label is selected.
     """
 
     def __init__(
@@ -105,8 +105,8 @@ class RepetitionClassifier:
         Insufficient coverage makes alignment evidence unscorable, although a
         higher-priority elbow rule may still determine the final label.
         """
-        # Extension quality is defined by the returned top posture after the
-        # repetition's bottom, not by the posture before descent began.
+        #extension quality is defined by the returned top posture after the
+        #repetition's bottom, not by the posture before descent began
         top_extension_angle = repetition.end_top_angle
 
         insufficient_depth = repetition.minimum_elbow_angle > self.depth_threshold
@@ -156,9 +156,9 @@ class RepetitionClassifier:
 
         multiple_rules_triggered = len(triggered_rules) > 1
 
-        # The evaluation uses one intended class per repetition.
-        # This deterministic priority is used only when several rules
-        # trigger simultaneously. All triggers remain in the log.
+        #the evaluation uses one intended class per repetition,
+        #this deterministic priority is used only when several rules
+        #trigger simultaneously, all triggers remain in the log
         if insufficient_depth:
             predicted_class = RepetitionClass.INSUFFICIENT_DEPTH.value
             reason = "Minimum elbow angle remained above the depth threshold."

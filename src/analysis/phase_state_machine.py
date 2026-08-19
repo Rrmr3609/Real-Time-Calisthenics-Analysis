@@ -247,7 +247,7 @@ class PushUpPhaseStateMachine:
         frame_index: int,
     ) -> dict:
         """
-        Update the phase machine for one integer video-frame identity.
+        Update the phase machine for one integer video frame identity.
 
         ``elbow_angle`` is a smoothed measurement in degrees or ``None`` when
         unavailable. The result contains the stable phase, cumulative count,
@@ -268,10 +268,10 @@ class PushUpPhaseStateMachine:
             self._clear_return_top_candidate_measurements()
 
             if interrupted_descent_candidate:
-                # A missing observation breaks consecutive descent
-                # confirmation. Discard its tentative measurement
-                # window so those frames cannot leak into a later
-                # repetition.
+                #a missing observation breaks consecutive descent
+                #confirmation, discard its tentative measurement
+                #window so those frames cannot leak into a later
+                #repetition
                 self._clear_current_attempt()
 
             if self._missing_count > self.missing_grace_frames:
@@ -310,9 +310,9 @@ class PushUpPhaseStateMachine:
 
             if descent_condition:
                 if self._window_start_frame is None:
-                    # An interrupted candidate invalidates its earlier
-                    # anchor. A later descent cannot confirm until a
-                    # new genuine top observation is available.
+                    #an interrupted candidate invalidates its earlier
+                    #anchor, a later descent cannot confirm until a
+                    #new genuine top observation is available
                     self._clear_candidate()
                     self._clear_descent_candidate_measurements()
 
@@ -342,10 +342,10 @@ class PushUpPhaseStateMachine:
                         self._clear_descent_candidate_measurements()
 
             elif self._descent_candidate_measurements:
-                # The consecutive descent condition was interrupted.
-                # Discard its buffered frames and the old tentative
-                # window. Only a genuine top observation can establish
-                # a new start anchor.
+                #the consecutive descent condition was interrupted,
+                #discard its buffered frames and the old tentative
+                #window, only a genuine top observation can establish
+                #a new start anchor
                 self._clear_current_attempt()
 
                 if angle >= self.top_region_threshold:
@@ -359,8 +359,8 @@ class PushUpPhaseStateMachine:
 
                 if angle >= self.top_region_threshold:
                     if self._start_top_angle is None or angle >= self._start_top_angle:
-                        # Keep the maximum genuine top observation and
-                        # freeze it once a descent candidate begins.
+                        #keep the maximum genuine top observation and
+                        #freeze it once a descent candidate begins
                         self._set_top_anchor(
                             frame_index,
                             angle,
@@ -372,8 +372,8 @@ class PushUpPhaseStateMachine:
                         )
 
                 elif self._window_start_frame is not None:
-                    # This frame is inside the tentative interval but
-                    # is neither a genuine top nor a descent candidate.
+                    #this frame is inside the tentative interval but
+                    #is neither a genuine top nor a descent candidate
                     self._update_minimum_angle(
                         frame_index,
                         angle,
@@ -390,8 +390,8 @@ class PushUpPhaseStateMachine:
                     self.phase = PushUpPhase.BOTTOM
 
             elif angle >= self.top_region_threshold:
-                # The movement returned to the top without entering
-                # the provisional bottom region.
+                #the movement returned to the top without entering
+                #the provisional bottom region
                 if self._confirm_transition(
                     PushUpPhase.TOP,
                     True,
@@ -436,8 +436,8 @@ class PushUpPhaseStateMachine:
                     )
 
             elif angle <= self.bottom_region_threshold:
-                # The subject moved back down before completing the
-                # return to the top.
+                #the subject moved back down before completing the
+                #return to the top
                 self._clear_return_top_candidate_measurements()
 
                 if self._confirm_transition(

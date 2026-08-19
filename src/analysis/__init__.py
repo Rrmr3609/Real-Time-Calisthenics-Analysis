@@ -1,1 +1,1 @@
-"""Push-up analysis, temporal segmentation, and repetition assessment."""
+"""Push-up analysis, temporal segmentation and repetition assessment."""

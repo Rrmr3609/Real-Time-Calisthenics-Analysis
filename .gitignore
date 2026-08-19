@@ -1,4 +1,4 @@
-# Python cache and compiled files
+#python cache and compiled files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -13,57 +13,57 @@ htmlcov/
 build/
 dist/
 
-# Virtual environments
+#virtual environments
 .venv/
 venv/
 env/
 
-# Environment variables and secrets
+#environment variables and secrets
 .env
 .env.*
 !.env.example
 
-# Editors
+#editors
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Windows and macOS files
+#windows and macOS files
 Thumbs.db
 desktop.ini
 .DS_Store
 
-# Raw and processed recordings
+#raw and processed recordings
 data/raw/*
 !data/raw/.gitkeep
 
 data/processed/*
 
-# Generated experiment files
+#generated experiment files
 experiments/logs/*
 
 experiments/outputs/*
 
-# Large video files
+#large video files
 *.mp4
 *.avi
 *.mov
 *.mkv
 *.webm
 
-# Generated model files
+#generated model files
 *.tflite
 *.onnx
 *.pt
 *.pth
 
-# Temporary output
+#temporary output
 *.tmp
 *.log
 
-# Local pytest temporary directory
+#local pytest temporary directory
 .pytest_tmp/
 
-# In-progress manual-annotation viewer checkpoint
+#in progress manual annotation viewer checkpoint
 data/annotations/*.resume.json

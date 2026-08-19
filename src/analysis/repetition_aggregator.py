@@ -1,4 +1,4 @@
-"""Collect repetition-level features over state-machine windows."""
+"""Collect repetition level features over state machine windows."""
 
 from dataclasses import replace
 from typing import List, Optional
@@ -8,7 +8,7 @@ from analysis.repetition_result import CompletedRepetition
 
 class RepetitionFeatureAggregator:
     """
-    Collect body-alignment measurements over the state machine's
+    Collect body alignment measurements over the state machine's
     inclusive repetition window.
 
     The window starts at the genuine top observation that supplies
@@ -63,9 +63,9 @@ class RepetitionFeatureAggregator:
                 alignment_angles=tuple(self._alignment_angles),
             )
 
-            # The completion frame is also the state machine's next top
-            # anchor. Seed the tentative next window so the shared
-            # boundary frame is available if no later top replaces it.
+            #the completion frame is also the state machine's next top
+            #anchor, seed the tentative next window so the shared
+            #boundary frame is available if no later top replaces it
             self.reset()
             self._window_start_frame = frame_index
             if body_alignment_angle is not None:

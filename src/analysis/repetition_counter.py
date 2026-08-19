@@ -1,4 +1,4 @@
-"""Count baseline repetitions using raw elbow-angle threshold crossings."""
+"""Count baseline repetitions using raw elbow angle threshold crossings."""
 
 
 class BasicRepetitionCounter:
@@ -9,7 +9,7 @@ class BasicRepetitionCounter:
 
     Positions are sticky: angles between the top and bottom thresholds retain
     the previous position. This is intentionally simple and does not use
-    smoothing, hysteresis, missing-frame tolerance or temporal confirmation.
+    smoothing, hysteresis, missing frame tolerance or temporal confirmation.
     """
 
     def __init__(

@@ -9,7 +9,7 @@ class CompletedRepetition:
     """
     Measurements recorded over one inclusive repetition interval.
 
-    Frame fields are integer video-frame identities, angle fields are degrees,
+    Frame fields are integer video frame identities, angle fields are degrees,
     and ``duration_frames`` is ``end_frame - start_frame + 1``. Alignment
     values contain only valid observations from that interval, so missing
     evidence is represented by absence rather than a placeholder or stale
@@ -32,8 +32,8 @@ class CompletedRepetition:
 
     duration_frames: int
 
-    # Valid smoothed body-alignment observations collected during
-    # the repetition. Missing observations are not inserted.
+    #valid smoothed body-alignment observations collected during
+    #the repetition, missing observations are not inserted
     alignment_angles: Tuple[float, ...] = ()
 
     def to_dict(self) -> Dict[str, object]:

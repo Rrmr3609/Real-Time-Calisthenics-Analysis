@@ -237,7 +237,7 @@ def main():
                 f"Baseline frame warning: {warning_text}",
                 (20, 240),
             )
-            # Frame warnings are diagnostics, not repetition classifications.
+            #frame warnings are diagnostics, not repetition classifications
             cv2.imshow("Real-Time Calisthenics Analysis - Baseline Prototype", frame)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):

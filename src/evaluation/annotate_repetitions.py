@@ -1,4 +1,4 @@
-"""Frame-accurate source-video annotation without prediction leakage.
+"""Frame accurate source-video annotation without prediction leakage.
 
 This viewer decodes one manifest video and records human-selected event frames,
 form labels and visibility decisions. It deliberately does not import pose,

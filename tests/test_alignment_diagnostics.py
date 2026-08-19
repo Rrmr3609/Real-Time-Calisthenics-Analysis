@@ -264,7 +264,7 @@ def test_historical_summary_content_is_preserved_across_line_endings():
 
     for filename, expected_hash in expected_sha256.items():
         content = (summaries / filename).read_bytes()
-        # Preserve historical text while tolerating Git/platform newline conversion.
+        #preserve historical text while tolerating Git/platform newline conversion
         canonical_content = content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
         assert hashlib.sha256(canonical_content).hexdigest() == expected_hash
 

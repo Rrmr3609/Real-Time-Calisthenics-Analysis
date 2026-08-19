@@ -1,4 +1,4 @@
-"""Provide the intentionally simple frame-level push-up baseline."""
+"""Provide the intentionally simple frame level push-up baseline."""
 
 from analysis.form_rules import baseline_form_warnings
 from analysis.repetition_counter import BasicRepetitionCounter
@@ -6,10 +6,10 @@ from analysis.repetition_counter import BasicRepetitionCounter
 
 class BaselinePushUpAnalyser:
     """
-    Combine raw-angle repetition counting with diagnostic warnings.
+    Combine raw angle repetition counting with diagnostic warnings.
 
     Measurements are used exactly as supplied for each frame. The baseline
-    deliberately has no smoothing, hysteresis or consecutive-frame temporal
+    deliberately has no smoothing, hysteresis or consecutive frame temporal
     confirmation, and is not intended to reproduce the enhanced method.
     Its warnings describe individual frames rather than formally classified
     completed repetitions.
@@ -36,7 +36,7 @@ class BaselinePushUpAnalyser:
 
         Counter state is retained between calls. An absent elbow angle leaves
         that state unchanged; an absent alignment angle suppresses only the
-        corresponding frame-level warning.
+        corresponding frame level warning.
         """
         rep_count, position = self.counter.update(elbow_angle)
 
